@@ -1,0 +1,373 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>RALT ONDC Logistics Operations Center</title>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --primary: #0284c7;
+      --primary-hover: #0369a1;
+      --accent: #10b981;
+      --bg: #0b0f19;
+      --card-bg: #151e2e;
+      --border: #233147;
+      --text: #f8fafc;
+      --text-muted: #94a3b8;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: 'Plus Jakarta Sans', sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      padding: 24px;
+      line-height: 1.5;
+    }
+    .header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding-bottom: 20px;
+      border-bottom: 1px solid var(--border);
+      margin-bottom: 24px;
+    }
+    .logo {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+    .logo-icon {
+      font-size: 28px;
+      background: #0369a1;
+      padding: 8px 12px;
+      border-radius: 10px;
+    }
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 6px 14px;
+      border-radius: 9999px;
+      font-size: 13px;
+      font-weight: 600;
+      background: rgba(16, 185, 129, 0.15);
+      color: #34d399;
+      border: 1px solid rgba(16, 185, 129, 0.3);
+    }
+    .badge-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: #10b981;
+      animation: pulse 2s infinite;
+    }
+    @keyframes pulse {
+      0%, 100% { opacity: 1; transform: scale(1); }
+      50% { opacity: 0.5; transform: scale(0.85); }
+    }
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+      gap: 16px;
+      margin-bottom: 24px;
+    }
+    .card {
+      background: var(--card-bg);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 18px;
+    }
+    .card h3 {
+      font-size: 12px;
+      color: var(--text-muted);
+      margin-bottom: 6px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+    .card .val {
+      font-size: 20px;
+      font-weight: 700;
+      color: var(--text);
+    }
+    .main-layout {
+      display: grid;
+      grid-template-columns: 360px 1fr;
+      gap: 24px;
+    }
+    @media (max-width: 900px) {
+      .main-layout { grid-template-columns: 1fr; }
+    }
+    .dispatch-box {
+      background: var(--card-bg);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 20px;
+    }
+    .form-group {
+      margin-bottom: 14px;
+    }
+    .form-group label {
+      display: block;
+      font-size: 13px;
+      color: var(--text-muted);
+      margin-bottom: 6px;
+      font-weight: 500;
+    }
+    .form-control {
+      width: 100%;
+      padding: 10px 12px;
+      border-radius: 8px;
+      border: 1px solid var(--border);
+      background: #0b1120;
+      color: white;
+      font-size: 14px;
+    }
+    .btn {
+      width: 100%;
+      padding: 12px;
+      border-radius: 8px;
+      font-weight: 700;
+      font-size: 14px;
+      cursor: pointer;
+      border: none;
+      transition: all 0.2s;
+    }
+    .btn-primary {
+      background: #0284c7;
+      color: white;
+    }
+    .btn-primary:hover {
+      background: #0369a1;
+    }
+    .order-card {
+      background: #111a2c;
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 16px;
+      margin-bottom: 12px;
+    }
+    .order-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 10px;
+    }
+    .status-pill {
+      font-size: 11px;
+      font-weight: 700;
+      padding: 4px 10px;
+      border-radius: 9999px;
+      text-transform: uppercase;
+    }
+    .status-assigned { background: rgba(56, 189, 248, 0.2); color: #38bdf8; }
+    .status-atpickup { background: rgba(234, 179, 8, 0.2); color: #eab308; }
+    .status-pickedup { background: rgba(249, 115, 22, 0.2); color: #f97316; }
+    .status-intransit { background: rgba(168, 85, 247, 0.2); color: #c084fc; }
+    .status-delivered { background: rgba(16, 185, 129, 0.2); color: #34d399; }
+    .otp-badge {
+      background: #f43f5e;
+      color: white;
+      font-weight: 800;
+      padding: 2px 8px;
+      border-radius: 6px;
+      font-size: 13px;
+      letter-spacing: 1px;
+    }
+  </style>
+</head>
+<body>
+
+  <div class="header">
+    <div class="logo">
+      <div class="logo-icon">🛵</div>
+      <div>
+        <h1 style="font-size: 20px; font-weight: 800;">RALT ONDC Logistics BPP</h1>
+        <div style="font-size: 12px; color: var(--text-muted);">Real-time Beckn Fleet & Dispatch Engine (SQLite Persistent)</div>
+      </div>
+    </div>
+    <div class="badge">
+      <span class="badge-dot"></span>
+      ONDC PreProd Connected
+    </div>
+  </div>
+
+  <div class="grid">
+    <div class="card">
+      <h3>Subscriber ID</h3>
+      <div class="val">ralt.in</div>
+      <div style="font-size: 11px; color: var(--text-muted); margin-top: 4px;">Role: BPP (Logistics Service Provider)</div>
+    </div>
+    <div class="card">
+      <h3>Unique Key ID (UKID)</h3>
+      <div class="val" style="font-size: 14px; word-break: break-all;">2cb2bdeb-457b-47a9-bef9-c4d8954cbe49</div>
+      <div style="font-size: 11px; color: var(--text-muted); margin-top: 4px;">Ed25519 Request Signing Active</div>
+    </div>
+    <div class="card">
+      <h3>Delivery Payout</h3>
+      <div class="val" style="color: #34d399;">₹50.00</div>
+      <div style="font-size: 11px; color: var(--text-muted); margin-top: 4px;">Point-to-Point Hyperlocal Service</div>
+    </div>
+    <div class="card">
+      <h3>Active Rider</h3>
+      <div class="val" id="riderStatusText" style="color: #38bdf8;">Raju Kumar (Online)</div>
+      <div style="font-size: 11px; color: var(--text-muted); margin-top: 4px;" id="riderPhoneText">TS-09-EA-1234 • +91 98765 43210</div>
+    </div>
+  </div>
+
+  <div class="main-layout">
+    <!-- Left: Real Order Dispatcher -->
+    <div class="dispatch-box">
+      <h2 style="font-size: 16px; margin-bottom: 14px; color: white;">⚡ Dispatch Real ONDC Order</h2>
+      <p style="font-size: 12px; color: var(--text-muted); margin-bottom: 16px;">
+        Trigger an authentic ONDC delivery booking. Saved immediately to SQLite DB and pushed live via WebSocket to the Rider Mobile App!
+      </p>
+
+      <div class="form-group">
+        <label>Pickup Restaurant</label>
+        <select id="restaurantSelect" class="form-control">
+          <option value="Bawarchi Biryani House|Plot 42, Main Road, Gachibowli, Hyderabad">Bawarchi Biryani House (Gachibowli)</option>
+          <option value="Paradise Food Court|MG Road, Secunderabad">Paradise Food Court (Secunderabad)</option>
+          <option value="Mehfil Restaurant|Madhapur Main Rd, Hitec City">Mehfil Restaurant (Hitec City)</option>
+          <option value="Pista House Haleem|Charminar, Hyderabad">Pista House (Old City / Charminar)</option>
+        </select>
+      </div>
+
+      <div class="form-group">
+        <label>Customer Name</label>
+        <input type="text" id="custName" class="form-control" value="Arun Kumar">
+      </div>
+
+      <div class="form-group">
+        <label>Customer Delivery Address</label>
+        <input type="text" id="custAddress" class="form-control" value="Flat 402, Sai Residency, Kondapur">
+      </div>
+
+      <div class="form-group">
+        <label>Food Item</label>
+        <input type="text" id="foodItem" class="form-control" value="Chicken Dum Biryani (x2)">
+      </div>
+
+      <button class="btn btn-primary" onclick="dispatchOrder()">🚀 Dispatch Live Order to Rider</button>
+    </div>
+
+    <!-- Right: Real-time Database Orders List -->
+    <div class="card">
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
+        <h2 style="font-size: 16px;">📦 Real-Time Orders in Database (SQLite)</h2>
+        <span style="font-size: 12px; color: var(--text-muted);">Auto-refreshes every 3 seconds</span>
+      </div>
+      <div id="ordersContainer">Loading live orders from database...</div>
+    </div>
+  </div>
+
+  <script>
+    async function fetchRider() {
+      try {
+        const res = await fetch('/api/rider/profile');
+        const data = await res.json();
+        if (data.rider) {
+          const online = data.rider.is_online === 1;
+          document.getElementById('riderStatusText').innerHTML = `
+            ${data.rider.name} <span style="font-size: 13px; color: ${online ? '#34d399' : '#f43f5e'}">(${online ? 'Online' : 'Offline'})</span>
+          `;
+          document.getElementById('riderPhoneText').innerText = `${data.rider.vehicle_number} • ${data.rider.phone}`;
+        }
+      } catch (e) {}
+    }
+
+    async function fetchOrders() {
+      try {
+        const res = await fetch('/api/rider/all-orders');
+        const data = await res.json();
+        const container = document.getElementById('ordersContainer');
+        const orders = data.orders || [];
+
+        if (orders.length === 0) {
+          container.innerHTML = `
+            <div style="text-align: center; padding: 40px; color: var(--text-muted);">
+              <div style="font-size: 32px; margin-bottom: 8px;">🛵</div>
+              <p>No orders in database yet. Use the dispatch form on the left to create one!</p>
+            </div>
+          `;
+          return;
+        }
+
+        container.innerHTML = orders.map(o => {
+          let pillClass = 'status-assigned';
+          if (o.status === 'At-pickup') pillClass = 'status-atpickup';
+          if (o.status === 'Order-picked-up') pillClass = 'status-pickedup';
+          if (o.status === 'In-transit') pillClass = 'status-intransit';
+          if (o.status === 'Order-delivered') pillClass = 'status-delivered';
+
+          return `
+            <div class="order-card">
+              <div class="order-header">
+                <div>
+                  <strong style="color: #38bdf8; font-size: 15px;">${o.orderId}</strong>
+                  <span style="font-size: 12px; color: var(--text-muted); margin-left: 8px;">${new Date(o.createdAt).toLocaleTimeString()}</span>
+                </div>
+                <div style="display: flex; gap: 8px; align-items: center;">
+                  <span class="status-pill ${pillClass}">${o.status}</span>
+                  <span style="font-size: 12px; color: var(--text-muted);">OTP: <strong class="otp-badge">${o.deliveryOtp}</strong></span>
+                </div>
+              </div>
+
+              <div style="font-size: 13px; color: #cbd5e1; margin-bottom: 4px;">
+                <strong>Pickup:</strong> ${o.pickup.name} (${o.pickup.address})
+              </div>
+              <div style="font-size: 13px; color: #cbd5e1; margin-bottom: 10px;">
+                <strong>Drop:</strong> ${o.drop.name} (${o.drop.address})
+              </div>
+
+              <div style="display: flex; justify-content: space-between; font-size: 12px; color: var(--text-muted); border-top: 1px solid var(--border); padding-top: 8px;">
+                <span>Items: <strong>${o.items.map(i => i.name).join(', ')}</strong></span>
+                <span>Payout: <strong style="color: #34d399; font-size: 14px;">₹${o.deliveryFee}</strong></span>
+              </div>
+            </div>
+          `;
+        }).join('');
+      } catch (err) {
+        console.error('Fetch orders error:', err);
+      }
+    }
+
+    async function dispatchOrder() {
+      const restSelect = document.getElementById('restaurantSelect').value.split('|');
+      const restName = restSelect[0];
+      const restAddress = restSelect[1];
+      const custName = document.getElementById('custName').value;
+      const custAddress = document.getElementById('custAddress').value;
+      const foodItem = document.getElementById('foodItem').value;
+
+      try {
+        const res = await fetch('/api/rider/simulate-order', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            restaurantName: restName,
+            restaurantAddress: restAddress,
+            customerName: custName,
+            customerAddress: custAddress,
+            items: [{ name: foodItem, quantity: 1 }]
+          })
+        });
+        const data = await res.json();
+        if (data.success) {
+          alert('✅ Real ONDC Order Created: ' + data.order.orderId + '\nDelivery OTP: ' + data.order.deliveryOtp + '\nDispatched live to Rider Mobile App!');
+          fetchOrders();
+        }
+      } catch (e) {
+        alert('Error dispatching order: ' + e.message);
+      }
+    }
+
+    fetchRider();
+    fetchOrders();
+    setInterval(() => {
+      fetchRider();
+      fetchOrders();
+    }, 3000);
+  </script>
+</body>
+</html>
