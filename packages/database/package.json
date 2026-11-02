@@ -1,6 +1,6 @@
 {
   "name": "@ralt-ondc/database",
-  "version": "1.7.1",
+  "version": "1.8.0",
   "description": "PostgreSQL 16 + PostGIS Schemas and Migrations for RALT ONDC Logistics",
   "private": true,
   "main": "init-dbs.sql",
