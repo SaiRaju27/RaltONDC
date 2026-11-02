@@ -18,7 +18,7 @@ FROM base AS runner
 WORKDIR /app
 
 COPY package*.json ./
-COPY node_modules ./node_modules
+RUN npm install --omit=dev --no-audit --no-fund
 COPY dist ./dist
 COPY data ./data
 COPY .env ./
