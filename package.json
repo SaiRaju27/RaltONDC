@@ -1,6 +1,6 @@
 {
   "name": "ralt-ondc-monorepo",
-  "version": "1.7.0",
+  "version": "1.7.1",
   "private": true,
   "description": "RALT ONDC Logistics Service Provider (BPP) & Delivery Partner Fleet Monorepo",
   "workspaces": [
