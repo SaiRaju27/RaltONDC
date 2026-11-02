@@ -436,17 +436,6 @@ describe('Backend 85%+ Coverage Booster Suite', () => {
   });
 
   describe('Server graceful shutdown handler', () => {
-    it('executes graceful shutdown routine without crashing process', async () => {
-      jest.spyOn(process, 'exit').mockImplementation((() => undefined) as any);
-      const closeSpy = jest.spyOn(server, 'close').mockImplementation((cb?: any) => {
-        if (cb) cb();
-        return server;
-      });
-
-      await shutdown('SIGTERM');
-      expect(closeSpy).toHaveBeenCalled();
-    });
-
     it('executes server.start startup routine cleanly in test', async () => {
       const listenSpy = jest.spyOn(server, 'listen').mockImplementation((port: any, cb?: any) => {
         if (typeof cb === 'function') cb();
@@ -456,6 +445,17 @@ describe('Backend 85%+ Coverage Booster Suite', () => {
       await start();
       expect(listenSpy).toHaveBeenCalled();
       listenSpy.mockRestore();
+    });
+
+    it('executes graceful shutdown routine without crashing process', async () => {
+      jest.spyOn(process, 'exit').mockImplementation((() => undefined) as any);
+      const closeSpy = jest.spyOn(server, 'close').mockImplementation((cb?: any) => {
+        if (cb) cb();
+        return server;
+      });
+
+      await shutdown('SIGTERM');
+      expect(closeSpy).toHaveBeenCalled();
     });
 
     it('queueService.init connects and asserts standard queues when amqp succeeds', async () => {

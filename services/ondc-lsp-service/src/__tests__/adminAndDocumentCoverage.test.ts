@@ -13,16 +13,17 @@ describe('Admin, Document Controller & Document Worker Coverage Suite', () => {
   beforeAll(async () => {
     await initDatabase();
     // Ensure test rider exists
+    await run(`DELETE FROM riders WHERE id = '${testRiderId}'`);
     await run(`
-      INSERT OR REPLACE INTO riders (
+      INSERT INTO riders (
         id, name, phone, vehicle_type, vehicle_number, dl_number,
         pan_number, aadhaar_number, bank_account_number, bank_ifsc,
-        kyc_status, is_active, is_online, onboarding_completed, created_at, updated_at
+        kyc_status, is_online, onboarding_completed, created_at, updated_at
       ) VALUES (
         '${testRiderId}', 'Admin Test Candidate', '9876599999',
         'Motorcycle', 'TS09EA9999', 'TS0920210009999', 'ABCDE9999F',
         '548912349999', '999912345678', 'HDFC0009999',
-        'PENDING_VERIFICATION', 1, 0, 0, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP
+        'PENDING_VERIFICATION', 0, 0, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP
       )
     `);
   });
@@ -279,9 +280,10 @@ describe('Admin, Document Controller & Document Worker Coverage Suite', () => {
       expect(res404.status).toBe(404);
 
       // Create an unverified rider
+      await run(`DELETE FROM riders WHERE id = 'UNVERIFIED-RIDER-01'`);
       await run(`
-        INSERT OR REPLACE INTO riders (id, name, phone, vehicle_type, vehicle_number, kyc_status, onboarding_completed, is_active)
-        VALUES ('UNVERIFIED-RIDER-01', 'Unverified', '9998881111', 'Motorcycle', 'TS09EA1111', 'PENDING_VERIFICATION', 0, 1)
+        INSERT INTO riders (id, name, phone, vehicle_type, vehicle_number, kyc_status, onboarding_completed)
+        VALUES ('UNVERIFIED-RIDER-01', 'Unverified', '9998881111', 'Motorcycle', 'TS09EA1111', 'PENDING_VERIFICATION', 0)
       `);
       const res400 = await request(app)
         .post('/api/admin/riders/UNVERIFIED-RIDER-01/toggle-status')
@@ -296,8 +298,9 @@ describe('Admin, Document Controller & Document Worker Coverage Suite', () => {
       expect(resEmpty.status).toHaveBeenCalledWith(400);
 
       // Preview with utf8 SVG data
+      await run(`DELETE FROM rider_documents WHERE id = 'DOC-SVG-TEST-01'`);
       await run(`
-        INSERT OR REPLACE INTO rider_documents (
+        INSERT INTO rider_documents (
           id, rider_id, doc_type, file_name, mime_type, file_size, file_data, status
         ) VALUES (
           'DOC-SVG-TEST-01', '${testRiderId}', 'pan_card', 'test.svg', 'image/svg+xml', 1024,
@@ -348,8 +351,9 @@ describe('Admin, Document Controller & Document Worker Coverage Suite', () => {
     });
 
     it('DocumentController.previewDocument renders raw base64 data correctly', async () => {
+      await run(`DELETE FROM rider_documents WHERE id = 'DOC-RAW-BASE64-01'`);
       await run(`
-        INSERT OR REPLACE INTO rider_documents (
+        INSERT INTO rider_documents (
           id, rider_id, doc_type, file_name, mime_type, file_size, file_data, status
         ) VALUES (
           'DOC-RAW-BASE64-01', '${testRiderId}', 'aadhaar_front', 'raw.jpg', 'image/jpeg', 24,
