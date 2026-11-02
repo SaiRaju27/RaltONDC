@@ -6,6 +6,12 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 
+## [1.5.0](https://github.com/SaiRaju27/RaltONDC/compare/v1.4.1...v1.5.0) (2026-11-02)
+
+### Features
+
+* **mobile:** add dynamic environment resolver for local vs production APK/iOS builds ([f6c3cac](https://github.com/SaiRaju27/RaltONDC/commit/f6c3cac0ed6924d7b66ae563ae9061d9d12b7467))
+
 ## [1.4.1](https://github.com/SaiRaju27/RaltONDC/compare/v1.4.0...v1.4.1) (2026-11-02)
 
 ### Documentation
