@@ -16,5 +16,11 @@ config.resolver.nodeModulesPaths = [
   path.resolve(monorepoRoot, 'node_modules'),
 ];
 
-module.exports = config;
+// 3. Block legacy directories to prevent duplicate package collisions
+config.resolver.blockList = [
+  /.*[\/\\]mobile-app[\/\\].*/,
+  /.*[\/\\]backend[\/\\].*/,
+  /.*[\/\\]services[\/\\].*/,
+];
 
+module.exports = config;

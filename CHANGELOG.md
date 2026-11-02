@@ -6,6 +6,12 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 
+## [1.5.5](https://github.com/SaiRaju27/RaltONDC/compare/v1.5.4...v1.5.5) (2026-11-02)
+
+### Bug Fixes
+
+* **mobile:** declare sdkVersion 58.0.0, block duplicate metro folders, and clear cache on start ([54aa203](https://github.com/SaiRaju27/RaltONDC/commit/54aa20321138ce8c4beb8f0b90c188e008f084d5))
+
 ## [1.5.4](https://github.com/SaiRaju27/RaltONDC/compare/v1.5.3...v1.5.4) (2026-11-02)
 
 ### Bug Fixes

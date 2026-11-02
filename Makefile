@@ -137,7 +137,7 @@ rabbit: check-engine env ## Start only RabbitMQ container
 mobile: ## Run Delivery Partner App in interactive Expo CLI
 	@echo -e "${COLOR_INFO}Launching Delivery Partner Mobile App...${COLOR_RESET}"
 	@test -d apps/delivery-app/node_modules/expo || (cd apps/delivery-app && npm install --no-audit --no-fund)
-	@cd apps/delivery-app && NODE_OPTIONS="-r ./polyfill.js" npx expo start
+	@cd apps/delivery-app && NODE_OPTIONS="-r ./polyfill.js" npx expo start -c
 
 mobile-web: ## Launch Delivery Partner App in Web Browser (Port 8081)
 	@echo -e "${COLOR_INFO}Launching Delivery Partner Mobile App in Web Browser (Port 8081)...${COLOR_RESET}"
