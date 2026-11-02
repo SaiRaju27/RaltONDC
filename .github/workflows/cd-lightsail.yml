@@ -23,25 +23,27 @@ jobs:
   # 1. Quality Gate (TypeScript Compilation & Static Analysis)
   # ============================================================================
   quality-gate:
-    name: 🛡️ Quality Gate & Typecheck
+    name: 🛡️ Quality Gate (Lint, Scans, >=85% Coverage Tests)
     runs-on: ubuntu-latest
     if: inputs.skip_tests != true
     steps:
       - name: Checkout Code
         uses: actions/checkout@v4
 
-      - name: Setup Node.js 20.x
+      - name: Setup Node.js 22.x
         uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version: 22
           cache: 'npm'
-          cache-dependency-path: 'services/ondc-lsp-service/package-lock.json'
 
-      - name: Install Dependencies
-        run: cd services/ondc-lsp-service && npm ci
+      - name: Install Monorepo Dependencies
+        run: |
+          npm ci || npm install
+          (cd services/ondc-lsp-service && npm ci)
+          (cd apps/delivery-app && npm ci)
 
-      - name: Compile TypeScript & Check Types
-        run: cd services/ondc-lsp-service && npm run build
+      - name: Run Complete Quality Gate
+        run: npm run check:all
 
   # ============================================================================
   # 2. Parallel Docker Image Build & Push to GHCR

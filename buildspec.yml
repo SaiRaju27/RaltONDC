@@ -17,12 +17,16 @@ phases:
 
   pre_build:
     commands:
-      - echo "=== Step 2: Quality Gates & TypeScript Validation ==="
-      - echo "Checking backend TypeScript compilation..."
+      - echo "=== Step 2: Quality Gates (Lint, Scans, >=85% Coverage Tests) ==="
+      - echo "Running static analysis and linting..."
+      - npm run lint
+      - echo "Running security audit, secret scans, and UI copy validation..."
+      - npm run scan
+      - echo "Running unit tests with 85%+ coverage thresholds..."
+      - npm run test:coverage
+      - echo "Building backend distribution..."
       - (cd services/ondc-lsp-service && npm run build)
-      - echo "Checking mobile delivery app TypeScript validation..."
-      - (cd apps/delivery-app && npx tsc --noEmit)
-      - echo "Quality gate validation passed."
+      - echo "Quality gate validation passed successfully."
 
   build:
     commands:
@@ -44,3 +48,4 @@ artifacts:
     - 'services/ondc-lsp-service/package.json'
     - 'services/ondc-lsp-service/package-lock.json'
     - 'services/ondc-lsp-service/Dockerfile'
+

@@ -266,7 +266,11 @@ const shutdown = async (signal: string) => {
 process.on('SIGINT', () => shutdown('SIGINT'));
 process.on('SIGTERM', () => shutdown('SIGTERM'));
 
-start().catch(err => {
-  logger.fatal({ err: err.message }, 'Fatal error during server startup');
-  process.exit(1);
-});
+export { app, server, wss, start, shutdown };
+
+if (process.env.NODE_ENV !== 'test' && require.main === module) {
+  start().catch(err => {
+    logger.fatal({ err: err.message }, 'Fatal error during server startup');
+    process.exit(1);
+  });
+}

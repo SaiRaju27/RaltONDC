@@ -197,7 +197,7 @@ async function initPostgres(): Promise<boolean> {
   }
 }
 
-async function initSqlite(): Promise<void> {
+export async function initSqlite(): Promise<void> {
   activeEngine = 'sqlite';
   const dataDir = path.resolve(__dirname, '../data');
   if (!fs.existsSync(dataDir)) {

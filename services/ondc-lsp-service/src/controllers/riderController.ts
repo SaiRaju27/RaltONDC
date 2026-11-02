@@ -310,7 +310,7 @@ export class RiderController {
       const totalEarnings = completed.reduce((sum, o) => sum + (o.deliveryFee || 50), 0);
       const todayDateStr = new Date().toISOString().slice(0, 10);
       const todayEarnings = completed
-        .filter(o => (o.deliveredAt || o.createdAt || '').startsWith(todayDateStr))
+        .filter(o => String(o.deliveredAt || o.createdAt || '').startsWith(todayDateStr))
         .reduce((sum, o) => sum + (o.deliveryFee || 50), 0);
 
       res.json({

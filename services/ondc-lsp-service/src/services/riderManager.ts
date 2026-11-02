@@ -250,8 +250,8 @@ class RiderManager {
     ]);
 
     // Update Prometheus metric
-    const onlineRiders = await query<{ count: number }>('SELECT COUNT(*) as count FROM riders WHERE is_online = 1');
-    activeOnlineRidersGauge.set(onlineRiders[0]?.count || 0);
+    const onlineRiders = await query<{ count: number | string }>('SELECT COUNT(*) as count FROM riders WHERE is_online = 1');
+    activeOnlineRidersGauge.set(Number(onlineRiders[0]?.count || 0));
 
     const updated = await this.getRider(riderId);
     this.notifyRider(riderId, {
@@ -304,7 +304,7 @@ class RiderManager {
 
     // 2. Secondary fallback: find first online rider without an active pending order
     let rider = await get<RiderRecord>(
-      'SELECT * FROM riders WHERE is_online = 1 AND (current_order_id IS NULL OR current_order_id = "") LIMIT 1'
+      'SELECT * FROM riders WHERE is_online = 1 AND (current_order_id IS NULL OR current_order_id = \'\') LIMIT 1'
     );
 
     // 3. Fallback to first online rider

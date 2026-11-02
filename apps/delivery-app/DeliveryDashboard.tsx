@@ -180,7 +180,7 @@ const SlideToAction: React.FC<{
   );
 };
 
-const PostGisMapLayer: React.FC<{
+const LiveRouteMapLayer: React.FC<{
   lat?: number;
   lng?: number;
   label?: string;
@@ -450,7 +450,7 @@ export const DeliveryDashboard: React.FC<DeliveryDashboardProps> = ({
   // Checklist State for Step 1: In-Store Manifest
   const [checkedItems, setCheckedItems] = useState<number[]>([]);
 
-  // Live Location tracking with PostGIS / backend synchronization
+  // Real-time location tracking and fleet synchronization
   const [riderCoords, setRiderCoords] = useState<{ lat: number; lng: number }>({
     lat: 12.9716,
     lng: 77.5946,
@@ -558,7 +558,7 @@ export const DeliveryDashboard: React.FC<DeliveryDashboardProps> = ({
     setTimeout(() => setShowToast(false), 3000);
   };
 
-  // Calculate spherical distance using PostGIS Haversine formula
+  // Calculate spherical distance along delivery route
   const calculateDistanceKm = (lat1: number, lon1: number, lat2: number, lon2: number): string => {
     if (!lat1 || !lon1 || !lat2 || !lon2) return '2.4';
     const R = 6371; // Earth radius in km
@@ -700,7 +700,7 @@ export const DeliveryDashboard: React.FC<DeliveryDashboardProps> = ({
     }
   };
 
-  // High-frequency Polling Fallback (syncs with SQLite backend every 2.5s)
+  // High-frequency Polling Fallback (syncs active delivery fleet every 2.5s)
   useEffect(() => {
     let isMounted = true;
     const fetchOrders = async (isInitial = false) => {
@@ -997,7 +997,7 @@ export const DeliveryDashboard: React.FC<DeliveryDashboardProps> = ({
           <View style={{ gap: 14 }}>
             {/* Interactive Dispatch Header & Map Preview Window */}
             <View style={dashStyles.radarMapHeader}>
-              <PostGisMapLayer
+              <LiveRouteMapLayer
                 lat={riderCoords.lat}
                 lng={riderCoords.lng}
                 label="Radar Map"
@@ -1228,7 +1228,7 @@ export const DeliveryDashboard: React.FC<DeliveryDashboardProps> = ({
 
                       {/* Live Status & GPS Mini-Map Section */}
                       <View style={dashStyles.manifestMapContainer}>
-                        <PostGisMapLayer
+                        <LiveRouteMapLayer
                           lat={curLat}
                           lng={curLng}
                           label={activeMapTarget === 'store' ? "Store Pickup Map" : "Customer Drop Map"}
@@ -1256,7 +1256,7 @@ export const DeliveryDashboard: React.FC<DeliveryDashboardProps> = ({
                         </View>
                       </View>
 
-                      {/* ZOMATO-STYLE LIVE TRIP ROUTE & POSTGIS TELEMETRY HUD */}
+                      {/* LIVE TRIP ROUTE & FLEET TELEMETRY HUD */}
                       <View style={dashStyles.zomatoEstCard}>
                         <View style={dashStyles.betweenRow}>
                           <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
@@ -1481,7 +1481,7 @@ export const DeliveryDashboard: React.FC<DeliveryDashboardProps> = ({
                     <View style={{ gap: 14 }}>
                       {/* Live Status & GPS Mini-Map Section */}
                       <View style={dashStyles.manifestMapContainer}>
-                        <PostGisMapLayer
+                        <LiveRouteMapLayer
                           lat={dLat}
                           lng={dLng}
                           label="Customer Drop Map"
@@ -2236,7 +2236,7 @@ export const DeliveryDashboard: React.FC<DeliveryDashboardProps> = ({
           <View style={dashStyles.modalDetailSheet}>
             {/* Map Preview Layer */}
             <View style={dashStyles.detailMapContainer}>
-              <PostGisMapLayer
+              <LiveRouteMapLayer
                 lat={selectedOrderDetail?.pickupGps?.lat || 12.9716}
                 lng={selectedOrderDetail?.pickupGps?.lng || 77.5946}
                 label="Delivery Request Map"

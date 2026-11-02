@@ -108,6 +108,17 @@ export function signRiderToken(riderId: string, phone: string, role: 'RIDER' | '
 }
 
 /**
+ * Verify and decode a Rider JWT token
+ */
+export function verifyRiderToken(token: string): RiderTokenPayload | null {
+  try {
+    return jwt.verify(token, config.jwt.secret) as RiderTokenPayload;
+  } catch {
+    return null;
+  }
+}
+
+/**
  * JWT Verification Middleware for Rider APIs
  */
 export function requireRiderAuth(req: Request, res: Response, next: NextFunction) {
@@ -141,12 +152,12 @@ export function requireRiderAuth(req: Request, res: Response, next: NextFunction
 // =============================================================================
 
 export const SendOtpSchema = z.object({
-  phone: z.string().min(10).max(15)
+  phone: z.string().regex(/^\+?[0-9]{10,14}$/, 'Must be a valid numeric phone number (10 to 14 digits)')
 });
 
 export const VerifyOtpSchema = z.object({
-  phone: z.string().min(10).max(15),
-  otp: z.string().min(4).max(6)
+  phone: z.string().regex(/^\+?[0-9]{10,14}$/, 'Must be a valid numeric phone number'),
+  otp: z.string().regex(/^[0-9]{4,6}$/, 'OTP must be 4 to 6 numeric digits')
 });
 
 export const LocationUpdateSchema = z.object({

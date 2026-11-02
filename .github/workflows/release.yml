@@ -48,10 +48,9 @@ jobs:
           (cd services/ondc-lsp-service && npm ci)
           (cd apps/delivery-app && npm ci)
 
-      - name: Run Typecheck & Tests Prior to Release
+      - name: Run Quality Gate (Lint, Scans, >=85% Coverage Tests)
         run: |
-          npm run test
-          (cd apps/delivery-app && npx tsc --noEmit)
+          npm run check:all
 
       - name: Run Semantic Release (Dry-Run Simulation)
         if: ${{ github.event.inputs.dry_run == 'true' }}

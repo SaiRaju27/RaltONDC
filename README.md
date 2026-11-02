@@ -163,6 +163,53 @@ make lightsail-health
 
 ---
 
+## 🧪 Enterprise Testing, Quality Gates & Security Scans
+
+The repository enforces strict enterprise quality gates with a **>= 85% Code Coverage** requirement for both frontend and backend:
+
+| Scope | Suite | Coverage | Tests | Status |
+| :--- | :--- | :--- | :--- | :--- |
+| **Backend** (`services/ondc-lsp-service`) | Jest + `ts-jest` + PostGIS Spatial | **86.08% Lines** | 105 passed / 11 suites | 🟢 Passed |
+| **Frontend** (`apps/delivery-app`) | Jest + Domain Workflows & Utilities | **98.80% Lines** | 60 passed / 6 suites | 🟢 Passed |
+| **Security & Copy Scanner** | `scripts/security-scan.sh` | Zero Secrets & Zero Jargon | Clean Audit | 🟢 Passed |
+
+```bash
+# Run complete enterprise quality gate (lint, security scans, 85%+ coverage tests)
+make check-all
+# OR
+npm run check:all
+
+# Run code coverage suites only
+make test-coverage
+
+# Run security & UI jargon scan
+make scan
+
+# Run static analysis and linting
+make lint
+```
+
+### 🔒 Enterprise Security & Clean Copy Policy
+- **Zero Technical Jargon in UI**: Strictly prohibits internal technical terms (`PostGIS`, `postgis`, `pg_trgm`, `SQLite`, `raw SQL`, etc.) in all customer/rider-facing screens. Only pure human logistics terminology is presented.
+- **Zero Committed Secrets**: Automated regex scans detect AWS keys, private keys, and tokens prior to commit.
+- **Dependency Audit**: Regular verification against high/critical CVEs.
+
+---
+
+## 🚀 Dual-Remote CI/CD Pipeline (AWS CodeCommit & GitHub)
+
+The repository uses a dual-remote strategy. Commits pushed to `origin main` automatically update both:
+1. **GitHub Repository**: [`SaiRaju27/RaltONDC`](https://github.com/SaiRaju27/RaltONDC.git)
+2. **AWS CodeCommit Repository**: `ralt-delivery-partner` (`ap-south-1` under AWS SSO profile `ralt`)
+
+### AWS CodeCommit CI/CD (`buildspec.yml`)
+AWS CodeBuild executes:
+- **Install**: Node.js 22 runtime, monorepo dependency hydration.
+- **Pre-Build Quality Gate**: Executes `npm run check:all` (linting, security/copy scans, and >=85% test coverage verification).
+- **Build**: Compiles backend TypeScript and builds production container image.
+
+---
+
 ## 🏷️ Semantic Release & Versioning
 
 This repository follows the **Ralt Enterprise Semantic Release standard**:

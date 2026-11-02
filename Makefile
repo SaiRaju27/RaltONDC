@@ -197,15 +197,30 @@ shell-db: check-engine ## Open interactive PostgreSQL psql shell
 	@$(COMPOSE_CMD) -f $(DOCKER_COMPOSE_FILE) exec postgres psql -U postgres -d ralt_ondc_db
 
 # ------------------------------------------------------------------------------
-# 6. Quality, Testing & Cleanup
+# 6. Quality, Testing, Scans & CI/CD Gates
 # ------------------------------------------------------------------------------
 
-test: ## Run TypeScript build and typecheck
-	@echo -e "${COLOR_INFO}Typechecking ONDC LSP backend service...${COLOR_RESET}"
-	@cd services/ondc-lsp-service && npm run build
-	@echo -e "${COLOR_SUCCESS}All checks passed!${COLOR_RESET}"
+test: ## Run unit tests across backend and frontend
+	@echo -e "${COLOR_INFO}Running test suites for backend and frontend...${COLOR_RESET}"
+	@npm run test
+	@echo -e "${COLOR_SUCCESS}All test suites passed!${COLOR_RESET}"
 
-lint: test ## Run lint / typecheck
+test-coverage: ## Run full test suites with >= 85% coverage validation
+	@echo -e "${COLOR_INFO}Running code coverage verification (target >= 85%)...${COLOR_RESET}"
+	@npm run test:coverage
+	@echo -e "${COLOR_SUCCESS}Coverage thresholds (>= 85%) satisfied!${COLOR_RESET}"
+
+lint: ## Run lint / typecheck across backend and frontend
+	@echo -e "${COLOR_INFO}Running static analysis and typechecking...${COLOR_RESET}"
+	@npm run lint
+	@echo -e "${COLOR_SUCCESS}Linting clean!${COLOR_RESET}"
+
+scan: ## Run security audit, secret scan, and UI policy check
+	@echo -e "${COLOR_INFO}Running enterprise security scans...${COLOR_RESET}"
+	@bash scripts/security-scan.sh
+
+check-all: lint scan test-coverage ## Run complete quality gate (lint, scans, >= 85% test coverage)
+	@echo -e "${COLOR_SUCCESS}All quality gates passed successfully!${COLOR_RESET}"
 
 clean: check-engine ## Stop containers and remove persistent docker volumes
 	@echo -e "${COLOR_DANGER}Purging all containers, networks, and persistent data volumes...${COLOR_RESET}"

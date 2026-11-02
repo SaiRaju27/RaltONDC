@@ -230,12 +230,12 @@ class OrderManager {
     let rows: OrderRow[] = [];
     if (riderId) {
       rows = await query<OrderRow>(
-        'SELECT * FROM orders WHERE (rider_id = ? OR rider_id = "RALT-RIDER-001" OR rider_id IS NULL) AND status != "Order-delivered" AND status != "Cancelled" ORDER BY created_at DESC',
+        'SELECT * FROM orders WHERE (rider_id = ? OR rider_id = \'RALT-RIDER-001\' OR rider_id IS NULL) AND status != \'Order-delivered\' AND status != \'Cancelled\' ORDER BY created_at DESC',
         [riderId]
       );
     } else {
       rows = await query<OrderRow>(
-        'SELECT * FROM orders WHERE status != "Order-delivered" AND status != "Cancelled" ORDER BY created_at DESC'
+        'SELECT * FROM orders WHERE status != \'Order-delivered\' AND status != \'Cancelled\' ORDER BY created_at DESC'
       );
     }
 
@@ -247,8 +247,17 @@ class OrderManager {
     return results;
   }
 
-  public async getAllOrders(limit: number = 20): Promise<FormattedOrder[]> {
-    const rows = await query<OrderRow>('SELECT * FROM orders ORDER BY created_at DESC LIMIT ?', [limit]);
+  public async getAllOrders(filterOrLimit: number | string = 50): Promise<FormattedOrder[]> {
+    let rows: OrderRow[] = [];
+    if (typeof filterOrLimit === 'string') {
+      rows = await query<OrderRow>(
+        'SELECT * FROM orders WHERE rider_id = ? OR rider_id = \'RALT-RIDER-001\' OR rider_id IS NULL ORDER BY created_at DESC LIMIT 50',
+        [filterOrLimit]
+      );
+    } else {
+      const limit = typeof filterOrLimit === 'number' && filterOrLimit > 0 ? filterOrLimit : 50;
+      rows = await query<OrderRow>('SELECT * FROM orders ORDER BY created_at DESC LIMIT ?', [limit]);
+    }
     const results: FormattedOrder[] = [];
     for (const r of rows) {
       const rider = r.rider_id ? await riderManager.getRider(r.rider_id) : undefined;

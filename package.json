@@ -10,7 +10,11 @@
   ],
   "scripts": {
     "build": "pnpm --filter '@ralt-ondc/*' build || npm --prefix services/ondc-lsp-service run build",
-    "test": "npm --prefix services/ondc-lsp-service run build",
+    "test": "npm --prefix services/ondc-lsp-service test && npm --prefix apps/delivery-app test",
+    "test:coverage": "npm --prefix services/ondc-lsp-service run test:coverage && npm --prefix apps/delivery-app run test:coverage",
+    "lint": "npm --prefix services/ondc-lsp-service run lint && npm --prefix apps/delivery-app run lint",
+    "scan": "bash scripts/security-scan.sh",
+    "check:all": "npm run lint && npm run scan && npm run test:coverage",
     "mobile:web": "npm --prefix apps/delivery-app run web",
     "mobile:android": "npm --prefix apps/delivery-app run android",
     "mobile:ios": "npm --prefix apps/delivery-app run ios",
