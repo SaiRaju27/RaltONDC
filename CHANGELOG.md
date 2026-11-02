@@ -6,6 +6,12 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 
+## [1.5.1](https://github.com/SaiRaju27/RaltONDC/compare/v1.5.0...v1.5.1) (2026-11-02)
+
+### Performance Improvements
+
+* **auth:** auto-fill instant OTP 1234 in dev, add 1-tap mobile fill pill, and enable 4-digit auto-verify ([86b84cb](https://github.com/SaiRaju27/RaltONDC/commit/86b84cb26507a998f25f8afce57fbdfb3efaad91))
+
 ## [1.5.0](https://github.com/SaiRaju27/RaltONDC/compare/v1.4.1...v1.5.0) (2026-11-02)
 
 ### Features
