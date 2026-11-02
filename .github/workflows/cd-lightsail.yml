@@ -1,16 +1,6 @@
 name: CD - Enterprise Lightsail Production Deployment
 
 on:
-  push:
-    branches:
-      - main
-    paths:
-      - 'services/**'
-      - 'apps/**'
-      - 'packages/**'
-      - 'deploy/**'
-      - 'docker-compose.yml'
-      - '.github/workflows/cd-lightsail.yml'
   workflow_dispatch:
     inputs:
       skip_tests:

@@ -26,7 +26,7 @@
     "@babel/core": "^7.20.0",
     "@expo/ngrok": "^4.1.0",
     "@types/react": "~19.3.0",
-    "typescript": "~6.0.3"
+    "typescript": "^5.4.5"
   },
   "private": true
 }
