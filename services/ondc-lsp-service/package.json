@@ -1,6 +1,6 @@
 {
   "name": "@ralt-ondc/lsp-service",
-  "version": "1.8.1",
+  "version": "1.8.2",
   "description": "RALT ONDC Logistics Service Provider (LSP) Beckn Adapter & Dispatch Backend",
   "main": "dist/server.js",
   "scripts": {
