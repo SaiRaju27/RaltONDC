@@ -1,6 +1,9 @@
 import { Platform } from 'react-native';
 import Constants from 'expo-constants';
 
+export const PRODUCTION_API_URL = 'https://ralt.in';
+export const PRODUCTION_WS_URL = 'wss://ralt.in/ws';
+
 export interface AppEnvironmentConfig {
   apiUrl: string;
   wsUrl: string;
@@ -112,6 +115,30 @@ export function resolveWsUrl(riderId: string = 'RALT-RIDER-001', customApiUrl?: 
     const host = apiUrl.replace(/^http:\/\//, '').replace(/\/.*$/, '');
     return `ws://${host}/ws?riderId=${cleanId}`;
   }
+}
+
+/**
+ * Returns the production base API URL
+ */
+export function getProductionApiUrl(): string {
+  return PRODUCTION_API_URL;
+}
+
+/**
+ * Returns the production WebSocket URL
+ */
+export function getProductionWsUrl(): string {
+  return PRODUCTION_WS_URL;
+}
+
+/**
+ * Returns local development loopback URL based on OS / platform
+ */
+export function getLocalApiUrl(): string {
+  if (Platform.OS === 'android') {
+    return 'http://10.0.2.2:5001';
+  }
+  return 'http://localhost:5001';
 }
 
 /**

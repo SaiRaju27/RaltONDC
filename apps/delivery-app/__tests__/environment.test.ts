@@ -5,6 +5,11 @@ import {
   resolveApiUrl,
   resolveWsUrl,
   getAppConfig,
+  getProductionApiUrl,
+  getProductionWsUrl,
+  getLocalApiUrl,
+  PRODUCTION_API_URL,
+  PRODUCTION_WS_URL,
 } from '../src/utils/environment';
 
 describe('Environment Configuration Suite', () => {
@@ -141,5 +146,18 @@ describe('Environment Configuration Suite', () => {
     expect(config.apiUrl).toBe('https://ralt.in');
     expect(config.wsUrl).toContain('wss://ralt.in/ws?riderId=');
     expect(config.environmentName).toBe('production');
+  });
+
+  it('provides production and local URL constants and helper functions', () => {
+    expect(PRODUCTION_API_URL).toBe('https://ralt.in');
+    expect(PRODUCTION_WS_URL).toBe('wss://ralt.in/ws');
+    expect(getProductionApiUrl()).toBe('https://ralt.in');
+    expect(getProductionWsUrl()).toBe('wss://ralt.in/ws');
+
+    (Platform as any).OS = 'android';
+    expect(getLocalApiUrl()).toBe('http://10.0.2.2:5001');
+
+    (Platform as any).OS = 'ios';
+    expect(getLocalApiUrl()).toBe('http://localhost:5001');
   });
 });

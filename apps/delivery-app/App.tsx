@@ -20,7 +20,15 @@ import {
   useWindowDimensions,
 } from 'react-native';
 import Constants from 'expo-constants';
-import { resolveApiUrl, resolveWsUrl, getAppConfig, isProductionEnvironment } from './src/utils/environment';
+import {
+  resolveApiUrl,
+  resolveWsUrl,
+  getAppConfig,
+  isProductionEnvironment,
+  PRODUCTION_API_URL,
+  PRODUCTION_WS_URL,
+  getLocalApiUrl,
+} from './src/utils/environment';
 import { OnboardingFlow } from './OnboardingFlow';
 import { DeliveryDashboard } from './DeliveryDashboard';
 
@@ -29,7 +37,44 @@ const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
 // =============================================================================
 // API & SERVICE CONFIGURATION (Dynamic: Local vs Production APK / iOS)
 // =============================================================================
-const API_URL = resolveApiUrl();
+const DEMO_PHONE = '9876543210';
+const DEMO_OTP = '1234';
+
+const DEMO_RIDER_FALLBACK: RiderProfile = {
+  id: 'RALT-RIDER-001',
+  name: 'Sai Raju',
+  phone: '+91 9876543210',
+  city: 'Hyderabad',
+  workArea: 'Hitec City, Hyderabad',
+  address: 'Hitec City, Hyderabad',
+  father_name: 'Ram Raju',
+  dob: '1998-05-15',
+  gender: 'Male',
+  emergency_name: 'Emergency Contact',
+  emergency_phone: '+91 9876500000',
+  emergency_relation: 'Brother',
+  vehicle_type: 'motorcycle',
+  vehicle_number: 'TS 09 EA 1234',
+  dl_number: 'TS0920190012345',
+  dl_expiry: '2030-12-31',
+  insurance_number: 'POL-9921',
+  aadhaar_number: '548912349876',
+  pan_number: 'ABCDE1234F',
+  bank_name: 'HDFC Bank',
+  bank_account_number: '987654321012',
+  bank_ifsc: 'HDFC0001234',
+  account_holder_name: 'Sai Raju',
+  upi_id: 'sairaju@okhdfcbank',
+  rating: 5.0,
+  total_orders: 24,
+  total_earnings: 3420,
+  is_online: 1,
+  kyc_step: 5,
+  onboarding_completed: 1,
+};
+
+const DEFAULT_API_URL = resolveApiUrl();
+const API_URL = DEFAULT_API_URL;
 const AIRBRICK_API_PRIMARY = 'https://abapi.airbrick.com';
 const MAPBOX_ACCESS_TOKEN = (typeof globalThis !== 'undefined' && (globalThis as any).process?.env?.EXPO_PUBLIC_MAPBOX_TOKEN) || '';
 
@@ -475,6 +520,61 @@ export default function App() {
 
   // Main Dashboard State
   const [isAuthenticated, setIsAuthenticated] = useState<boolean>(false);
+  const [activeApiUrl, setActiveApiUrl] = useState<string>(() => {
+    if (typeof process !== 'undefined' && process.env?.EXPO_PUBLIC_API_URL) {
+      return process.env.EXPO_PUBLIC_API_URL.replace(/\/$/, '');
+    }
+    if (typeof process !== 'undefined' && process.env?.EXPO_PUBLIC_USE_LOCAL === 'true') {
+      return resolveApiUrl();
+    }
+    return PRODUCTION_API_URL;
+  });
+  const [authToken, setAuthToken] = useState<string>('');
+
+  // Enterprise Safe API Fetch with timeout, JWT token attachment, and fallback
+  const apiFetch = async (
+    endpoint: string,
+    options: RequestInit = {},
+    timeoutMs: number = 4000
+  ): Promise<{ ok: boolean; status: number; data: any; error?: string }> => {
+    const url = `${activeApiUrl}${endpoint.startsWith('/') ? endpoint : `/${endpoint}`}`;
+    const headers: Record<string, string> = {
+      'Content-Type': 'application/json',
+      Accept: 'application/json',
+      ...((options.headers as Record<string, string>) || {}),
+    };
+    if (authToken && !headers['Authorization']) {
+      headers['Authorization'] = `Bearer ${authToken}`;
+    }
+
+    try {
+      const controller = new AbortController();
+      const timer = setTimeout(() => controller.abort(), timeoutMs);
+      const res = await fetch(url, { ...options, headers, signal: controller.signal });
+      clearTimeout(timer);
+      const data = await res.json().catch(() => null);
+      return { ok: res.ok, status: res.status, data };
+    } catch (err: any) {
+      if (activeApiUrl !== PRODUCTION_API_URL) {
+        try {
+          const fallbackUrl = `${PRODUCTION_API_URL}${endpoint.startsWith('/') ? endpoint : `/${endpoint}`}`;
+          const controller = new AbortController();
+          const timer = setTimeout(() => controller.abort(), timeoutMs);
+          const res = await fetch(fallbackUrl, { ...options, headers, signal: controller.signal });
+          clearTimeout(timer);
+          const data = await res.json().catch(() => null);
+          if (res.ok) {
+            setActiveApiUrl(PRODUCTION_API_URL);
+          }
+          return { ok: res.ok, status: res.status, data };
+        } catch (fbErr: any) {
+          return { ok: false, status: 0, data: null, error: fbErr.message || 'Network request failed' };
+        }
+      }
+      return { ok: false, status: 0, data: null, error: err.message || 'Network request failed' };
+    }
+  };
+
   const [activeTab, setActiveTab] = useState<'radar' | 'orders' | 'wallet' | 'profile' | 'pocket' | 'trips'>('radar');
   const [isOnline, setIsOnline] = useState<boolean>(true);
   const [rider, setRider] = useState<RiderProfile>({
@@ -629,7 +729,7 @@ export default function App() {
 
     const connectWs = () => {
       try {
-        const wsUrl = resolveWsUrl(rider.id || 'rider-ralt-001', API_URL);
+        const wsUrl = resolveWsUrl(rider.id || 'rider-ralt-001', activeApiUrl);
         const ws = new WebSocket(wsUrl);
         wsRef.current = ws;
 
@@ -683,7 +783,7 @@ export default function App() {
     return () => {
       if (wsRef.current) wsRef.current.close();
     };
-  }, [isAuthenticated, rider.id, currentOrder]);
+  }, [isAuthenticated, rider.id, currentOrder, activeApiUrl]);
 
   // Real-time HTTP Polling Fallback (Polls active ONDC orders every 3s)
   useEffect(() => {
@@ -692,7 +792,9 @@ export default function App() {
     const pollActiveOrders = async () => {
       try {
         const targetRiderId = rider.id || 'rider-ralt-001';
-        const res = await fetch(`${API_URL}/api/rider/orders?riderId=${encodeURIComponent(targetRiderId)}`);
+        const headers: Record<string, string> = {};
+        if (authToken) headers['Authorization'] = `Bearer ${authToken}`;
+        const res = await fetch(`${activeApiUrl}/api/rider/orders?riderId=${encodeURIComponent(targetRiderId)}`, { headers });
         if (res.ok) {
           const json = await res.json();
           if (Array.isArray(json.orders) && json.orders.length > 0) {
@@ -719,13 +821,16 @@ export default function App() {
     pollActiveOrders();
     const interval = setInterval(pollActiveOrders, 3000);
     return () => clearInterval(interval);
-  }, [isAuthenticated, currentOrder, incomingOrderAlert, rider.id]);
+  }, [isAuthenticated, currentOrder, incomingOrderAlert, rider.id, activeApiUrl, authToken]);
 
 
   // Fetch Live Metrics
-  const fetchMetrics = async (phone: string) => {
+  const fetchMetrics = async (phone: string, tokenOverride?: string) => {
     try {
-      const res = await fetch(`${API_URL}/api/rider/metrics?phone=${encodeURIComponent(phone)}`);
+      const token = tokenOverride || authToken;
+      const headers: Record<string, string> = {};
+      if (token) headers['Authorization'] = `Bearer ${token}`;
+      const res = await fetch(`${activeApiUrl}/api/rider/metrics?phone=${encodeURIComponent(phone)}`, { headers });
       const data = await res.json();
       if (data && data.success && data.metrics) {
         setLiveMetrics(data.metrics);
@@ -734,9 +839,12 @@ export default function App() {
   };
 
   // Fetch Real Completed Trips History from Database
-  const fetchTripsHistory = async (phone: string) => {
+  const fetchTripsHistory = async (phone: string, tokenOverride?: string) => {
     try {
-      const res = await fetch(`${API_URL}/api/rider/all-orders?limit=30`);
+      const token = tokenOverride || authToken;
+      const headers: Record<string, string> = {};
+      if (token) headers['Authorization'] = `Bearer ${token}`;
+      const res = await fetch(`${activeApiUrl}/api/rider/all-orders?limit=30`, { headers });
       if (res.ok) {
         const json = await res.json();
         if (Array.isArray(json.orders)) {
@@ -851,7 +959,15 @@ export default function App() {
     }
   };
 
-  // Send OTP (Real High-Speed Carrier Route)
+  // 1-Tap Demo Rider Instant Login
+  const handleDemoRiderInstantLogin = async () => {
+    setAuthPhone(DEMO_PHONE);
+    setOtpDigits(['1', '2', '3', '4', '', '']);
+    setOtpSent(true);
+    await triggerVerifyCode(DEMO_OTP, DEMO_PHONE);
+  };
+
+  // Send OTP (Real High-Speed Carrier Route with Instant Demo Bypass)
   const handleSendOtp = async () => {
     const cleanPhone = authPhone.replace(/[^0-9]/g, '').slice(-10);
     if (cleanPhone.length !== 10) {
@@ -859,30 +975,36 @@ export default function App() {
       return;
     }
     setAuthError('');
+
+    // Instant bypass for Demo Rider: No SMS carrier delay, never hang
+    if (cleanPhone === DEMO_PHONE || cleanPhone === '9999999999') {
+      setIsSendingOtp(false);
+      setTimerCount(45);
+      setOtpDigits(['1', '2', '3', '4', '', '']);
+      setOtpSent(true);
+      return;
+    }
+
     setIsSendingOtp(true);
 
     try {
-      let otpSent = false;
-      // 1. Backend proxy carrier route (%2B91)
-      try {
-        const proxyRes = await fetch(`${API_URL}/api/auth/send-otp`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ phone: cleanPhone }),
-        });
-        const proxyData = await proxyRes.json();
-        if (proxyRes.ok && (proxyData.type === 'success' || proxyData.success === true)) {
-          otpSent = true;
-        }
-      } catch (e) {}
+      let sent = false;
+      const res = await apiFetch('/api/auth/send-otp', {
+        method: 'POST',
+        body: JSON.stringify({ phone: cleanPhone }),
+      }, 4000);
 
-      // 2. Direct Airbrick fallback
-      if (!otpSent) {
+      if (res.ok && (res.data?.type === 'success' || res.data?.success === true)) {
+        sent = true;
+      }
+
+      // Airbrick direct fallback
+      if (!sent) {
         try {
           const directRes = await fetch(`${AIRBRICK_API_PRIMARY}/api/v1/otp/%2B91${cleanPhone}`);
           const directData = await directRes.json();
           if (directData && (directData.type === 'success' || directData.success === true)) {
-            otpSent = true;
+            sent = true;
           }
         } catch (e) {}
       }
@@ -901,11 +1023,11 @@ export default function App() {
       setOtpSent(true);
       setTimerCount(45);
       setOtpDigits(['1', '2', '3', '4', '', '']);
-      Alert.alert('Notice', 'OTP dispatched via SMS (Demo code: 1234)');
+      Alert.alert('Notice', 'OTP dispatched via carrier (Demo code: 1234)');
     }
   };
 
-  // Verify OTP against Backend Database
+  // Verify OTP against Backend Database with Resilient Offline Fallback
   const triggerVerifyCode = async (code: string, phone: string) => {
     const cleanPhone = phone.replace(/[^0-9]/g, '').slice(-10);
     const cleanCode = code.trim();
@@ -915,34 +1037,57 @@ export default function App() {
     }
 
     setIsVerifyingOtp(true);
-    try {
-      const res = await fetch(`${API_URL}/api/auth/verify-otp`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ phone: cleanPhone, code: cleanCode }),
-      });
-      const data = await res.json();
-      setIsVerifyingOtp(false);
+    setIsAuthenticating(true);
 
-      if (!res.ok || !data.success) {
-        Alert.alert('Verification Failed', data.error || 'Invalid OTP code. Please enter 1234 or your SMS code.');
+    try {
+      const res = await apiFetch('/api/auth/verify-otp', {
+        method: 'POST',
+        body: JSON.stringify({ phone: cleanPhone, code: cleanCode }),
+      }, 4000);
+
+      setIsVerifyingOtp(false);
+      setIsAuthenticating(false);
+
+      if (res.ok && res.data && res.data.success) {
+        const data = res.data;
+        if (data.token) {
+          setAuthToken(data.token);
+        }
+        if (data.isRegistered && data.rider && (data.rider.onboarding_completed === 1 || data.onboardingCompleted)) {
+          setRider(data.rider);
+          setIsAuthenticated(true);
+          fetchMetrics(cleanPhone, data.token);
+          fetchTripsHistory(cleanPhone, data.token);
+          setCurrentScreen('main');
+          return;
+        } else {
+          setOnboardStep(1);
+          setCurrentScreen('onboarding');
+          return;
+        }
+      }
+
+      // Offline / Network Failure Fallback for Demo Rider
+      if (cleanPhone === DEMO_PHONE && (cleanCode === '1234' || cleanCode === '123456')) {
+        setRider(DEMO_RIDER_FALLBACK);
+        setIsAuthenticated(true);
+        setCurrentScreen('main');
         return;
       }
 
-      // Check if user already exists and completed onboarding
-      if (data.isRegistered && data.rider && (data.rider.onboarding_completed === 1 || data.onboardingCompleted)) {
-        setRider(data.rider);
-        setIsAuthenticated(true);
-        fetchMetrics(cleanPhone);
-        fetchTripsHistory(cleanPhone);
-        setCurrentScreen('main');
-      } else {
-        // Unregistered partner: guide cleanly into onboarding flow
-        setOnboardStep(1);
-        setCurrentScreen('onboarding');
-      }
+      const errMsg = res.data?.error || res.data?.message || 'Invalid OTP code. Please enter 1234 or your SMS code.';
+      Alert.alert('Verification Failed', errMsg);
     } catch (e) {
       setIsVerifyingOtp(false);
+      setIsAuthenticating(false);
+
+      if (cleanPhone === DEMO_PHONE && (cleanCode === '1234' || cleanCode === '123456')) {
+        setRider(DEMO_RIDER_FALLBACK);
+        setIsAuthenticated(true);
+        setCurrentScreen('main');
+        return;
+      }
+
       Alert.alert('Network Error', 'Could not verify OTP. Please try again.');
     }
   };
@@ -956,7 +1101,7 @@ export default function App() {
     setIsVerifyingDigio(true);
     try {
       const cleanPhone = authPhone.replace(/[^0-9]/g, '').slice(-10);
-      await fetch(`${API_URL}/api/kyc/request/${cleanPhone}`);
+      await fetch(`${activeApiUrl}/api/kyc/request/${cleanPhone}`);
       setIsVerifyingDigio(false);
       setAadhaarOtpModal(true);
     } catch (e) {
@@ -1026,9 +1171,11 @@ export default function App() {
     };
 
     try {
-      await fetch(`${API_URL}/api/rider/register`, {
+      const headers: Record<string, string> = { 'Content-Type': 'application/json' };
+      if (authToken) headers['Authorization'] = `Bearer ${authToken}`;
+      await fetch(`${activeApiUrl}/api/rider/register`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers,
         body: JSON.stringify(newProfile),
       });
     } catch (e) {}
@@ -1094,9 +1241,11 @@ export default function App() {
 
     // Call backend API to mark delivered and credit ₹50 in DB
     try {
-      await fetch(`${API_URL}/api/rider/orders/${encodeURIComponent(currentOrder.orderId)}/verify-otp`, {
+      const headers: Record<string, string> = { 'Content-Type': 'application/json' };
+      if (authToken) headers['Authorization'] = `Bearer ${authToken}`;
+      await fetch(`${activeApiUrl}/api/rider/orders/${encodeURIComponent(currentOrder.orderId)}/verify-otp`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers,
         body: JSON.stringify({ otp: effectiveOtp }),
       });
     } catch (e) {
@@ -1131,9 +1280,11 @@ export default function App() {
   // Test Simulation Trigger (To test ONDC flow on-demand)
   const triggerTestOndcOrder = async () => {
     try {
-      const res = await fetch(`${API_URL}/api/rider/simulate-order`, {
+      const headers: Record<string, string> = { 'Content-Type': 'application/json' };
+      if (authToken) headers['Authorization'] = `Bearer ${authToken}`;
+      const res = await fetch(`${activeApiUrl}/api/rider/simulate-order`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers,
         body: JSON.stringify({
           restaurantName: 'Bawarchi Biryani House',
           restaurantAddress: 'Plot 42, Main Road, Gachibowli, Hyderabad',
@@ -1560,6 +1711,45 @@ export default function App() {
           </View>
         </View>
 
+        {/* Environment Selector: Cloud (ralt.in) vs Localhost */}
+        <View style={loginStyles.serverPillRow}>
+          <TouchableOpacity
+            style={[
+              loginStyles.serverPill,
+              activeApiUrl === PRODUCTION_API_URL && loginStyles.serverPillActive,
+            ]}
+            onPress={() => setActiveApiUrl(PRODUCTION_API_URL)}
+            activeOpacity={0.7}
+          >
+            <Text
+              style={[
+                loginStyles.serverPillText,
+                activeApiUrl === PRODUCTION_API_URL && loginStyles.serverPillTextActive,
+              ]}
+            >
+              🟢 Cloud: ralt.in
+            </Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={[
+              loginStyles.serverPill,
+              activeApiUrl !== PRODUCTION_API_URL && loginStyles.serverPillActive,
+            ]}
+            onPress={() => setActiveApiUrl(getLocalApiUrl())}
+            activeOpacity={0.7}
+          >
+            <Text
+              style={[
+                loginStyles.serverPillText,
+                activeApiUrl !== PRODUCTION_API_URL && loginStyles.serverPillTextActive,
+              ]}
+            >
+              💻 Local: {Platform.OS === 'android' ? '10.0.2.2:5001' : 'localhost:5001'}
+            </Text>
+          </TouchableOpacity>
+        </View>
+
         {!otpSent ? (
           // ============================================================
           // PHASE 1: ENTER MOBILE NUMBER & SUBMIT
@@ -1610,17 +1800,33 @@ export default function App() {
                 </View>
               </View>
 
-              {/* Quick Fill Demo Rider Pill */}
-              <TouchableOpacity
-                style={loginStyles.quickDemoPill}
-                onPress={() => setAuthPhone('9876543210')}
-                activeOpacity={0.8}
-              >
-                <Text style={loginStyles.quickDemoText}>
-                  ⚡ Quick Demo Rider:{' '}
-                  <Text style={{ fontWeight: '800', color: '#042f1e' }}>9876543210</Text>
-                </Text>
-              </TouchableOpacity>
+              {/* Quick Fill Demo Rider Pill & Instant Login */}
+              <View style={{ flexDirection: 'row', gap: 8, alignItems: 'center', flexWrap: 'wrap', marginTop: 10 }}>
+                <TouchableOpacity
+                  style={loginStyles.quickDemoPill}
+                  onPress={() => {
+                    setAuthPhone(DEMO_PHONE);
+                    setOtpDigits(['1', '2', '3', '4', '', '']);
+                    setOtpSent(true);
+                    setTimerCount(45);
+                  }}
+                  activeOpacity={0.8}
+                >
+                  <Text style={loginStyles.quickDemoText}>
+                    ⚡ Quick Demo: <Text style={{ fontWeight: '800', color: '#042f1e' }}>{DEMO_PHONE}</Text>
+                  </Text>
+                </TouchableOpacity>
+
+                <TouchableOpacity
+                  style={loginStyles.instantLoginPill}
+                  onPress={handleDemoRiderInstantLogin}
+                  activeOpacity={0.8}
+                >
+                  <Text style={loginStyles.instantLoginPillText}>
+                    🚀 1-Tap Demo Sign In
+                  </Text>
+                </TouchableOpacity>
+              </View>
             </View>
 
             {/* Security Note */}
@@ -1820,19 +2026,19 @@ export default function App() {
             <TouchableOpacity
               style={[
                 loginStyles.primarySubmitBtn,
-                isAuthenticating && { backgroundColor: '#065f46' },
+                (isVerifyingOtp || isAuthenticating) && { backgroundColor: '#065f46' },
               ]}
               onPress={() => {
                 const code = otpDigits.join('').trim() || '1234';
                 triggerVerifyCode(code, authPhone);
               }}
-              disabled={isAuthenticating}
+              disabled={isVerifyingOtp || isAuthenticating}
               activeOpacity={0.9}
             >
-              {isAuthenticating ? (
+              {isVerifyingOtp || isAuthenticating ? (
                 <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
                   <ActivityIndicator color="#ffffff" size="small" />
-                  <Text style={loginStyles.primarySubmitBtnText}>Authenticating Fleet...</Text>
+                  <Text style={loginStyles.primarySubmitBtnText}>Verifying & Continuing...</Text>
                 </View>
               ) : (
                 <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
@@ -2190,7 +2396,7 @@ export default function App() {
           };
 
           try {
-            const regRes = await fetch(`${API_URL}/api/rider/register`, {
+            const regRes = await fetch(`${activeApiUrl}/api/rider/register`, {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
               body: JSON.stringify(newProfile),
@@ -2238,7 +2444,7 @@ export default function App() {
       currentOrder={currentOrder}
       setCurrentOrder={setCurrentOrder}
       onLogout={handleLogout}
-      apiUrl={API_URL}
+      apiUrl={activeApiUrl}
     />
   );
 }
@@ -4568,12 +4774,53 @@ const loginStyles = StyleSheet.create({
     paddingHorizontal: 10,
     paddingVertical: 5,
     borderRadius: 8,
-    marginTop: 10,
   },
   quickDemoText: {
     fontSize: 11,
     color: '#15803d',
     fontWeight: '600',
+  },
+  instantLoginPill: {
+    alignSelf: 'flex-start',
+    backgroundColor: '#042f1e',
+    borderWidth: 1,
+    borderColor: '#00e676',
+    paddingHorizontal: 12,
+    paddingVertical: 5,
+    borderRadius: 8,
+  },
+  instantLoginPillText: {
+    fontSize: 11,
+    color: '#00e676',
+    fontWeight: '800',
+  },
+  serverPillRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    marginVertical: 10,
+    flexWrap: 'wrap',
+  },
+  serverPill: {
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 8,
+    backgroundColor: '#f1f5f9',
+    borderWidth: 1,
+    borderColor: '#cbd5e1',
+  },
+  serverPillActive: {
+    backgroundColor: '#042f1e',
+    borderColor: '#00e676',
+  },
+  serverPillText: {
+    fontSize: 11,
+    fontWeight: '600',
+    color: '#475569',
+  },
+  serverPillTextActive: {
+    color: '#00e676',
+    fontWeight: '700',
   },
   primarySubmitBtn: {
     width: '100%',
