@@ -20,6 +20,8 @@
     "release": "semantic-release",
     "release:dry": "node scripts/release-preview.js",
     "version:sync": "node scripts/sync-versions.js",
+    "push": "git push origin main",
+    "push:codecommit": "git push codecommit main",
     "clean": "rm -rf node_modules apps/*/node_modules services/*/node_modules services/*/dist"
   },
   "devDependencies": {

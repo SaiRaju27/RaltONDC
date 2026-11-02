@@ -1,0 +1,46 @@
+version: 0.2
+
+env:
+  variables:
+    NODE_ENV: "production"
+    AWS_DEFAULT_REGION: "ap-south-1"
+
+phases:
+  install:
+    runtime-versions:
+      nodejs: 22
+    commands:
+      - echo "=== Step 1: Installing monorepo dependencies ==="
+      - npm ci || npm install
+      - (cd services/ondc-lsp-service && npm ci)
+      - (cd apps/delivery-app && npm ci)
+
+  pre_build:
+    commands:
+      - echo "=== Step 2: Quality Gates & TypeScript Validation ==="
+      - echo "Checking backend TypeScript compilation..."
+      - (cd services/ondc-lsp-service && npm run build)
+      - echo "Checking mobile delivery app TypeScript validation..."
+      - (cd apps/delivery-app && npx tsc --noEmit)
+      - echo "Quality gate validation passed."
+
+  build:
+    commands:
+      - echo "=== Step 3: Container Image Build ==="
+      - docker build -t ralt-delivery-partner:latest -f services/ondc-lsp-service/Dockerfile services/ondc-lsp-service
+      - docker tag ralt-delivery-partner:latest ralt-delivery-partner:$CODEBUILD_RESOLVED_SOURCE_VERSION || true
+      - echo "Container build finished successfully on $(date)"
+
+  post_build:
+    commands:
+      - echo "=== Step 4: Post-Build & Deployment Readiness ==="
+      - echo "CodeCommit CI/CD pipeline stage completed for commit: $CODEBUILD_RESOLVED_SOURCE_VERSION"
+
+artifacts:
+  files:
+    - 'docker-compose.yml'
+    - 'deploy/**/*'
+    - 'services/ondc-lsp-service/dist/**/*'
+    - 'services/ondc-lsp-service/package.json'
+    - 'services/ondc-lsp-service/package-lock.json'
+    - 'services/ondc-lsp-service/Dockerfile'
