@@ -1,0 +1,39 @@
+meta {
+  name: ONDC Search
+  type: http
+  seq: 9
+}
+
+post {
+  url: {{baseUrl}}/ondc/search
+  body: json
+  auth: none
+}
+
+body:json {
+  {
+    "context": {
+      "domain": "ONDC:LOG10",
+      "country": "IND",
+      "city": "std:040",
+      "action": "search",
+      "core_version": "1.2.0",
+      "bap_id": "buyer-app.ondc.org",
+      "bap_uri": "https://buyer-app.ondc.org/protocol/v1",
+      "transaction_id": "tx-bruno-test",
+      "message_id": "msg-bruno-test",
+      "timestamp": "2026-11-02T12:00:00.000Z",
+      "ttl": "PT30S"
+    },
+    "message": {
+      "intent": {
+        "category": { "id": "Immediate Delivery" },
+        "fulfillment": {
+          "type": "Delivery",
+          "start": { "location": { "gps": "17.4399,78.3680" } },
+          "end": { "location": { "gps": "17.4589,78.3721" } }
+        }
+      }
+    }
+  }
+}

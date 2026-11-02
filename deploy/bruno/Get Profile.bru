@@ -1,0 +1,11 @@
+meta {
+  name: Get Profile
+  type: http
+  seq: 5
+}
+
+get {
+  url: {{baseUrl}}/api/rider/profile?phone={{phone}}
+  body: none
+  auth: none
+}

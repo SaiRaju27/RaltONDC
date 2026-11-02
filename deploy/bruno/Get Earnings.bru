@@ -1,0 +1,11 @@
+meta {
+  name: Get Earnings
+  type: http
+  seq: 8
+}
+
+get {
+  url: {{baseUrl}}/api/rider/earnings?riderId={{riderId}}
+  body: none
+  auth: none
+}

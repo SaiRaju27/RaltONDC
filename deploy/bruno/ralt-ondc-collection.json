@@ -1,0 +1,331 @@
+{
+  "info": {
+    "_postman_id": "ralt-ondc-logistics-api",
+    "name": "RALT ONDC Logistics API (Production)",
+    "description": "Production Bruno / Postman collection for RALT ONDC Logistics Provider (BPP). Includes System Health, Partner Onboarding, Real-time Operations, Simulation, and ONDC BPP Protocol endpoints.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "https://ralt.in",
+      "type": "string"
+    },
+    {
+      "key": "token",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "riderId",
+      "value": "RALT-RIDER-001",
+      "type": "string"
+    },
+    {
+      "key": "phone",
+      "value": "9876543210",
+      "type": "string"
+    }
+  ],
+  "item": [
+    {
+      "name": "1. System & Health",
+      "item": [
+        {
+          "name": "Health Check (BPP Liveness)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/health",
+              "host": ["{{baseUrl}}"],
+              "path": ["health"]
+            },
+            "description": "Checks server status, uptime, subscriber ID, and active database engine."
+          }
+        },
+        {
+          "name": "Readiness Probe (Postgres + Redis + RabbitMQ)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/ready",
+              "host": ["{{baseUrl}}"],
+              "path": ["ready"]
+            },
+            "description": "Checks readiness of all backing services: PostgreSQL, Redis, RabbitMQ, and ONDC cryptographic keypair."
+          }
+        },
+        {
+          "name": "Prometheus Metrics",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/metrics",
+              "host": ["{{baseUrl}}"],
+              "path": ["metrics"]
+            },
+            "description": "Scrapes Prometheus metrics for HTTP traffic, latency, and memory utilization."
+          }
+        }
+      ]
+    },
+    {
+      "name": "2. Authentication & Onboarding",
+      "item": [
+        {
+          "name": "Send OTP",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"phone\": \"{{phone}}\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/auth/send-otp",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "auth", "send-otp"]
+            },
+            "description": "Triggers SMS dispatch via Airbrick gateway with built-in instant test fallback (OTP: 1234)."
+          }
+        },
+        {
+          "name": "Verify OTP & Generate JWT",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"phone\": \"{{phone}}\",\n  \"code\": \"1234\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/auth/verify-otp",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "auth", "verify-otp"]
+            },
+            "description": "Verifies OTP, returns signed JWT bearer token and rider account state."
+          }
+        },
+        {
+          "name": "Direct Login",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"phone\": \"{{phone}}\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/auth/login",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "auth", "login"]
+            },
+            "description": "Direct login check for registered delivery partner."
+          }
+        },
+        {
+          "name": "Verify Bank Account (Penny Drop)",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"accountNumber\": \"987654321012\",\n  \"ifsc\": \"HDFC0001234\",\n  \"accountHolderName\": \"Sai Raju\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/rider/verify-bank",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "rider", "verify-bank"]
+            },
+            "description": "Simulates NPCI / RazorpayX ₹1 penny-drop validation with instant branch name resolution."
+          }
+        }
+      ]
+    },
+    {
+      "name": "3. Delivery Partner Operations",
+      "item": [
+        {
+          "name": "Get Partner Profile",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/rider/profile?phone={{phone}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "rider", "profile"],
+              "query": [
+                { "key": "phone", "value": "{{phone}}" }
+              ]
+            },
+            "description": "Fetches verified partner profile, KYC documents, and current order status."
+          }
+        },
+        {
+          "name": "Toggle Duty Status (Online / Offline)",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"riderId\": \"{{riderId}}\",\n  \"isOnline\": 1\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/rider/status",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "rider", "status"]
+            },
+            "description": "Toggles rider between online and offline in the dispatch engine."
+          }
+        },
+        {
+          "name": "Update GPS Location (PostGIS Spatial)",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"riderId\": \"{{riderId}}\",\n  \"lat\": 17.4375,\n  \"lng\": 78.3687,\n  \"heading\": 90,\n  \"speed\": 25\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/rider/location",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "rider", "location"]
+            },
+            "description": "Updates rider's live latitude and longitude, updates PostGIS geometry column, and broadcasts on_track if rider has an active order."
+          }
+        },
+        {
+          "name": "Get Active Orders",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/rider/orders?riderId={{riderId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "rider", "orders"],
+              "query": [
+                { "key": "riderId", "value": "{{riderId}}" }
+              ]
+            },
+            "description": "Returns current active order assigned to rider."
+          }
+        },
+        {
+          "name": "Get Earnings & Settlement History",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/rider/earnings?riderId={{riderId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "rider", "earnings"],
+              "query": [
+                { "key": "riderId", "value": "{{riderId}}" }
+              ]
+            },
+            "description": "Calculates total earnings, delivered trip count, and detailed ledger entries."
+          }
+        },
+        {
+          "name": "Get In-App Notifications",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/notifications?riderId={{riderId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "notifications"],
+              "query": [
+                { "key": "riderId", "value": "{{riderId}}" }
+              ]
+            },
+            "description": "Retrieves dispatch notifications and payout alerts."
+          }
+        }
+      ]
+    },
+    {
+      "name": "4. Order Simulation & Lifecycle",
+      "item": [
+        {
+          "name": "Simulate Incoming ONDC Order",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"restaurantName\": \"Bawarchi Biryani House\",\n  \"restaurantAddress\": \"Plot 42, Main Road, Gachibowli, Hyderabad\",\n  \"customerName\": \"Arun Kumar\",\n  \"customerPhone\": \"+91 98765 43210\",\n  \"customerAddress\": \"Flat 402, Sai Residency, Kondapur, Hyderabad\",\n  \"deliveryFee\": 65.0\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/rider/simulate-order",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "rider", "simulate-order"]
+            },
+            "description": "Simulates an instant incoming ONDC order assigned to the online partner."
+          }
+        },
+        {
+          "name": "Complete Active Order (Instant OTP Verification)",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"riderId\": \"{{riderId}}\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/rider/complete-current",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "rider", "complete-current"]
+            },
+            "description": "Verifies delivery OTP, marks order as Order-delivered, credits wallet, and records earnings entry."
+          }
+        }
+      ]
+    },
+    {
+      "name": "5. ONDC Logistics Protocol (BPP)",
+      "item": [
+        {
+          "name": "ONDC /search (Protocol Discovery)",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"context\": {\n    \"domain\": \"ONDC:LOG10\",\n    \"country\": \"IND\",\n    \"city\": \"std:040\",\n    \"action\": \"search\",\n    \"core_version\": \"1.2.0\",\n    \"bap_id\": \"buyer-app.ondc.org\",\n    \"bap_uri\": \"https://buyer-app.ondc.org/protocol/v1\",\n    \"transaction_id\": \"tx-sample-001\",\n    \"message_id\": \"msg-sample-001\",\n    \"timestamp\": \"2026-11-02T12:00:00.000Z\",\n    \"ttl\": \"PT30S\"\n  },\n  \"message\": {\n    \"intent\": {\n      \"category\": { \"id\": \"Immediate Delivery\" },\n      \"fulfillment\": {\n        \"type\": \"Delivery\",\n        \"start\": { \"location\": { \"gps\": \"17.4399,78.3680\" } },\n        \"end\": { \"location\": { \"gps\": \"17.4589,78.3721\" } }\n      }\n    }\n  }\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/ondc/search",
+              "host": ["{{baseUrl}}"],
+              "path": ["ondc", "search"]
+            },
+            "description": "ONDC buyer app queries for logistics serviceability. BPP responds with ACK and sends on_search callback."
+          }
+        }
+      ]
+    }
+  ]
+}

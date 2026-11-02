@@ -1,0 +1,19 @@
+meta {
+  name: Simulate Order
+  type: http
+  seq: 6
+}
+
+post {
+  url: {{baseUrl}}/api/rider/simulate-order
+  body: json
+  auth: none
+}
+
+body:json {
+  {
+    "restaurantName": "Bawarchi Biryani House",
+    "customerName": "Arun Kumar",
+    "deliveryFee": 60.0
+  }
+}
