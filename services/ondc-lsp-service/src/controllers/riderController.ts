@@ -580,14 +580,16 @@ export class RiderController {
 
   public static async simulateIncomingOrder(req: Request, res: Response) {
     try {
+      const pGps = req.body?.pickup?.gps || req.body?.pickupGps || { lat: 17.3488, lng: 78.5518 };
+      const dGps = req.body?.drop?.gps || req.body?.dropGps || { lat: 17.3625, lng: 78.5412 };
       const {
-        restaurantName = 'Bawarchi Biryani House',
-        restaurantAddress = 'Plot 42, Main Road, Gachibowli, Hyderabad',
-        customerName = 'Arun Kumar',
+        restaurantName = 'Paradise Food Court - LB Nagar',
+        restaurantAddress = 'Sagar Ring Road, Near LB Nagar Metro Station, Hyderabad - 500074',
+        customerName = 'Sai Praneeth',
         customerPhone = '+91 98765 43210',
-        customerAddress = 'Flat 402, Sai Residency, Kondapur, Hyderabad',
-        items = [{ name: 'Chicken Dum Biryani', quantity: 2 }, { name: 'Thums Up (750ml)', quantity: 1 }],
-        deliveryFee = 50.0
+        customerAddress = 'Flat 304, Sri Sai Enclave, Kothapet Main Road, LB Nagar, Hyderabad - 500035',
+        items = [{ name: 'Hyderabadi Chicken Dum Biryani', quantity: 2 }, { name: 'Mirchi Ka Salan & Raitha', quantity: 1 }],
+        deliveryFee = 65.0
       } = req.body || {};
 
       const order = await orderManager.createOrder({
@@ -599,13 +601,13 @@ export class RiderController {
           name: restaurantName,
           phone: '+91 99887 76655',
           address: restaurantAddress,
-          gps: { lat: 17.4399, lng: 78.3680 }
+          gps: pGps
         },
         drop: {
           name: customerName,
           phone: customerPhone,
           address: customerAddress,
-          gps: { lat: 17.4589, lng: 78.3721 }
+          gps: dGps
         },
         items,
         deliveryFee

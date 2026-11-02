@@ -91,7 +91,7 @@ export class ONDCClient {
                   { code: 'max_liability', value: '2' },
                   { code: 'max_liability_cap', value: '10000' },
                   { code: 'mandatory_arbitration', value: 'false' },
-                  { code: 'court_jurisdiction', value: 'Bengaluru' },
+                  { code: 'court_jurisdiction', value: 'Hyderabad' },
                   { code: 'delay_interest', value: '10' }
                 ]
               }
@@ -209,26 +209,26 @@ export class ONDCClient {
     const inEndAddr = inEndLoc.address || {};
     const inEndContact = inEnd.contact || {};
 
-    const startLocationGps = inStartLoc.gps || '12.974002,77.613458';
-    const startName = inStartAddr.name || inStartContact.name || 'Merchant Store';
-    const startBuilding = inStartAddr.building || inStartAddr.street || 'Shop 1, Ground Floor';
-    const startLocality = inStartAddr.locality || 'Indiranagar';
-    const startCity = inStartAddr.city || 'Bengaluru';
-    const startState = inStartAddr.state || 'Karnataka';
+    const startLocationGps = inStartLoc.gps || '17.3488,78.5518';
+    const startName = inStartAddr.name || inStartContact.name || 'Paradise Food Court - LB Nagar';
+    const startBuilding = inStartAddr.building || inStartAddr.street || 'Sagar Ring Road, Near LB Nagar Metro';
+    const startLocality = inStartAddr.locality || 'LB Nagar';
+    const startCity = inStartAddr.city || 'Hyderabad';
+    const startState = inStartAddr.state || 'Telangana';
     const startCountry = inStartAddr.country || 'IND';
-    const startAreaCode = inStartAddr.area_code || inStartAddr.areaCode || '560038';
-    const startPhone = inStartContact.phone || '9886012345';
+    const startAreaCode = inStartAddr.area_code || inStartAddr.areaCode || '500074';
+    const startPhone = inStartContact.phone || '9988776655';
     const startEmail = inStartContact.email || 'merchant@ralt.in';
 
-    const endLocationGps = inEndLoc.gps || '12.981002,77.625458';
-    const endName = inEndAddr.name || inEndContact.name || 'Customer Delivery Location';
-    const endBuilding = inEndAddr.building || inEndAddr.street || 'Apartment 4B, Green Towers';
-    const endLocality = inEndAddr.locality || 'Indiranagar';
-    const endCity = inEndAddr.city || 'Bengaluru';
-    const endState = inEndAddr.state || 'Karnataka';
+    const endLocationGps = inEndLoc.gps || '17.3625,78.5412';
+    const endName = inEndAddr.name || inEndContact.name || 'Sai Praneeth';
+    const endBuilding = inEndAddr.building || inEndAddr.street || 'Flat 304, Sri Sai Enclave, Kothapet Road';
+    const endLocality = inEndAddr.locality || 'Kothapet';
+    const endCity = inEndAddr.city || 'Hyderabad';
+    const endState = inEndAddr.state || 'Telangana';
     const endCountry = inEndAddr.country || 'IND';
-    const endAreaCode = inEndAddr.area_code || inEndAddr.areaCode || '560038';
-    const endPhone = inEndContact.phone || '9886098765';
+    const endAreaCode = inEndAddr.area_code || inEndAddr.areaCode || '500035';
+    const endPhone = inEndContact.phone || '9876543210';
 
     const payload = {
       context: {
@@ -509,26 +509,26 @@ export class ONDCClient {
     const inEndAddr = inEndLoc.address || {};
     const inEndContact = inEnd.contact || {};
 
-    const startGps = inStartLoc.gps || (params.order?.pickup?.gps ? `${params.order.pickup.gps.lat},${params.order.pickup.gps.lng}` : '12.974002,77.613458');
-    const startName = inStartAddr.name || params.order?.pickup?.name || inStartContact.name || 'Merchant Store';
-    const startBuilding = inStartAddr.building || inStartAddr.street || params.order?.pickup?.address || 'Shop 1, Tech Park';
-    const startLocality = inStartAddr.locality || 'Indiranagar';
-    const startCity = inStartAddr.city || 'Bengaluru';
-    const startState = inStartAddr.state || 'Karnataka';
+    const startGps = inStartLoc.gps || (params.order?.pickup?.gps ? `${params.order.pickup.gps.lat},${params.order.pickup.gps.lng}` : '17.3488,78.5518');
+    const startName = inStartAddr.name || params.order?.pickup?.name || inStartContact.name || 'Paradise Food Court - LB Nagar';
+    const startBuilding = inStartAddr.building || inStartAddr.street || params.order?.pickup?.address || 'Sagar Ring Road, Near LB Nagar Metro';
+    const startLocality = inStartAddr.locality || 'LB Nagar';
+    const startCity = inStartAddr.city || 'Hyderabad';
+    const startState = inStartAddr.state || 'Telangana';
     const startCountry = inStartAddr.country || 'India';
-    const startAreaCode = inStartAddr.area_code || inStartAddr.areaCode || '560038';
-    const startPhone = inStartContact.phone || params.order?.pickup?.phone || '9886012345';
+    const startAreaCode = inStartAddr.area_code || inStartAddr.areaCode || '500074';
+    const startPhone = inStartContact.phone || params.order?.pickup?.phone || '9988776655';
     const startEmail = inStartContact.email || 'merchant@ralt.in';
 
-    const endGps = inEndLoc.gps || (params.order?.drop?.gps ? `${params.order.drop.gps.lat},${params.order.drop.gps.lng}` : '12.981002,77.625458');
-    const endName = inEndAddr.name || params.order?.drop?.name || inEndContact.name || 'Customer Delivery Location';
-    const endBuilding = inEndAddr.building || inEndAddr.street || params.order?.drop?.address || 'Apartment 4B, Green Towers';
-    const endLocality = inEndAddr.locality || 'Indiranagar';
-    const endCity = inEndAddr.city || 'Bengaluru';
-    const endState = inEndAddr.state || 'Karnataka';
+    const endGps = inEndLoc.gps || (params.order?.drop?.gps ? `${params.order.drop.gps.lat},${params.order.drop.gps.lng}` : '17.3625,78.5412');
+    const endName = inEndAddr.name || params.order?.drop?.name || inEndContact.name || 'Sai Praneeth';
+    const endBuilding = inEndAddr.building || inEndAddr.street || params.order?.drop?.address || 'Flat 304, Sri Sai Enclave, Kothapet Road';
+    const endLocality = inEndAddr.locality || 'Kothapet';
+    const endCity = inEndAddr.city || 'Hyderabad';
+    const endState = inEndAddr.state || 'Telangana';
     const endCountry = inEndAddr.country || 'India';
-    const endAreaCode = inEndAddr.area_code || inEndAddr.areaCode || '560038';
-    const endPhone = inEndContact.phone || params.order?.drop?.phone || '9886098765';
+    const endAreaCode = inEndAddr.area_code || inEndAddr.areaCode || '500035';
+    const endPhone = inEndContact.phone || params.order?.drop?.phone || '9876543210';
 
     const fee = ((params.order && params.order.deliveryFee) || params.deliveryFee || config.commercial.defaultDeliveryFee).toFixed(2);
 

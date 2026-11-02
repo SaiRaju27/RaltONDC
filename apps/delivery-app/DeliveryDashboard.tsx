@@ -183,10 +183,12 @@ const SlideToAction: React.FC<{
 };
 
 const LiveRouteMapLayer: React.FC<{
+  mode?: 'radar' | 'order';
   lat?: number;
   lng?: number;
   riderLat?: number;
   riderLng?: number;
+  originLabel?: string;
   label?: string;
   zoom?: number;
   address?: string;
@@ -195,10 +197,12 @@ const LiveRouteMapLayer: React.FC<{
   orderId?: string;
   onPressLocation?: (lat: number, lng: number, address?: string) => void;
 }> = ({
+  mode,
   lat,
   lng,
-  riderLat = 17.4375,
-  riderLng = 78.3687,
+  riderLat = 17.3457,
+  riderLng = 78.5522,
+  originLabel,
   label = 'Live Delivery Map',
   address,
   destinationType = 'customer',
@@ -206,6 +210,7 @@ const LiveRouteMapLayer: React.FC<{
   orderId,
   onPressLocation,
 }) => {
+  const isRadarMode = mode === 'radar' || (!lat && !lng);
   const parseNum = (val: any, fallback: number) => {
     if (typeof val === 'number' && !isNaN(val) && val !== 0) return val;
     if (typeof val === 'string') {
@@ -214,17 +219,24 @@ const LiveRouteMapLayer: React.FC<{
     }
     return fallback;
   };
-  const safeDestLat = parseNum(lat, 17.4485);
-  const safeDestLng = parseNum(lng, 78.3908);
-  const safeRiderLat = parseNum(riderLat, 17.4375);
-  const safeRiderLng = parseNum(riderLng, 78.3687);
+  const safeRiderLat = parseNum(riderLat, 17.3457);
+  const safeRiderLng = parseNum(riderLng, 78.5522);
+
+  const destinationLocation = isRadarMode
+    ? undefined
+    : {
+        lat: parseNum(lat, 17.3625),
+        lng: parseNum(lng, 78.5412),
+      };
 
   return (
     <View style={{ width: '100%', height: '100%', position: 'relative', overflow: 'hidden', borderRadius: 16 }}>
       <LiveTrackingMap
+        mode={isRadarMode ? 'radar' : 'order'}
         riderLocation={{ lat: safeRiderLat, lng: safeRiderLng }}
-        destinationLocation={{ lat: safeDestLat, lng: safeDestLng }}
-        destinationLabel={label}
+        destinationLocation={destinationLocation}
+        originLabel={originLabel}
+        destinationLabel={isRadarMode ? 'Radar Active' : label}
         destinationAddress={address}
         destinationType={destinationType}
         isOnline={isOnline}
@@ -386,10 +398,10 @@ export const DeliveryDashboard: React.FC<DeliveryDashboardProps> = ({
   // Checklist State for Step 1: In-Store Manifest
   const [checkedItems, setCheckedItems] = useState<number[]>([]);
 
-  // Real-time location tracking and fleet synchronization
+  // Real-time location tracking and fleet synchronization (Default: LB Nagar Metro Junction, Hyderabad)
   const [riderCoords, setRiderCoords] = useState<{ lat: number; lng: number }>({
-    lat: 12.9716,
-    lng: 77.5946,
+    lat: 17.3457,
+    lng: 78.5522,
   });
 
   useEffect(() => {
@@ -397,14 +409,31 @@ export const DeliveryDashboard: React.FC<DeliveryDashboardProps> = ({
       const watchId = navigator.geolocation.watchPosition(
         (pos) => {
           const { latitude, longitude } = pos.coords;
-          setRiderCoords({ lat: latitude, lng: longitude });
+          // Cluster center for LB Nagar: 17.3457, 78.5522
+          // If browser/device GPS is within 10 km of LB Nagar, use real device GPS.
+          // If on web desktop and browser GPS is far away (e.g. Hitec City 22km away), keep rider in active cluster.
+          const dLat = ((latitude - 17.3457) * Math.PI) / 180;
+          const dLon = ((longitude - 78.5522) * Math.PI) / 180;
+          const a =
+            Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+            Math.cos((17.3457 * Math.PI) / 180) *
+              Math.cos((latitude * Math.PI) / 180) *
+              Math.sin(dLon / 2) *
+              Math.sin(dLon / 2);
+          const distKm = 6371 * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+          const isFarOnWeb = Platform.OS === 'web' && distKm > 10;
+
+          const effectiveLat = isFarOnWeb ? 17.3457 : latitude;
+          const effectiveLng = isFarOnWeb ? 78.5522 : longitude;
+
+          setRiderCoords({ lat: effectiveLat, lng: effectiveLng });
           fetch(`${apiUrl}/api/rider/location`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
               riderId: rider.id || 'RALT-RIDER-001',
-              lat: latitude,
-              lng: longitude,
+              lat: effectiveLat,
+              lng: effectiveLng,
             }),
           }).catch(() => {});
         },
@@ -416,8 +445,8 @@ export const DeliveryDashboard: React.FC<DeliveryDashboardProps> = ({
   }, [apiUrl, rider.id]);
 
   const openExternalNavigation = (destLat?: number, destLng?: number, address?: string) => {
-    const lat = typeof destLat === 'number' && !isNaN(destLat) && destLat !== 0 ? destLat : 17.4375;
-    const lng = typeof destLng === 'number' && !isNaN(destLng) && destLng !== 0 ? destLng : 78.3687;
+    const lat = typeof destLat === 'number' && !isNaN(destLat) && destLat !== 0 ? destLat : 17.3488;
+    const lng = typeof destLng === 'number' && !isNaN(destLng) && destLng !== 0 ? destLng : 78.5518;
     const q = address ? encodeURIComponent(address) : `${lat},${lng}`;
     const url = `https://www.google.com/maps/dir/?api=1&destination=${q}`;
     try {
@@ -551,17 +580,17 @@ export const DeliveryDashboard: React.FC<DeliveryDashboardProps> = ({
 
   // Convert raw order payload from backend/ONDC into dashboard order format
   const mapRawOrderToUi = (o: any, currentRiderCoords: { lat: number; lng: number }) => {
-    const pickupName = o.pickup?.name || o.pickup_name || o.pickupName || 'Merchant Store';
-    const pickupAddress = o.pickup?.address || o.pickup_address || o.pickupAddress || 'Indiranagar Hub';
+    const pickupName = o.pickup?.name || o.pickup_name || o.pickupName || 'Paradise Food Court - LB Nagar';
+    const pickupAddress = o.pickup?.address || o.pickup_address || o.pickupAddress || 'Sagar Ring Road, LB Nagar, Hyderabad';
     const pickupPhone = o.pickup?.phone || o.pickup_phone || '+91 99887 76655';
-    const pickupLat = Number(o.pickup?.gps?.lat || o.pickup_lat || 12.9716);
-    const pickupLng = Number(o.pickup?.gps?.lng || o.pickup_lng || 77.5946);
+    const pickupLat = Number(o.pickup?.gps?.lat || o.pickupGps?.lat || o.pickup_lat || 17.3488);
+    const pickupLng = Number(o.pickup?.gps?.lng || o.pickupGps?.lng || o.pickup_lng || 78.5518);
 
-    const dropName = o.drop?.name || o.drop_name || o.dropName || 'Customer';
-    const dropAddress = o.drop?.address || o.drop_address || o.dropAddress || 'Bangalore City';
+    const dropName = o.drop?.name || o.drop_name || o.dropName || 'Sai Praneeth';
+    const dropAddress = o.drop?.address || o.drop_address || o.dropAddress || 'Kothapet Road, LB Nagar, Hyderabad';
     const dropPhone = o.drop?.phone || o.drop_phone || '+91 98765 43210';
-    const dropLat = Number(o.drop?.gps?.lat || o.drop_lat || 12.9816);
-    const dropLng = Number(o.drop?.gps?.lng || o.drop_lng || 77.6046);
+    const dropLat = Number(o.drop?.gps?.lat || o.dropGps?.lat || o.drop_lat || 17.3625);
+    const dropLng = Number(o.drop?.gps?.lng || o.dropGps?.lng || o.drop_lng || 78.5412);
 
     let parsedItems = o.items;
     if (typeof parsedItems === 'string') {
@@ -718,16 +747,30 @@ export const DeliveryDashboard: React.FC<DeliveryDashboardProps> = ({
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          restaurantName: 'Bawarchi Biryani House',
-          restaurantAddress: '100ft Rd, Indiranagar, Bangalore',
-          customerName: 'Rio Daniel',
+          restaurantName: 'Paradise Food Court - LB Nagar',
+          restaurantAddress: 'Sagar Ring Road, Near LB Nagar Metro Station, Hyderabad - 500074',
+          customerName: 'Sai Praneeth',
           customerPhone: '+91 98450 12345',
-          customerAddress: 'HAL 2nd Stage, Indiranagar, Bangalore',
+          customerAddress: 'Flat 304, Sri Sai Enclave, Kothapet Main Road, LB Nagar, Hyderabad - 500035',
+          pickupGps: { lat: 17.3488, lng: 78.5518 },
+          dropGps: { lat: 17.3625, lng: 78.5412 },
+          pickup: {
+            name: 'Paradise Food Court - LB Nagar',
+            phone: '+91 99887 76655',
+            address: 'Sagar Ring Road, Near LB Nagar Metro Station, Hyderabad - 500074',
+            gps: { lat: 17.3488, lng: 78.5518 },
+          },
+          drop: {
+            name: 'Sai Praneeth',
+            phone: '+91 98450 12345',
+            address: 'Flat 304, Sri Sai Enclave, Kothapet Main Road, LB Nagar, Hyderabad - 500035',
+            gps: { lat: 17.3625, lng: 78.5412 },
+          },
           items: [
-            { name: 'Special Chicken Dum Biryani', quantity: 2 },
+            { name: 'Special Hyderabadi Chicken Biryani', quantity: 2 },
             { name: 'Mirchi Ka Salan & Raitha', quantity: 1 }
           ],
-          deliveryFee: 85.0
+          deliveryFee: 65.0
         })
       });
       const data = await res.json();
@@ -771,11 +814,11 @@ export const DeliveryDashboard: React.FC<DeliveryDashboardProps> = ({
       sellerName: orderItem.sellerName || 'Merchant Store',
       sellerAddress: orderItem.sellerAddress || 'Merchant Pickup Point',
       sellerPhone: orderItem.sellerPhone || '+91 99887 76655',
-      pickupGps: orderItem.pickupGps || { lat: 12.9716, lng: 77.5946 },
+      pickupGps: orderItem.pickupGps || { lat: 17.3488, lng: 78.5518 },
       customerName: orderItem.customerName || 'Customer',
       customerAddress: orderItem.customerAddress || 'Customer Delivery Address',
       customerPhone: orderItem.customerPhone || '+91 98765 43210',
-      dropGps: orderItem.dropGps || { lat: 12.9816, lng: 77.6046 },
+      dropGps: orderItem.dropGps || { lat: 17.3625, lng: 78.5412 },
       payout: orderItem.payout || 50.00,
       deliveryFee: orderItem.payout || 50.00,
       deliveryOtp: orderItem.deliveryOtp || '1234',
@@ -938,38 +981,33 @@ export const DeliveryDashboard: React.FC<DeliveryDashboardProps> = ({
         {/* =================================================================== */}
         {activeTab === 'radar' && (
           <View style={{ gap: 14 }}>
-            {/* Interactive Dispatch Header & Map Preview Window */}
+            {/* Hero Interactive Map Window (Zomato / Swiggy / Uber style) */}
             <View style={dashStyles.radarMapHeader}>
               <LiveRouteMapLayer
-                lat={riderCoords.lat}
-                lng={riderCoords.lng}
-                label="Radar Map"
-                zoom={13}
+                mode="radar"
+                riderLat={riderCoords.lat}
+                riderLng={riderCoords.lng}
+                label="LB Nagar Radar Map"
+                zoom={15}
+                isOnline={isOnline}
               />
-              <View style={dashStyles.radarMapOverlay}>
-                <View style={dashStyles.betweenRow}>
-                  <View style={dashStyles.surgePill}>
-                    <View style={dashStyles.surgeDot} />
-                    <Text style={dashStyles.surgePillText}>Surge Active +15%</Text>
-                  </View>
-                  <View style={dashStyles.radarSweepPill}>
-                    <Text style={{ color: '#ffffff', fontSize: 12 }}>🧭</Text>
-                    <Text style={dashStyles.radarSweepText}>Radar Sweep</Text>
-                  </View>
-                </View>
+            </View>
 
-                <View style={dashStyles.betweenRow}>
-                  <View>
-                    <Text style={dashStyles.zoneSub}>ACTIVE DISPATCH ZONE</Text>
-                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
-                      <Text style={dashStyles.zoneTitle}>{rider.workArea || 'Indiranagar Cluster'}</Text>
-                      <Text style={{ fontSize: 14, color: '#fd651e' }}>✓</Text>
-                    </View>
-                  </View>
-                  <View style={dashStyles.nearbyBadge}>
-                    <Text style={dashStyles.nearbyBadgeText}>{availableOrders.length} Nearby Requests</Text>
-                  </View>
-                </View>
+            {/* Quick Shift Summary Ribbon (Uber Driver / Swiggy Captain style) */}
+            <View style={dashStyles.quickShiftRibbon}>
+              <View style={dashStyles.quickShiftItem}>
+                <Text style={dashStyles.quickShiftLabel}>TODAY'S PAYOUT</Text>
+                <Text style={dashStyles.quickShiftValue}>₹{walletBalance.toFixed(2)}</Text>
+              </View>
+              <View style={dashStyles.quickShiftDivider} />
+              <View style={dashStyles.quickShiftItem}>
+                <Text style={dashStyles.quickShiftLabel}>SURGE RATE</Text>
+                <Text style={[dashStyles.quickShiftValue, { color: '#008744' }]}>+15% Active</Text>
+              </View>
+              <View style={dashStyles.quickShiftDivider} />
+              <View style={dashStyles.quickShiftItem}>
+                <Text style={dashStyles.quickShiftLabel}>DISPATCH ZONE</Text>
+                <Text style={dashStyles.quickShiftValue}>{rider.workArea || 'LB Nagar'}</Text>
               </View>
             </View>
 
@@ -1093,7 +1131,7 @@ export const DeliveryDashboard: React.FC<DeliveryDashboardProps> = ({
                 <View>
                   <Text style={dashStyles.greenTierTitle}>Active Delivery Zone</Text>
                   <Text style={dashStyles.fieldHint}>
-                    {rider.workArea || 'Indiranagar Cluster'} • Wallet: ₹{walletBalance.toFixed(2)}
+                    {rider.workArea || 'LB Nagar Cluster, Hyderabad'} • Wallet: ₹{walletBalance.toFixed(2)}
                   </Text>
                 </View>
               </View>
@@ -1124,10 +1162,10 @@ export const DeliveryDashboard: React.FC<DeliveryDashboardProps> = ({
                     return fallback;
                   };
 
-                  const pLat = parseCoord(currentOrder.pickupGps?.lat ?? currentOrder.pickup?.gps?.lat ?? currentOrder.pickup_lat, 17.4375);
-                  const pLng = parseCoord(currentOrder.pickupGps?.lng ?? currentOrder.pickup?.gps?.lng ?? currentOrder.pickup_lng, 78.3687);
-                  const dLat = parseCoord(currentOrder.dropGps?.lat ?? currentOrder.drop?.gps?.lat ?? currentOrder.drop_lat, 17.4485);
-                  const dLng = parseCoord(currentOrder.dropGps?.lng ?? currentOrder.drop?.gps?.lng ?? currentOrder.drop_lng, 78.3758);
+                  const pLat = parseCoord(currentOrder.pickupGps?.lat ?? currentOrder.pickup?.gps?.lat ?? currentOrder.pickup_lat, 17.3488);
+                  const pLng = parseCoord(currentOrder.pickupGps?.lng ?? currentOrder.pickup?.gps?.lng ?? currentOrder.pickup_lng, 78.5518);
+                  const dLat = parseCoord(currentOrder.dropGps?.lat ?? currentOrder.drop?.gps?.lat ?? currentOrder.drop_lat, 17.3625);
+                  const dLng = parseCoord(currentOrder.dropGps?.lng ?? currentOrder.drop?.gps?.lng ?? currentOrder.drop_lng, 78.5412);
 
                   const riderToStoreKm = parseFloat(calculateDistanceKm(riderCoords.lat, riderCoords.lng, pLat, pLng));
                   const storeToCustomerKm = parseFloat(calculateDistanceKm(pLat, pLng, dLat, dLng));
@@ -1172,6 +1210,7 @@ export const DeliveryDashboard: React.FC<DeliveryDashboardProps> = ({
                       {/* Live Status & GPS Mini-Map Section */}
                       <View style={dashStyles.manifestMapContainer}>
                         <LiveRouteMapLayer
+                          mode="order"
                           lat={curLat}
                           lng={curLng}
                           riderLat={riderCoords.lat}
@@ -1184,8 +1223,6 @@ export const DeliveryDashboard: React.FC<DeliveryDashboardProps> = ({
                           isOnline={isOnline}
                           onPressLocation={openExternalNavigation}
                         />
-                        {/* Gradient overlay */}
-                        <View style={dashStyles.manifestMapGradient} />
 
                         {/* Floating Top Status Chips */}
                         <View style={dashStyles.manifestTopChipsRow}>
@@ -1422,14 +1459,15 @@ export const DeliveryDashboard: React.FC<DeliveryDashboardProps> = ({
                     return fallback;
                   };
 
-                  const dLat = parseCoord(currentOrder.dropGps?.lat ?? currentOrder.drop?.gps?.lat ?? currentOrder.drop_lat, 17.4485);
-                  const dLng = parseCoord(currentOrder.dropGps?.lng ?? currentOrder.drop?.gps?.lng ?? currentOrder.drop_lng, 78.3758);
+                  const dLat = parseCoord(currentOrder.dropGps?.lat ?? currentOrder.drop?.gps?.lat ?? currentOrder.drop_lat, 17.3625);
+                  const dLng = parseCoord(currentOrder.dropGps?.lng ?? currentOrder.drop?.gps?.lng ?? currentOrder.drop_lng, 78.5412);
 
                   return (
                     <View style={{ gap: 14 }}>
                       {/* Live Status & GPS Mini-Map Section */}
                       <View style={dashStyles.manifestMapContainer}>
                         <LiveRouteMapLayer
+                          mode="order"
                           lat={dLat}
                           lng={dLng}
                           riderLat={riderCoords.lat}
@@ -1442,7 +1480,6 @@ export const DeliveryDashboard: React.FC<DeliveryDashboardProps> = ({
                           isOnline={isOnline}
                           onPressLocation={openExternalNavigation}
                         />
-                        <View style={dashStyles.manifestMapGradient} />
 
                         {/* Floating Top Status Chips */}
                         <View style={dashStyles.manifestTopChipsRow}>
@@ -1568,7 +1605,7 @@ export const DeliveryDashboard: React.FC<DeliveryDashboardProps> = ({
                 <Text style={{ fontSize: 36 }}>🛵</Text>
                 <Text style={dashStyles.sheetHeading}>No Active Delivery</Text>
                 <Text style={[dashStyles.fieldHint, { textAlign: 'center' }]}>
-                  Your radar is sweeping the Indiranagar Cluster. Go to the Radar tab to accept nearby orders.
+                  Your radar is sweeping the LB Nagar Cluster, Hyderabad. Go to the Radar tab to accept nearby orders.
                 </Text>
                 <TouchableOpacity
                   style={[dashStyles.primaryActionBtn, { width: '80%', marginTop: 8 }]}
@@ -2241,14 +2278,17 @@ export const DeliveryDashboard: React.FC<DeliveryDashboardProps> = ({
             {/* Map Preview Layer */}
             <View style={dashStyles.detailMapContainer}>
               <LiveRouteMapLayer
-                lat={selectedOrderDetail?.pickupGps?.lat || 17.4485}
-                lng={selectedOrderDetail?.pickupGps?.lng || 78.3908}
-                riderLat={riderCoords.lat}
-                riderLng={riderCoords.lng}
-                destinationType="store"
+                mode="order"
+                lat={selectedOrderDetail?.dropGps?.lat || 17.3625}
+                lng={selectedOrderDetail?.dropGps?.lng || 78.5412}
+                riderLat={selectedOrderDetail?.pickupGps?.lat || 17.3488}
+                riderLng={selectedOrderDetail?.pickupGps?.lng || 78.5518}
+                originLabel="store"
+                destinationType="customer"
                 isOnline={isOnline}
-                label="Delivery Request Map"
-                zoom={14}
+                label="Delivery Trip Route"
+                address={selectedOrderDetail?.customerAddress}
+                zoom={15}
               />
 
               {/* Waypoint Overlay */}
@@ -2716,11 +2756,55 @@ const dashStyles = StyleSheet.create({
     fontSize: 14,
   },
   radarMapHeader: {
-    height: 150,
+    height: 350,
     borderRadius: 20,
     overflow: 'hidden',
     position: 'relative',
-    backgroundColor: '#e1e8fd',
+    backgroundColor: '#042f1e',
+    borderWidth: 1,
+    borderColor: 'rgba(0, 230, 118, 0.25)',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.12,
+    shadowRadius: 8,
+    elevation: 3,
+  },
+  quickShiftRibbon: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    backgroundColor: '#ffffff',
+    borderRadius: 16,
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    borderWidth: 1,
+    borderColor: '#e8edf3',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.06,
+    shadowRadius: 4,
+    elevation: 2,
+  },
+  quickShiftItem: {
+    alignItems: 'center',
+    flex: 1,
+  },
+  quickShiftLabel: {
+    fontSize: 9.5,
+    fontWeight: '700',
+    color: '#64748b',
+    letterSpacing: 0.5,
+    marginBottom: 3,
+  },
+  quickShiftValue: {
+    fontSize: 15,
+    fontWeight: '800',
+    color: '#0f172a',
+  },
+  quickShiftDivider: {
+    width: 1,
+    height: 24,
+    backgroundColor: '#e2e8f0',
   },
   radarMapImage: {
     width: '100%',
@@ -3251,9 +3335,9 @@ const dashStyles = StyleSheet.create({
     alignSelf: 'center',
   },
   detailMapContainer: {
-    height: 220,
+    height: 280,
     position: 'relative',
-    backgroundColor: '#e1e8fd',
+    backgroundColor: '#042f1e',
   },
   detailMapImage: {
     width: '100%',
@@ -3929,11 +4013,11 @@ const dashStyles = StyleSheet.create({
     color: '#141b2b',
   },
   manifestMapContainer: {
-    height: 250,
+    height: 320,
     borderRadius: 20,
     overflow: 'hidden',
     position: 'relative',
-    backgroundColor: '#dce2f7',
+    backgroundColor: '#042f1e',
   },
   manifestMapImage: {
     width: '100%',

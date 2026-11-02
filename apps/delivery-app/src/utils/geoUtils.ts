@@ -149,3 +149,127 @@ export function interpolateLatLng(a: LatLng, b: LatLng, fraction: number): LatLn
   };
 }
 
+/**
+ * Real Map Tile representation for rendering Slippy Map layers
+ */
+export interface MapTile {
+  key: string;
+  url: string;
+  x: number;
+  y: number;
+  left: number;
+  top: number;
+  width: number;
+  height: number;
+}
+
+/**
+ * Projects (lat, lng) to global Web Mercator pixel coordinates at a given zoom level.
+ */
+export function latLngToMercatorPixels(
+  lat: number,
+  lng: number,
+  zoom: number
+): { px: number; py: number } {
+  const n = Math.pow(2, zoom);
+  const px = ((lng + 180) / 360) * n * 256;
+  const clampedLat = Math.max(-85.05112878, Math.min(85.05112878, lat));
+  const clampedRad = (clampedLat * Math.PI) / 180;
+  const py = ((1 - Math.asinh(Math.tan(clampedRad)) / Math.PI) / 2) * n * 256;
+  return { px, py };
+}
+
+/**
+ * Projects a geographic coordinate into screen (x, y) relative to a given center and zoom.
+ */
+export function projectMercatorToScreen(
+  lat: number,
+  lng: number,
+  centerLat: number,
+  centerLng: number,
+  zoom: number,
+  width: number,
+  height: number
+): ProjectedPoint {
+  const pt = latLngToMercatorPixels(lat, lng, zoom);
+  const center = latLngToMercatorPixels(centerLat, centerLng, zoom);
+  return {
+    x: Math.round(pt.px - (center.px - width / 2)),
+    y: Math.round(pt.py - (center.py - height / 2)),
+  };
+}
+
+/**
+ * Computes all required 256x256 map tiles to cover a viewport of (width x height) around (centerLat, centerLng).
+ */
+export function getVisibleTiles(
+  centerLat: number,
+  centerLng: number,
+  zoom: number,
+  width: number,
+  height: number,
+  tileUrlTemplate: string = 'https://basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}@2x.png'
+): MapTile[] {
+  const center = latLngToMercatorPixels(centerLat, centerLng, zoom);
+  const originX = center.px - width / 2;
+  const originY = center.py - height / 2;
+
+  // Add 1-tile buffer around edges for seamless panning and rotation coverage
+  const minTileX = Math.floor(originX / 256) - 1;
+  const maxTileX = Math.floor((originX + width) / 256) + 1;
+  const minTileY = Math.floor(originY / 256) - 1;
+  const maxTileY = Math.floor((originY + height) / 256) + 1;
+
+  const tiles: MapTile[] = [];
+  for (let ty = minTileY; ty <= maxTileY; ty++) {
+    for (let tx = minTileX; tx <= maxTileX; tx++) {
+      const left = tx * 256 - originX;
+      const top = ty * 256 - originY;
+      const url = tileUrlTemplate
+        .replace('{z}', String(zoom))
+        .replace('{x}', String(tx))
+        .replace('{y}', String(ty));
+      tiles.push({
+        key: `${zoom}-${tx}-${ty}`,
+        url,
+        x: tx,
+        y: ty,
+        left: Math.round(left),
+        top: Math.round(top),
+        width: 256,
+        height: 256,
+      });
+    }
+  }
+  return tiles;
+}
+
+/**
+ * Computes the optimal map zoom level so all provided coordinates fit inside the viewport with comfortable padding.
+ */
+export function calculateAutoZoom(
+  coords: LatLng[],
+  width: number,
+  height: number,
+  targetPadding: number = 50
+): number {
+  if (!coords || coords.length < 2) return 15;
+  const lats = coords.map((c) => c.lat);
+  const lngs = coords.map((c) => c.lng);
+  const minLat = Math.min(...lats);
+  const maxLat = Math.max(...lats);
+  const minLng = Math.min(...lngs);
+  const maxLng = Math.max(...lngs);
+
+  for (let z = 18; z >= 11; z--) {
+    const p1 = latLngToMercatorPixels(minLat, minLng, z);
+    const p2 = latLngToMercatorPixels(maxLat, maxLng, z);
+    const spanX = Math.abs(p2.px - p1.px);
+    const spanY = Math.abs(p2.py - p1.py);
+    if (spanX <= width - targetPadding * 2 && spanY <= height - targetPadding * 2) {
+      return z;
+    }
+  }
+  return 13;
+}
+

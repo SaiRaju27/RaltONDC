@@ -414,7 +414,7 @@ export const OnboardingFlow: React.FC<OnboardingFlowProps> = ({
   const [phoneOtpTimer, setPhoneOtpTimer] = useState<number>(0);
   const [emailAddr, setEmailAddr] = useState<string>('');
   const [dobInput, setDobInput] = useState<string>('');
-  const [selectedHub, setSelectedHub] = useState<'indiranagar' | 'koramangala' | 'whitefield' | 'hiteccity'>('indiranagar');
+  const [selectedHub, setSelectedHub] = useState<'lbnagar' | 'hiteccity' | 'gachibowli' | 'indiranagar'>('lbnagar');
   const [referralCode, setReferralCode] = useState<string>('');
   const [isReferralApplied, setIsReferralApplied] = useState<boolean>(false);
   const [isSavingStep1, setIsSavingStep1] = useState<boolean>(false);
@@ -1724,7 +1724,7 @@ export const OnboardingFlow: React.FC<OnboardingFlowProps> = ({
                   };
                   const bankName = bankNames[prefix] || (prefix + ' Bank');
                   return clean.length === 11
-                    ? 'Resolved: ' + bankName + ' (' + (selectedHub === 'hiteccity' ? 'Hitec City Branch' : 'Primary Branch') + ')'
+                    ? 'Resolved: ' + bankName + ' (' + (selectedHub === 'lbnagar' ? 'LB Nagar Branch' : selectedHub === 'hiteccity' ? 'Hitec City Branch' : 'Primary Branch') + ')'
                     : '11-character code (' + bankName + ')';
                 })()}
               />

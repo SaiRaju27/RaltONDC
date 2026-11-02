@@ -129,16 +129,16 @@ app.get('/api/track/:orderId', async (req: any, res: any) => {
       order: {
         orderId,
         status: order?.status || 'In-transit',
-        customerAddress: order?.drop?.address?.full || 'Cyber Towers Main Block, Hitec City',
-        pickupGps: order?.pickup?.gps || { lat: 17.4350, lng: 78.3650 },
-        dropGps: order?.drop?.gps || { lat: 17.4485, lng: 78.3908 },
+        customerAddress: order?.drop?.address?.full || 'Flat 402, Sri Sai Residency, Kothapet Road, LB Nagar, Hyderabad',
+        pickupGps: order?.pickup?.gps || { lat: 17.3488, lng: 78.5518 },
+        dropGps: order?.drop?.gps || { lat: 17.3625, lng: 78.5412 },
         rider: rider ? {
           name: rider.name,
           phone: rider.phone,
           vehicle_number: rider.vehicle_number,
           rating: rider.rating || 5.0,
-          lat: rider.lat || 17.4375,
-          lng: rider.lng || 78.3687
+          lat: rider.lat || 17.3457,
+          lng: rider.lng || 78.5522
         } : null
       }
     });

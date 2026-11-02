@@ -117,6 +117,8 @@ class OrderManager {
     bapUri: string;
     pickup: { name: string; phone?: string; address: string; gps?: { lat: number; lng: number } };
     drop: { name: string; phone?: string; address: string; gps?: { lat: number; lng: number } };
+    pickupGps?: { lat: number; lng: number };
+    dropGps?: { lat: number; lng: number };
     items?: Array<{ name: string; quantity: number }>;
     deliveryFee?: number;
   }): Promise<FormattedOrder> {
@@ -126,10 +128,10 @@ class OrderManager {
     const itemsJson = JSON.stringify(data.items || [{ name: 'Restaurant Food Delivery', quantity: 1 }]);
     const fee = data.deliveryFee || 50.0;
 
-    const pickupLat = data.pickup.gps?.lat || 17.4375;
-    const pickupLng = data.pickup.gps?.lng || 78.3687;
-    const dropLat = data.drop.gps?.lat || 17.4485;
-    const dropLng = data.drop.gps?.lng || 78.3758;
+    const pickupLat = data.pickup?.gps?.lat || data.pickupGps?.lat || 17.3488;
+    const pickupLng = data.pickup?.gps?.lng || data.pickupGps?.lng || 78.5518;
+    const dropLat = data.drop?.gps?.lat || data.dropGps?.lat || 17.3625;
+    const dropLng = data.drop?.gps?.lng || data.dropGps?.lng || 78.5412;
 
     // 1. Find nearest available online rider via PostGIS spatial distance
     const availableRider = await riderManager.findAvailableRider(pickupLat, pickupLng, 10.0);

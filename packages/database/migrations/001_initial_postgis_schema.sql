@@ -174,8 +174,8 @@ INSERT INTO riders (
   penny_drop_status, selfie_url, training_completed, kyc_status,
   kyc_step, onboarding_completed, rating, total_orders, total_earnings
 ) VALUES (
-  'RALT-RIDER-001', 'Sai Raju', '+91 9876543210', 'Hyderabad', 'Hitec City, Hyderabad', 'TS 09 EA 1234', 'motorcycle',
-  1, 17.4375, 78.3687, ST_SetSRID(ST_MakePoint(78.3687, 17.4375), 4326),
+  'RALT-RIDER-001', 'Sai Raju', '+91 9876543210', 'Hyderabad', 'LB Nagar, Hyderabad', 'TS 09 EA 1234', 'motorcycle',
+  1, 17.3457, 78.5522, ST_SetSRID(ST_MakePoint(78.5522, 17.3457), 4326),
   'Ram Raju', '1998-05-15', 'Male',
   'Emergency Contact', '+91 9876500000', 'Brother',
   '548912349876', 'ABCDE1234F', 'TS0920190012345', '2030-12-31', 'POL-9921',

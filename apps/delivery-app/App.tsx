@@ -45,8 +45,8 @@ const DEMO_RIDER_FALLBACK: RiderProfile = {
   name: 'Sai Raju',
   phone: '+91 9876543210',
   city: 'Hyderabad',
-  workArea: 'Hitec City, Hyderabad',
-  address: 'Hitec City, Hyderabad',
+  workArea: 'LB Nagar, Hyderabad',
+  address: 'LB Nagar, Hyderabad',
   father_name: 'Ram Raju',
   dob: '15-05-1998',
   gender: 'Male',
@@ -216,15 +216,15 @@ export const HERO_TRANSLATIONS: { [key: string]: HeroTranslation } = {
 
 // Delivery Zones Quick Filter Chips
 const POPULAR_ZONES = [
+  'LB Nagar, Hyderabad',
   'Hitec City, Hyderabad',
   'Gachibowli, Hyderabad',
   'Madhapur, Hyderabad',
   'Kondapur, Hyderabad',
+  'Dilsukhnagar, Hyderabad',
   'Banjara Hills, Hyderabad',
   'Jubilee Hills, Hyderabad',
   'Kukatpally, Hyderabad',
-  'Indiranagar, Bengaluru',
-  'Koramangala, Bengaluru',
 ];
 
 // Types
@@ -681,17 +681,17 @@ export default function App() {
       itemsList = [{ name: 'ONDC Logistics Package', quantity: 1 }];
     }
 
-    const pName = ord.pickup?.name || ord.pickup_name || ord.sellerName || 'ONDC Merchant Store';
-    const pAddr = ord.pickup?.address || ord.pickup_address || ord.sellerAddress || 'Merchant Location';
+    const pName = ord.pickup?.name || ord.pickup_name || ord.sellerName || 'Paradise Food Court - LB Nagar';
+    const pAddr = ord.pickup?.address || ord.pickup_address || ord.sellerAddress || 'LB Nagar X Roads, Hyderabad';
     const pPhone = ord.pickup?.phone || ord.pickup_phone || ord.sellerPhone || '+91 99887 76655';
-    const pLat = Number(ord.pickup?.gps?.lat ?? ord.pickup_lat ?? ord.pickupGps?.lat ?? 17.4375);
-    const pLng = Number(ord.pickup?.gps?.lng ?? ord.pickup_lng ?? ord.pickupGps?.lng ?? 78.3687);
+    const pLat = Number(ord.pickup?.gps?.lat ?? ord.pickup_lat ?? ord.pickupGps?.lat ?? 17.3488);
+    const pLng = Number(ord.pickup?.gps?.lng ?? ord.pickup_lng ?? ord.pickupGps?.lng ?? 78.5518);
 
-    const dName = ord.drop?.name || ord.drop_name || ord.customerName || 'Customer';
-    const dAddr = ord.drop?.address || ord.drop_address || ord.customerAddress || 'Customer Delivery Address';
+    const dName = ord.drop?.name || ord.drop_name || ord.customerName || 'Sai Praneeth';
+    const dAddr = ord.drop?.address || ord.drop_address || ord.customerAddress || 'Flat 402, Sri Sai Residency, Kothapet Road, LB Nagar, Hyderabad';
     const dPhone = ord.drop?.phone || ord.drop_phone || ord.customerPhone || '+91 98765 43210';
-    const dLat = Number(ord.drop?.gps?.lat ?? ord.drop_lat ?? ord.dropGps?.lat ?? 17.4485);
-    const dLng = Number(ord.drop?.gps?.lng ?? ord.drop_lng ?? ord.dropGps?.lng ?? 78.3758);
+    const dLat = Number(ord.drop?.gps?.lat ?? ord.drop_lat ?? ord.dropGps?.lat ?? 17.3625);
+    const dLng = Number(ord.drop?.gps?.lng ?? ord.drop_lng ?? ord.dropGps?.lng ?? 78.5412);
 
     const fee = typeof ord.deliveryFee === 'number' ? ord.deliveryFee : (parseFloat(ord.delivery_fee) || 50.0);
     const otp = ord.deliveryOtp || ord.delivery_otp || '1234';
@@ -2517,8 +2517,8 @@ Unauthorized users cannot log in. Please register first to join as a delivery pa
             id: newPartnerId,
             name: profileData.name || 'Delivery Partner',
             phone: `+91 ${cleanPhone}`,
-            city: profileData.hub === 'hiteccity' ? 'Hyderabad' : 'Bangalore',
-            workArea: profileData.hub === 'hiteccity' ? 'Hitec City Metro Cluster' : 'Indiranagar Hub',
+            city: 'Hyderabad',
+            workArea: profileData.hub === 'hiteccity' ? 'Hitec City Metro Cluster' : 'LB Nagar Cluster, Hyderabad',
             dob: profileData.dob || '',
             vehicle_type: profileData.vehicleType === 'ev' ? 'electric' : profileData.vehicleType === 'bicycle' ? 'bicycle' : 'motorcycle',
             vehicle_number: profileData.vehiclePlate || '',

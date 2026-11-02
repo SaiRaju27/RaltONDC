@@ -113,12 +113,12 @@ export class ONDCController {
         const endLoc = fulfillment?.end?.location || {};
 
         const parseGps = (str: any) => {
-          if (!str) return { lat: 17.4375, lng: 78.3687 };
+          if (!str) return { lat: 17.3488, lng: 78.5518 };
           if (typeof str === 'object' && str.lat && str.lng) {
             return { lat: Number(str.lat), lng: Number(str.lng) };
           }
           const parts = String(str).split(',').map(s => parseFloat(s.trim()));
-          return { lat: parts[0] || 17.4375, lng: parts[1] || 78.3687 };
+          return { lat: parts[0] || 17.3488, lng: parts[1] || 78.5518 };
         };
 
         const pAddr = startLoc?.address || linkedOrder?.provider?.address || {};

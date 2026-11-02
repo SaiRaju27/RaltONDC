@@ -488,7 +488,7 @@
           <div class="loc-icon">🏬</div>
           <div>
             <div class="loc-title">PICKUP STORE</div>
-            <div class="loc-desc" id="pickup-address">Hitec City Metro Cluster, Hyderabad</div>
+            <div class="loc-desc" id="pickup-address">Paradise Food Court, Sagar Ring Road, LB Nagar, Hyderabad</div>
           </div>
         </div>
         <div style="border-top: 1px dashed #e2e8f0; margin: 4px 0;"></div>
@@ -496,7 +496,7 @@
           <div class="loc-icon">📍</div>
           <div>
             <div class="loc-title">DELIVERY DESTINATION</div>
-            <div class="loc-desc" id="drop-address">Cyber Towers Main Block, Madhapur</div>
+            <div class="loc-desc" id="drop-address">Flat 304, Sri Sai Enclave, Kothapet Road, LB Nagar, Hyderabad</div>
           </div>
         </div>
       </div>
@@ -517,13 +517,13 @@
     const orderId = pathParts[pathParts.length - 1] || 'ralt-ondc-165204';
     document.getElementById('order-id-label').textContent = `Order #${orderId}`;
 
-    // Initial Coordinates
-    let riderLat = 17.4375;
-    let riderLng = 78.3687;
-    let storeLat = 17.4350;
-    let storeLng = 78.3650;
-    let dropLat = 17.4485;
-    let dropLng = 78.3908;
+    // Initial Coordinates (Hyderabad LB Nagar Metro corridor)
+    let riderLat = 17.3457;
+    let riderLng = 78.5522;
+    let storeLat = 17.3488;
+    let storeLng = 78.5518;
+    let dropLat = 17.3625;
+    let dropLng = 78.5412;
 
     // Initialize Leaflet Map with CartoDB Voyager High-Contrast Tiles
     const map = L.map('map-viewport', { zoomControl: false }).setView([riderLat, riderLng], 14);

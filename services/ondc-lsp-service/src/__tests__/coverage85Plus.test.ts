@@ -331,8 +331,8 @@ describe('Backend 85%+ Coverage Booster Suite', () => {
         messageId: `msg-track-${Date.now()}`,
         bapId: 'mock-buyer-bap.ondc.org',
         bapUri: 'http://localhost:5000/mock/bap',
-        pickup: { name: 'Indiranagar Hub', address: 'Indiranagar', gps: { lat: 12.9716, lng: 77.5946 } },
-        drop: { name: 'Koramangala User', address: 'Koramangala', gps: { lat: 12.9352, lng: 77.6245 } },
+        pickup: { name: 'Paradise Food Court - LB Nagar', address: 'Sagar Ring Road, LB Nagar', gps: { lat: 17.3488, lng: 78.5518 } },
+        drop: { name: 'Sai Praneeth', address: 'Kothapet Road, LB Nagar', gps: { lat: 17.3625, lng: 78.5412 } },
         deliveryFee: 90,
       });
 
@@ -366,8 +366,8 @@ describe('Backend 85%+ Coverage Booster Suite', () => {
         messageId: `msg-cancel-${Date.now()}`,
         bapId: 'mock-buyer-bap.ondc.org',
         bapUri: 'http://localhost:5000/mock/bap',
-        pickup: { name: 'Indiranagar Hub', address: 'Indiranagar', gps: { lat: 12.9716, lng: 77.5946 } },
-        drop: { name: 'Koramangala User', address: 'Koramangala', gps: { lat: 12.9352, lng: 77.6245 } },
+        pickup: { name: 'Paradise Food Court - LB Nagar', address: 'Sagar Ring Road, LB Nagar', gps: { lat: 17.3488, lng: 78.5518 } },
+        drop: { name: 'Sai Praneeth', address: 'Kothapet Road, LB Nagar', gps: { lat: 17.3625, lng: 78.5412 } },
         deliveryFee: 110,
       });
 

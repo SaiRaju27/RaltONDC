@@ -6,6 +6,10 @@ import {
   formatEta,
   projectCoordinates,
   interpolateLatLng,
+  latLngToMercatorPixels,
+  projectMercatorToScreen,
+  getVisibleTiles,
+  calculateAutoZoom,
 } from '../src/utils/geoUtils';
 
 describe('Geographic Math & Telemetry Suite', () => {
@@ -125,6 +129,44 @@ describe('Geographic Math & Telemetry Suite', () => {
       const end = { lat: 20, lng: 40 };
       expect(interpolateLatLng(start, end, -0.5)).toEqual(start);
       expect(interpolateLatLng(start, end, 1.5)).toEqual(end);
+    });
+  });
+
+  describe('Web Mercator Tile Math', () => {
+    it('latLngToMercatorPixels projects equator and poles within finite bounds', () => {
+      const equator = latLngToMercatorPixels(0, 0, 10);
+      expect(equator.px).toBeGreaterThan(0);
+      expect(equator.py).toBeGreaterThan(0);
+
+      const highLat = latLngToMercatorPixels(89, 78, 12);
+      expect(Number.isFinite(highLat.px)).toBe(true);
+      expect(Number.isFinite(highLat.py)).toBe(true);
+    });
+
+    it('projectMercatorToScreen centers point when coordinates match center', () => {
+      const screenPt = projectMercatorToScreen(17.3457, 78.5522, 17.3457, 78.5522, 15, 360, 240);
+      expect(screenPt.x).toBe(180);
+      expect(screenPt.y).toBe(120);
+    });
+
+    it('getVisibleTiles generates correct grid of Slippy map tiles', () => {
+      const tiles = getVisibleTiles(17.3457, 78.5522, 15, 360, 240);
+      expect(tiles.length).toBeGreaterThanOrEqual(4);
+      expect(tiles[0].url).toContain('https://basemaps.cartocdn.com/rastertiles/voyager/15/');
+      expect(tiles[0].width).toBe(256);
+      expect(tiles[0].height).toBe(256);
+    });
+
+    it('calculateAutoZoom computes appropriate zoom level for distance', () => {
+      const lbNagar = { lat: 17.3457, lng: 78.5522 };
+      const kothapet = { lat: 17.3625, lng: 78.5412 };
+      const autoZ = calculateAutoZoom([lbNagar, kothapet], 360, 240, 40);
+      expect(autoZ).toBeGreaterThanOrEqual(12);
+      expect(autoZ).toBeLessThanOrEqual(16);
+
+      // Single or empty coord fallback
+      expect(calculateAutoZoom([lbNagar], 360, 240)).toBe(15);
+      expect(calculateAutoZoom([], 360, 240)).toBe(15);
     });
   });
 });
