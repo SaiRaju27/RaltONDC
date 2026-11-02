@@ -2,7 +2,7 @@
 # RALT ONDC Logistics Provider (BPP) — Production Dockerfile
 # Base: Ubuntu 24.04 LTS (Noble) with Node.js 22 LTS for binary compatibility
 # ==============================================================================
-FROM ubuntu:24.04 AS base
+FROM ubuntu:24.04 AS runner
 
 # Install Node.js 22 and essential runtime tools
 RUN apt-get update -qq && \
@@ -13,29 +13,12 @@ RUN apt-get update -qq && \
 
 WORKDIR /app
 
-# ==============================================================================
-# Builder stage: compile TypeScript
-# ==============================================================================
-FROM base AS builder
-WORKDIR /app
-
-COPY package*.json tsconfig.json ./
-RUN npm install --no-audit --no-fund
-
-COPY src ./src
-RUN npm run build
-
-# ==============================================================================
-# Production runtime container
-# ==============================================================================
-FROM base AS runner
-WORKDIR /app
-
+# Production dependencies only (avoids OOM on low-memory servers)
 COPY package*.json ./
 RUN npm install --omit=dev --no-audit --no-fund
 
-# Copy compiled artifacts from builder
-COPY --from=builder /app/dist ./dist
+# Copy compiled JavaScript artifacts
+COPY dist ./dist
 
 # Copy public static web assets (Admin portal, Customer tracking, etc.)
 COPY public ./public
