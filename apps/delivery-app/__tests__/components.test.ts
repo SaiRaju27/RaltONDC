@@ -1,3 +1,10 @@
+jest.mock('expo-image-picker', () => ({
+  launchCameraAsync: jest.fn(),
+  launchImageLibraryAsync: jest.fn(),
+  requestCameraPermissionsAsync: jest.fn().mockResolvedValue({ status: 'granted' }),
+  requestMediaLibraryPermissionsAsync: jest.fn().mockResolvedValue({ status: 'granted' }),
+  MediaTypeOptions: { Images: 'Images' },
+}));
 import App from '../App';
 import { DeliveryDashboard } from '../DeliveryDashboard';
 import { OnboardingFlow } from '../OnboardingFlow';

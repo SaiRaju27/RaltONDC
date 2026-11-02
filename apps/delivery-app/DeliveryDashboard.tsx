@@ -1863,7 +1863,7 @@ export const DeliveryDashboard: React.FC<DeliveryDashboardProps> = ({
                       style={dashStyles.profileEditInput}
                       value={profileForm.dob}
                       onChangeText={(t) => setProfileForm({ ...profileForm, dob: t })}
-                      placeholder="YYYY-MM-DD"
+                      placeholder="DD-MM-YYYY"
                     />
                   ) : (
                     <Text style={dashStyles.profileValueText}>{profileForm.dob || 'Not provided'}</Text>

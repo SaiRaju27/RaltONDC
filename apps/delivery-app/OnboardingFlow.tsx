@@ -333,7 +333,7 @@ export const OnboardingFlow: React.FC<OnboardingFlowProps> = ({
   onFinishAndGoDashboard,
   onBackToAuth,
   authPhone,
-  apiUrl = 'http://localhost:5000',
+  apiUrl = 'http://localhost:5001',
   existingRider,
 }) => {
   // Step 1: Personal Profile State (Clean defaults, no hardcoded mock data)
@@ -408,7 +408,7 @@ export const OnboardingFlow: React.FC<OnboardingFlowProps> = ({
   const [phoneOtpInput, setPhoneOtpInput] = useState<string>('');
   const [isSendingPhoneOtp, setIsSendingPhoneOtp] = useState<boolean>(false);
   const [isVerifyingPhoneOtp, setIsVerifyingPhoneOtp] = useState<boolean>(false);
-  const [phoneOtpDispatchedCode, setPhoneOtpDispatchedCode] = useState<string>('1234');
+  const [phoneOtpDispatchedCode, setPhoneOtpDispatchedCode] = useState<string>('');
   const [phoneOtpTimer, setPhoneOtpTimer] = useState<number>(0);
   const [emailAddr, setEmailAddr] = useState<string>('');
   const [dobInput, setDobInput] = useState<string>('');
@@ -487,8 +487,8 @@ export const OnboardingFlow: React.FC<OnboardingFlowProps> = ({
     const candidateUrls = [
       apiUrl,
       resolveApiUrl(),
-      'http://localhost:5000',
-      'http://10.0.2.2:5000',
+      'http://localhost:5001',
+      'http://10.0.2.2:5001',
     ].filter((u, idx, arr): u is string => Boolean(u) && arr.indexOf(u) === idx);
 
     for (const base of candidateUrls) {
@@ -507,7 +507,7 @@ export const OnboardingFlow: React.FC<OnboardingFlowProps> = ({
       }
     }
 
-    cachedTargetBase = candidateUrls[0]?.replace(/\/$/, '') || 'http://localhost:5000';
+    cachedTargetBase = candidateUrls[0]?.replace(/\/$/, '') || 'http://localhost:5001';
     return cachedTargetBase;
   };
 
@@ -633,7 +633,7 @@ export const OnboardingFlow: React.FC<OnboardingFlowProps> = ({
       );
 
       // Refresh immediately
-      const baseUrl = apiUrl || 'http://localhost:5000';
+      const baseUrl = apiUrl || 'http://localhost:5001';
       const res = await fetch(`${baseUrl}/api/documents/rider/${currentRiderId}`);
       const data = await res.json();
       if (data.success) {
@@ -662,7 +662,7 @@ export const OnboardingFlow: React.FC<OnboardingFlowProps> = ({
     let isMounted = true;
     const fetchStatus = async () => {
       try {
-        const baseUrl = apiUrl || 'http://localhost:5000';
+        const baseUrl = apiUrl || 'http://localhost:5001';
         const res = await fetch(`${baseUrl}/api/documents/rider/${currentRiderId}`);
         const data = await res.json();
         if (isMounted && data.success) {
@@ -681,7 +681,7 @@ export const OnboardingFlow: React.FC<OnboardingFlowProps> = ({
 
     let ws: WebSocket | null = null;
     try {
-      const wsUrl = (apiUrl || 'http://localhost:5000').replace(/^http/, 'ws') + `/ws?riderId=${currentRiderId}`;
+      const wsUrl = (apiUrl || 'http://localhost:5001').replace(/^http/, 'ws') + `/ws?riderId=${currentRiderId}`;
       ws = new WebSocket(wsUrl);
       ws.onmessage = (event) => {
         try {
@@ -705,14 +705,23 @@ export const OnboardingFlow: React.FC<OnboardingFlowProps> = ({
     };
   }, [onboardStep, currentRiderId, apiUrl]);
 
-  // Age Calculator & 18+ Validation Helper
+  // Age Calculator & 18+ Validation Helper (Supports DD-MM-YYYY and YYYY-MM-DD)
   const calculateAge = (dobString: string): number => {
     if (!dobString) return 0;
-    const parts = dobString.split('-');
+    const parts = dobString.split(/[-/]/);
     if (parts.length !== 3) return 0;
-    const y = parseInt(parts[0], 10);
-    const m = parseInt(parts[1], 10) - 1;
-    const d = parseInt(parts[2], 10);
+    let d: number, m: number, y: number;
+    if (parts[0].length === 4) {
+      // Legacy format: YYYY-MM-DD
+      y = parseInt(parts[0], 10);
+      m = parseInt(parts[1], 10) - 1;
+      d = parseInt(parts[2], 10);
+    } else {
+      // Standard format: DD-MM-YYYY
+      d = parseInt(parts[0], 10);
+      m = parseInt(parts[1], 10) - 1;
+      y = parseInt(parts[2], 10);
+    }
     const birthDate = new Date(y, m, d);
     if (isNaN(birthDate.getTime())) return 0;
     const today = new Date();
@@ -761,9 +770,9 @@ export const OnboardingFlow: React.FC<OnboardingFlowProps> = ({
     }
 
     setIsSendingPhoneOtp(true);
-    const baseUrl = apiUrl || 'http://localhost:5000';
+    const baseUrl = apiUrl || 'http://localhost:5001';
     let dispatched = false;
-    let fallbackCode = '1234';
+    let fallbackCode = '';
 
     try {
       const res = await fetch(`${baseUrl}/api/auth/send-otp`, {
@@ -799,23 +808,15 @@ export const OnboardingFlow: React.FC<OnboardingFlowProps> = ({
     }
 
     setIsSendingPhoneOtp(false);
-    setPhoneOtpDispatchedCode(fallbackCode);
+    setPhoneOtpDispatchedCode('');
     setPhoneOtpTimer(45);
     setPhoneOtpInput('');
     setShowPhoneOtpModal(true);
 
     Alert.alert(
       'Verification Code Dispatched',
-      `Carrier SMS dispatched to +91 ${clean}.\n\nVerification Code: ${fallbackCode}`,
-      [
-        {
-          text: `Auto-fill (${fallbackCode})`,
-          onPress: () => {
-            setPhoneOtpInput(fallbackCode);
-          },
-        },
-        { text: 'Enter Manually', style: 'cancel' },
-      ]
+      `A 6-digit SMS verification code has been dispatched to +91 ${clean}.\n\nPlease enter the code to verify your mobile number.`,
+      [{ text: 'OK' }]
     );
   };
 
@@ -830,7 +831,7 @@ export const OnboardingFlow: React.FC<OnboardingFlowProps> = ({
     }
 
     setIsVerifyingPhoneOtp(true);
-    const baseUrl = apiUrl || 'http://localhost:5000';
+    const baseUrl = apiUrl || 'http://localhost:5001';
     let verified = false;
 
     try {
@@ -868,7 +869,7 @@ export const OnboardingFlow: React.FC<OnboardingFlowProps> = ({
       setShowPhoneOtpModal(false);
       Alert.alert('Mobile Number Verified ✓', `+91 ${clean} has been successfully verified.`);
     } else {
-      Alert.alert('Verification Failed', 'Invalid OTP code. Please enter the SMS code or test code 1234.');
+      Alert.alert('Verification Failed', 'Invalid verification code. Please enter the 6-digit code received via SMS.');
     }
   };
 
@@ -1211,16 +1212,21 @@ export const OnboardingFlow: React.FC<OnboardingFlowProps> = ({
 
               {/* Field 4: Date of Birth with Interactive Calendar Picker */}
               <FloatingLabelInput
-                label="Date of Birth (YYYY-MM-DD)"
+                label="Date of Birth (DD-MM-YYYY)"
                 value={dobInput}
                 editable={false}
-                placeholder="Tap calendar to select DOB"
+                placeholder="Tap calendar to select DOB (DD-MM-YYYY)"
                 onPress={() => {
                   if (dobInput) {
-                    const parts = dobInput.split('-');
+                    const parts = dobInput.split(/[-/]/);
                     if (parts.length === 3) {
-                      setCalYear(parseInt(parts[0], 10) || 2000);
-                      setCalMonth(parseInt(parts[1], 10) - 1 || 0);
+                      if (parts[0].length === 4) {
+                        setCalYear(parseInt(parts[0], 10) || 2000);
+                        setCalMonth((parseInt(parts[1], 10) - 1) || 0);
+                      } else {
+                        setCalMonth((parseInt(parts[1], 10) - 1) || 0);
+                        setCalYear(parseInt(parts[2], 10) || 2000);
+                      }
                     }
                   } else {
                     setCalYear(2000);
@@ -1239,7 +1245,7 @@ export const OnboardingFlow: React.FC<OnboardingFlowProps> = ({
                 isError={Boolean(dobInput && !isAgeValid)}
                 hint={
                   !dobInput
-                    ? 'Select your birth date from calendar (Must be 18+ to join)'
+                    ? 'Select your birth date from calendar (DD-MM-YYYY, must be 18+ to join)'
                     : isAgeValid
                       ? `Age: ${riderAge} years old (Eligible for onboarding)`
                       : `⚠️ Under 18: Partner fleet guidelines mandate age 18+ (Current: ${riderAge} yrs)`
@@ -1409,6 +1415,15 @@ export const OnboardingFlow: React.FC<OnboardingFlowProps> = ({
                   maxLength={13}
                   hint="Ensure RC is issued under valid commercial or two-wheeler transport guidelines"
                 />
+
+                <DocumentUploadBox
+                  title="Vehicle RC Document"
+                  subtitle="Clear photo of physical RC card or mParivahan digital copy"
+                  icon="📄"
+                  imageUri={docImages.vehicle_rc}
+                  onPickCamera={() => handlePickDocument('vehicle_rc', 'camera')}
+                  onPickGallery={() => handlePickDocument('vehicle_rc', 'gallery')}
+                />
               </View>
             ) : (
               <View style={obStyles.card}>
@@ -1456,30 +1471,6 @@ export const OnboardingFlow: React.FC<OnboardingFlowProps> = ({
                 
               </View>
 
-              {/* DL Image Previews */}
-              <View style={{ flexDirection: 'row', gap: 8, marginBottom: 12 }}>
-                <View style={obStyles.dlImageWrap}>
-                  <Image
-                    source={{ uri: 'https://lh3.googleusercontent.com/aida-public/AB6AXuBQ4n_bKv83Vjb95GE9SZw7o8kgzvso2nv-KkYQvf4_xsfw5-efltRABkW_gimDiULoVh7pvE6eQ5b4BTSrvShHBuIF1BPJm9WpVIwWQjhDgX-E2IrlHpGxVL4CIsmezT94uk478aMNZFjEgdM2fleuQ0uvfECX6D-cL0YN9xZyzhHVnWPuL1iEgqPqpHqmLVo_DL4ls9xfU8AgXNEeGvxvk66nnCHiG2TbfjXoTSEJ' }}
-                    style={obStyles.docThumbImage}
-                    resizeMode="cover"
-                  />
-                  <View style={obStyles.docThumbBadge}>
-                    <Text style={obStyles.docThumbBadgeText}>Front View</Text>
-                  </View>
-                </View>
-                <View style={obStyles.dlImageWrap}>
-                  <Image
-                    source={{ uri: 'https://lh3.googleusercontent.com/aida-public/AB6AXuBmJdSrI8jsi5cz2ooho1vPqZXqSnVrd2nhLpDq24Jy-BQVyYCXBaOiYebGLYCw7Q9ah4EFmJ31-uXULrBamDtXAqqLrXs-NiqAIeOFrv-55p_z3YyS14xVlB9setDSajt6nSpr44HXZFSFkBpwnUPOMYCf8HH7t4KLs4AqSuHS6T9uVy3mllymSLG5eYIhj5updBa08R-1vcUSD-KXw7EVoA0-8UDhLIpX8GGvFD_a' }}
-                    style={obStyles.docThumbImage}
-                    resizeMode="cover"
-                  />
-                  <View style={obStyles.docThumbBadge}>
-                    <Text style={obStyles.docThumbBadgeText}>Back View</Text>
-                  </View>
-                </View>
-              </View>
-
               <FloatingLabelInput
                 label="Driving License Number"
                 value={dlNumber}
@@ -1487,13 +1478,30 @@ export const OnboardingFlow: React.FC<OnboardingFlowProps> = ({
                 autoCapitalize="characters"
                 hint="Auto-matched with Sarathi Vahan DB • Valid till 2038"
               />
+
+              <DocumentUploadBox
+                title="Driving License (Front Side)"
+                subtitle="Clear photo showing Name, DL number and license validity"
+                icon="🪪"
+                imageUri={docImages.driving_license}
+                onPickCamera={() => handlePickDocument('driving_license', 'camera')}
+                onPickGallery={() => handlePickDocument('driving_license', 'gallery')}
+              />
+
+              <DocumentUploadBox
+                title="Driving License (Back Side)"
+                subtitle="Showing vehicle classes permitted (MCWG / LMV)"
+                icon="🪪"
+                imageUri={docImages.driving_license_back}
+                onPickCamera={() => handlePickDocument('driving_license_back', 'camera')}
+                onPickGallery={() => handlePickDocument('driving_license_back', 'gallery')}
+              />
             </View>
 
             {/* Document Card 2: PAN Card */}
             <View style={obStyles.card}>
               <View style={obStyles.betweenRow}>
                 <Text style={[obStyles.fieldLabel, { marginBottom: 10 }]}>PAN Card Identity</Text>
-                
               </View>
               <FloatingLabelInput
                 label="Permanent Account Number (PAN)"
@@ -1502,6 +1510,15 @@ export const OnboardingFlow: React.FC<OnboardingFlowProps> = ({
                 autoCapitalize="characters"
                 maxLength={10}
                 hint="Auto-authenticated via NSDL Protean Gateway • 100% Name Match"
+              />
+
+              <DocumentUploadBox
+                title="PAN Card (Front Side)"
+                subtitle="Clear photo showing PAN, Name, DOB and signature"
+                icon="💳"
+                imageUri={docImages.pan_card}
+                onPickCamera={() => handlePickDocument('pan_card', 'camera')}
+                onPickGallery={() => handlePickDocument('pan_card', 'gallery')}
               />
             </View>
 
@@ -1571,34 +1588,53 @@ export const OnboardingFlow: React.FC<OnboardingFlowProps> = ({
 
             {/* Section 2: Live Profile Selfie */}
             <View style={obStyles.card}>
-              <Text style={[obStyles.fieldLabel, { marginBottom: 8 }]}>Live Profile Selfie</Text>
-              <View style={obStyles.selfieViewfinderFrame}>
-                <Image
-                  source={{ uri: docImages.profile_selfie || 'https://lh3.googleusercontent.com/aida-public/AB6AXuDBfTx9LmnJCpwHIT_Re3GNM09fLKXmJLor6yCzHaVYvIPUuadkxtYFEcNuvs3lH3NddVd4IvQjUnrDVBwztMI12u9aAn_1SAv9PbYMQoHLUyRmBfRz4x-dfwUt8YL8dKrS0CTrI_cvRGGIsDROIsTf9auUNu1e0RTSX3IbpYhveNLD0yjoG1gytETK9L0JOMiXUC5mXZgEtr_vnr7RI0xtQr6S5oU2Eoh4NGcWahSj' }}
-                  style={obStyles.selfieImage}
-                  resizeMode="cover"
-                />
-                <View style={obStyles.ovalGuide}>
-                  <View style={obStyles.faceLockedPill}>
-                    <Text style={obStyles.faceLockedText}>Face Locked • 99.8% Match</Text>
+              <View style={obStyles.betweenRow}>
+                <Text style={[obStyles.fieldLabel, { marginBottom: 8 }]}>Live Profile Selfie</Text>
+                {docImages.profile_selfie ? (
+                  <View style={obStyles.docUploadBadgeSuccess}>
+                    <Text style={obStyles.docUploadBadgeSuccessText}>✓ Attached</Text>
                   </View>
-                </View>
+                ) : (
+                  <View style={obStyles.docUploadBadgePending}>
+                    <Text style={obStyles.docUploadBadgePendingText}>Selfie Required</Text>
+                  </View>
+                )}
               </View>
 
-              <TouchableOpacity
-                style={[obStyles.retakeBtn, { marginTop: 12 }]}
-                onPress={() => {
-                  setIsRetakingPhoto(true);
-                  setTimeout(() => {
-                    setIsRetakingPhoto(false);
-                    Alert.alert('Selfie Updated', 'Biometric liveness confirmed with 99.8% score.');
-                  }, 800);
-                }}
-              >
-                <Text style={obStyles.retakeBtnText}>
-                  {isRetakingPhoto ? 'Capturing...' : '🔄 Retake Live Selfie'}
-                </Text>
-              </TouchableOpacity>
+              {docImages.profile_selfie ? (
+                <View style={obStyles.selfieViewfinderFrame}>
+                  <Image
+                    source={{ uri: docImages.profile_selfie }}
+                    style={obStyles.selfieImage}
+                    resizeMode="cover"
+                  />
+                  <View style={obStyles.ovalGuide}>
+                    <View style={obStyles.faceLockedPill}>
+                      <Text style={obStyles.faceLockedText}>Face Locked • 99.8% Match</Text>
+                    </View>
+                  </View>
+                </View>
+              ) : null}
+
+              <View style={{ flexDirection: 'row', gap: 8, marginTop: docImages.profile_selfie ? 12 : 6 }}>
+                <TouchableOpacity
+                  style={[obStyles.docActionBtnCamera, { paddingVertical: 11, flex: 1 }]}
+                  onPress={() => handlePickDocument('profile_selfie', 'camera')}
+                  activeOpacity={0.85}
+                >
+                  <Text style={obStyles.docActionBtnCameraText}>
+                    {docImages.profile_selfie ? '📷 Retake Selfie' : '📷 Take Selfie (Camera)'}
+                  </Text>
+                </TouchableOpacity>
+
+                <TouchableOpacity
+                  style={[obStyles.docActionBtnGallery, { paddingVertical: 11, flex: 1 }]}
+                  onPress={() => handlePickDocument('profile_selfie', 'gallery')}
+                  activeOpacity={0.85}
+                >
+                  <Text style={obStyles.docActionBtnGalleryText}>🖼️ Choose Gallery</Text>
+                </TouchableOpacity>
+              </View>
             </View>
 
             {/* Bottom Button */}
@@ -1649,7 +1685,30 @@ export const OnboardingFlow: React.FC<OnboardingFlowProps> = ({
                 onChangeText={(v) => setBankIfscInput(v.toUpperCase())}
                 autoCapitalize="characters"
                 maxLength={11}
-                hint="Resolved: State Bank of India (Hitec City Branch)"
+                hint={(() => {
+                  const clean = bankIfscInput.trim().toUpperCase();
+                  if (clean.length < 4) return '11-character Indian Financial System Code';
+                  const prefix = clean.substring(0, 4);
+                  const bankNames = {
+                    SBIN: 'State Bank of India',
+                    HDFC: 'HDFC Bank',
+                    ICIC: 'ICICI Bank',
+                    KKBK: 'Kotak Mahindra Bank',
+                    PUNB: 'Punjab National Bank',
+                    BARB: 'Bank of Baroda',
+                    UBIN: 'Union Bank of India',
+                    CNRB: 'Canara Bank',
+                    AXIS: 'Axis Bank',
+                    UTIB: 'Axis Bank',
+                    YESB: 'Yes Bank',
+                    IDIB: 'Indian Bank',
+                    IOBA: 'Indian Overseas Bank'
+                  };
+                  const bankName = bankNames[prefix] || (prefix + ' Bank');
+                  return clean.length === 11
+                    ? 'Resolved: ' + bankName + ' (' + (selectedHub === 'hiteccity' ? 'Hitec City Branch' : 'Primary Branch') + ')'
+                    : '11-character code (' + bankName + ')';
+                })()}
               />
 
               <FloatingLabelInput
@@ -2048,7 +2107,7 @@ export const OnboardingFlow: React.FC<OnboardingFlowProps> = ({
               {/* Day cells */}
               {Array.from({ length: daysInCurrentCalMonth }).map((_, i) => {
                 const dayNum = i + 1;
-                const dateStr = `${calYear}-${String(calMonth + 1).padStart(2, '0')}-${String(dayNum).padStart(2, '0')}`;
+                const dateStr = `${String(dayNum).padStart(2, '0')}-${String(calMonth + 1).padStart(2, '0')}-${calYear}`;
                 const isSelected = dobInput === dateStr;
                 const cellAge = calculateAge(dateStr);
                 const isCell18Plus = cellAge >= 18;
@@ -2116,33 +2175,26 @@ export const OnboardingFlow: React.FC<OnboardingFlowProps> = ({
               </TouchableOpacity>
             </View>
 
-            {/* Quick-fill helper pill */}
-            {phoneOtpDispatchedCode ? (
-              <TouchableOpacity
-                style={obStyles.quickFillPill}
-                onPress={() => setPhoneOtpInput(phoneOtpDispatchedCode)}
-                activeOpacity={0.7}
-              >
-                <Text style={obStyles.quickFillPillText}>
-                  ⚡ Auto-fill Code: {phoneOtpDispatchedCode}
-                </Text>
-              </TouchableOpacity>
-            ) : null}
-
             {/* OTP Input Field */}
             <View style={{ marginVertical: 14 }}>
               <Text style={{ fontSize: 12, fontWeight: '700', color: '#1e4633', marginBottom: 6 }}>
-                ENTER VERIFICATION CODE
+                ENTER 6-DIGIT VERIFICATION CODE
               </Text>
               <TextInput
                 style={obStyles.otpLargeInput}
                 value={phoneOtpInput}
-                onChangeText={setPhoneOtpInput}
-                placeholder="• • • •"
+                onChangeText={(val) => {
+                  const digits = val.replace(/[^0-9]/g, '').slice(0, 6);
+                  setPhoneOtpInput(digits);
+                }}
+                placeholder="• • • • • •"
                 placeholderTextColor="#9ca3af"
-                keyboardType="number-pad"
+                keyboardType="numeric"
+                autoComplete="sms-otp"
+                textContentType="oneTimeCode"
                 maxLength={6}
                 autoFocus
+                selectTextOnFocus
               />
             </View>
 

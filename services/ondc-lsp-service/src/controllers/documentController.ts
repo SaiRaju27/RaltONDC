@@ -66,6 +66,7 @@ export class DocumentController {
       res.json({
         success: true,
         sessionId,
+        session: { sessionId, totalChunks },
         totalChunks,
         message: 'Chunked upload session initialized successfully'
       });

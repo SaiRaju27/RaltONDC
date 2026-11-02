@@ -437,7 +437,7 @@ describe('Backend 85%+ Coverage Booster Suite', () => {
 
   describe('Server graceful shutdown handler', () => {
     it('executes graceful shutdown routine without crashing process', async () => {
-      const exitSpy = jest.spyOn(process, 'exit').mockImplementation((code?: any) => undefined as never);
+      jest.spyOn(process, 'exit').mockImplementation((() => undefined) as any);
       const closeSpy = jest.spyOn(server, 'close').mockImplementation((cb?: any) => {
         if (cb) cb();
         return server;
@@ -445,8 +445,61 @@ describe('Backend 85%+ Coverage Booster Suite', () => {
 
       await shutdown('SIGTERM');
       expect(closeSpy).toHaveBeenCalled();
-      closeSpy.mockRestore();
-      exitSpy.mockRestore();
     });
+
+    it('executes server.start startup routine cleanly in test', async () => {
+      const listenSpy = jest.spyOn(server, 'listen').mockImplementation((port: any, cb?: any) => {
+        if (typeof cb === 'function') cb();
+        return server;
+      });
+      const { start } = require('../server');
+      await start();
+      expect(listenSpy).toHaveBeenCalled();
+      listenSpy.mockRestore();
+    });
+
+    it('queueService.init connects and asserts standard queues when amqp succeeds', async () => {
+      const mockChannel = {
+        assertQueue: jest.fn().mockResolvedValue({}),
+        createChannel: jest.fn(),
+        consume: jest.fn().mockResolvedValue({}),
+        sendToQueue: jest.fn().mockReturnValue(true),
+        ack: jest.fn(),
+        nack: jest.fn(),
+        close: jest.fn().mockResolvedValue({})
+      };
+      const mockConn = {
+        createChannel: jest.fn().mockResolvedValue(mockChannel),
+        on: jest.fn(),
+        close: jest.fn().mockResolvedValue({})
+      };
+      const amqp = require('amqplib');
+      const connectSpy = jest.spyOn(amqp, 'connect').mockResolvedValue(mockConn as any);
+
+      const qs = new QueueService();
+      await (qs as any).init();
+      expect((qs as any).isConnected).toBe(true);
+      await qs.close();
+      connectSpy.mockRestore();
+    });
+
+    it('redisService connects and executes redis commands', async () => {
+      const rs = new RedisService();
+      (rs as any).isConnected = true;
+      (rs as any).client = {
+        geoadd: jest.fn().mockResolvedValue(1),
+        set: jest.fn().mockResolvedValue('OK'),
+        get: jest.fn().mockResolvedValue('redis_val'),
+        publish: jest.fn().mockResolvedValue(1),
+        quit: jest.fn().mockResolvedValue('OK')
+      };
+      await rs.updateRiderLocation('R1', 17.44, 78.39);
+      await rs.set('key', 'val', 10);
+      const val = await rs.get('key');
+      expect(val).toBe('redis_val');
+      await rs.publish('ch', { a: 1 });
+      await rs.close();
+    });
+
   });
 });

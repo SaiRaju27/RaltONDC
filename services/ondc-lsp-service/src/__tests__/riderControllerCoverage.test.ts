@@ -110,5 +110,50 @@ describe('RiderController Deep Coverage Suite', () => {
     expect(res.status).toBe(200);
     expect(res.body.success).toBe(true);
   });
+
+  it('POST /api/auth/login and /api/rider/register should reject invalid phone formats', async () => {
+    const resLogin = await request(app).post('/api/auth/login').send({ phone: '123' });
+    expect(resLogin.status).toBe(400);
+
+    const resReg = await request(app).post('/api/rider/register').send({ phone: '123' });
+    expect(resReg.status).toBe(400);
+  });
+
+  it('POST /api/rider/save-step should reject missing riderId and phone', async () => {
+    const res = await request(app).post('/api/rider/save-step').send({});
+    expect(res.status).toBe(400);
+  });
+
+  it('POST /api/rider/verify-bank should validate account number and IFSC format', async () => {
+    const resShortAcc = await request(app)
+      .post('/api/rider/verify-bank')
+      .send({ accountNumber: '1234', ifsc: 'HDFC0001234' });
+    expect(resShortAcc.status).toBe(400);
+
+    const resInvalidIfsc = await request(app)
+      .post('/api/rider/verify-bank')
+      .send({ accountNumber: '1234567890', ifsc: 'INVALID_IFSC' });
+    expect(resInvalidIfsc.status).toBe(400);
+  });
+
+  it('POST /api/auth/send-otp should reject invalid phone and unregistered login', async () => {
+    const resInvalidPhone = await request(app)
+      .post('/api/auth/send-otp')
+      .send({ phone: '123', mode: 'login' });
+    expect(resInvalidPhone.status).toBe(400);
+
+    const resLoginUnreg = await request(app)
+      .post('/api/auth/send-otp')
+      .send({ phone: '9000000001', mode: 'login' });
+    expect(resLoginUnreg.status).toBe(404);
+  });
+
+  it('GET /api/rider/all-orders and /api/rider/earnings should succeed', async () => {
+    const resOrders = await request(app).get('/api/rider/all-orders');
+    expect(resOrders.status).toBe(200);
+
+    const resEarnings = await request(app).get('/api/rider/earnings');
+    expect(resEarnings.status).toBe(200);
+  });
 });
 

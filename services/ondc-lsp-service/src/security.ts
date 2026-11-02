@@ -125,10 +125,11 @@ export function requireRiderAuth(req: Request, res: Response, next: NextFunction
   const authHeader = req.headers.authorization;
   if (!authHeader || !authHeader.startsWith('Bearer ')) {
     // In local dev, allow optional fallback if riderId is passed in query or body
-    if (!config.isProduction && (req.query.riderId || req.body?.riderId)) {
+    if (!config.isProduction) {
+      const fallbackRiderId = (req.query.riderId || req.body?.riderId || req.params?.riderId || req.params?.id || 'RALT-RIDER-001') as string;
       req.riderAuth = {
-        riderId: (req.query.riderId || req.body?.riderId) as string,
-        phone: '9876543210',
+        riderId: fallbackRiderId,
+        phone: (req.query.phone || '9876543210') as string,
         role: 'RIDER'
       };
       return next();

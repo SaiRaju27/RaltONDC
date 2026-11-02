@@ -265,7 +265,6 @@ export class RiderController {
         success: true,
         type: 'success',
         message: `OTP sent successfully to +91 ${cleanPhone}`,
-        testOtp: defaultOtp,
         isRegistered: !!existingRider,
         airbrickDispatched,
       });
@@ -278,7 +277,7 @@ export class RiderController {
   public static async verifyOtp(req: Request, res: Response) {
     try {
       const phone = req.body?.phone || req.query?.phone || '';
-      const code = req.body?.code || req.query?.code || '';
+      const code = req.body?.code || req.body?.otp || req.query?.code || req.query?.otp || '';
       const mode = (req.body?.mode || req.query?.mode || '').toString().toLowerCase();
       const cleanPhone = phone.toString().replace(/[^0-9]/g, '').slice(-10);
       const cleanCode = code.toString().trim();
@@ -324,7 +323,7 @@ export class RiderController {
       if (!isMatch) {
         return res.status(400).json({
           success: false,
-          error: airbrickError || 'Invalid or expired OTP code. Use 1234 or your SMS code.'
+          error: airbrickError || 'Invalid or expired verification code. Please enter the 6-digit SMS verification code.'
         });
       }
 

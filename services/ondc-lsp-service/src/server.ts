@@ -167,9 +167,9 @@ app.post(['/ondc/cancel', '/cancel'], ondcRateLimiter, ONDCController.handleCanc
 // =============================================================================
 // 4. DELIVERY PARTNER MOBILE APP AUTH & ONBOARDING (Protected by otpRateLimiter)
 // =============================================================================
-app.all(['/api/auth/send-otp', '/api/rider/send-otp'], otpRateLimiter, RiderController.sendOtp);
-app.all(['/api/auth/verify-otp', '/api/rider/verify-otp'], otpRateLimiter, RiderController.verifyOtp);
-app.all(['/api/auth/login', '/api/rider/login'], apiRateLimiter, RiderController.login);
+app.all(['/api/auth/send-otp', '/api/rider/send-otp', '/api/rider/auth/send-otp'], otpRateLimiter, RiderController.sendOtp);
+app.all(['/api/auth/verify-otp', '/api/rider/verify-otp', '/api/rider/auth/verify-otp'], otpRateLimiter, RiderController.verifyOtp);
+app.all(['/api/auth/login', '/api/rider/login', '/api/rider/auth/login'], apiRateLimiter, RiderController.login);
 
 app.all('/api/rider/save-step', apiRateLimiter, RiderController.saveStep);
 app.all('/api/rider/metrics', apiRateLimiter, RiderController.getMetrics);
@@ -215,6 +215,12 @@ app.get('/api/notifications', apiRateLimiter, requireRiderAuth, RiderController.
 app.post('/api/notifications/send', apiRateLimiter, requireRiderAuth, RiderController.sendNotification);
 app.put('/api/notifications/:id/read', apiRateLimiter, requireRiderAuth, RiderController.markNotificationRead);
 app.put('/api/notifications/read-all', apiRateLimiter, requireRiderAuth, RiderController.markAllNotificationsRead);
+
+
+// Safe JSON 404 handler for /api routes (prevents HTML Unexpected character: <)
+app.use('/api', (req: any, res: any) => {
+  res.status(404).json({ success: false, error: `API route not found: ${req.method} ${req.originalUrl}` });
+});
 
 // Mock BAP endpoint for local integration test loopbacks
 app.post('/mock/bap/:action', (req: any, res: any) => {
@@ -325,13 +331,17 @@ const shutdown = async (signal: string) => {
     await queueService.close();
     await closeDatabase();
     logger.info('All connections terminated. Process exiting safely.');
-    process.exit(0);
+    if (process.env.NODE_ENV !== 'test') {
+      process.exit(0);
+    }
   });
 
   // Force exit after 10s if graceful shutdown hangs
   setTimeout(() => {
     logger.error('Forced shutdown due to timeout');
-    process.exit(1);
+    if (process.env.NODE_ENV !== 'test') {
+      process.exit(1);
+    }
   }, 10000);
 };
 

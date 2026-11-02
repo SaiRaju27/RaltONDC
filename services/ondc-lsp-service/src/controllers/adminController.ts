@@ -69,7 +69,7 @@ export class AdminController {
       }
 
       if (search) {
-        conditions.push('(r.name ILIKE ? OR r.phone LIKE ? OR r.vehicle_number ILIKE ? OR r.id ILIKE ?)');
+        conditions.push('(r.name LIKE ? OR r.phone LIKE ? OR r.vehicle_number LIKE ? OR r.id LIKE ?)');
         const searchPattern = `%${search}%`;
         params.push(searchPattern, searchPattern, searchPattern, searchPattern);
       }

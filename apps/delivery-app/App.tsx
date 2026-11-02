@@ -48,7 +48,7 @@ const DEMO_RIDER_FALLBACK: RiderProfile = {
   workArea: 'Hitec City, Hyderabad',
   address: 'Hitec City, Hyderabad',
   father_name: 'Ram Raju',
-  dob: '1998-05-15',
+  dob: '15-05-1998',
   gender: 'Male',
   emergency_name: 'Emergency Contact',
   emergency_phone: '+91 9876500000',
@@ -477,7 +477,7 @@ export default function App() {
   const [authError, setAuthError] = useState<string>('');
   const [isSendingOtp, setIsSendingOtp] = useState<boolean>(false);
   const [otpSent, setOtpSent] = useState<boolean>(false);
-  const [receivedOtp, setReceivedOtp] = useState<string>('1234');
+  const [receivedOtp, setReceivedOtp] = useState<string>('');
   const [otpDigits, setOtpDigits] = useState<string[]>(['', '', '', '', '', '']);
   const [timerCount, setTimerCount] = useState<number>(45);
   const [isVerifyingOtp, setIsVerifyingOtp] = useState<boolean>(false);
@@ -529,10 +529,7 @@ export default function App() {
     if (typeof process !== 'undefined' && process.env?.EXPO_PUBLIC_API_URL) {
       return process.env.EXPO_PUBLIC_API_URL.replace(/\/$/, '');
     }
-    if (typeof process !== 'undefined' && process.env?.EXPO_PUBLIC_USE_LOCAL === 'true') {
-      return resolveApiUrl();
-    }
-    return PRODUCTION_API_URL;
+    return resolveApiUrl();
   });
   const [authToken, setAuthToken] = useState<string>('');
 
@@ -1059,40 +1056,22 @@ export default function App() {
         } catch (e) {}
       }
 
-      setReceivedOtp(effectiveOtp);
       setIsSendingOtp(false);
       setTimerCount(45);
-      const isDev = (typeof __DEV__ !== 'undefined' && __DEV__) || !isProductionEnvironment();
-      if (isDev) {
-        setOtpDigits(['1', '2', '3', '4', '', '']);
-      } else {
-        setOtpDigits(['', '', '', '', '', '']);
-      }
+      setOtpDigits(['', '', '', '', '', '']);
       setOtpSent(true);
 
-      // Pop high-visibility OTP Alert
       Alert.alert(
         'Verification Code Dispatched',
-        `Your verification code is: ${effectiveOtp}
-
-(SMS sent to +91 ${cleanPhone}. Tap Auto-fill to continue.)`,
-        [
-          {
-            text: 'Auto-fill OTP',
-            onPress: () => {
-              handleAutoFillOtp(effectiveOtp);
-            },
-          },
-          { text: 'Enter Manually', style: 'cancel' },
-        ]
+        `A 6-digit SMS verification code has been dispatched to +91 ${cleanPhone}.\n\nPlease enter the code to continue.`,
+        [{ text: 'OK' }]
       );
     } catch (err: any) {
       setIsSendingOtp(false);
-      setReceivedOtp('1234');
       setOtpSent(true);
       setTimerCount(45);
-      setOtpDigits(['1', '2', '3', '4', '', '']);
-      Alert.alert('Notice', 'OTP dispatched via carrier (Demo code: 1234)');
+      setOtpDigits(['', '', '', '', '', '']);
+      Alert.alert('Notice', `Verification code dispatched to +91 ${cleanPhone}. Please check your SMS.`);
     }
   };
 
@@ -1192,7 +1171,7 @@ Unauthorized users cannot log in. Please register first to join as a delivery pa
         return;
       }
 
-      const errMsg = res.data?.error || res.data?.message || 'Invalid OTP code. Please enter 1234 or your SMS code.';
+      const errMsg = res.data?.error || res.data?.message || 'Invalid verification code. Please enter the 6-digit code received via SMS.';
       Alert.alert(
         'Verification Failed',
         errMsg,
@@ -1303,7 +1282,11 @@ Unauthorized users cannot log in. Please register first to join as a delivery pa
     try {
       const headers: Record<string, string> = { 'Content-Type': 'application/json' };
       if (authToken) headers['Authorization'] = `Bearer ${authToken}`;
-      await fetch(`${activeApiUrl}/api/rider/register`, {
+            const controller = new AbortController();
+            const timeoutId = setTimeout(() => controller.abort(), 5000);
+            const targetUrl = activeApiUrl || resolveApiUrl();
+            const regRes = await fetch(targetUrl + '/api/rider/register', {
+              signal: controller.signal,
         method: 'POST',
         headers,
         body: JSON.stringify(newProfile),
@@ -1901,45 +1884,6 @@ Unauthorized users cannot log in. Please register first to join as a delivery pa
           </View>
         ) : null}
 
-        {/* Environment Selector: Cloud (ralt.in) vs Localhost */}
-        <View style={loginStyles.serverPillRow}>
-          <TouchableOpacity
-            style={[
-              loginStyles.serverPill,
-              activeApiUrl === PRODUCTION_API_URL && loginStyles.serverPillActive,
-            ]}
-            onPress={() => setActiveApiUrl(PRODUCTION_API_URL)}
-            activeOpacity={0.7}
-          >
-            <Text
-              style={[
-                loginStyles.serverPillText,
-                activeApiUrl === PRODUCTION_API_URL && loginStyles.serverPillTextActive,
-              ]}
-            >
-              🟢 Cloud: ralt.in
-            </Text>
-          </TouchableOpacity>
-
-          <TouchableOpacity
-            style={[
-              loginStyles.serverPill,
-              activeApiUrl !== PRODUCTION_API_URL && loginStyles.serverPillActive,
-            ]}
-            onPress={() => setActiveApiUrl(getLocalApiUrl())}
-            activeOpacity={0.7}
-          >
-            <Text
-              style={[
-                loginStyles.serverPillText,
-                activeApiUrl !== PRODUCTION_API_URL && loginStyles.serverPillTextActive,
-              ]}
-            >
-              💻 Local: {Platform.OS === 'android' ? '10.0.2.2:5001' : 'localhost:5001'}
-            </Text>
-          </TouchableOpacity>
-        </View>
-
         {!otpSent ? (
           // ============================================================
           // PHASE 1: ENTER MOBILE NUMBER & SUBMIT
@@ -1992,33 +1936,6 @@ Unauthorized users cannot log in. Please register first to join as a delivery pa
                 </View>
               </View>
 
-              {/* Quick Fill Demo Rider Pill & Instant Login */}
-              <View style={{ flexDirection: 'row', gap: 8, alignItems: 'center', flexWrap: 'wrap', marginTop: 10 }}>
-                <TouchableOpacity
-                  style={loginStyles.quickDemoPill}
-                  onPress={() => {
-                    setAuthPhone(DEMO_PHONE);
-                    setOtpDigits(['1', '2', '3', '4', '', '']);
-                    setOtpSent(true);
-                    setTimerCount(45);
-                  }}
-                  activeOpacity={0.8}
-                >
-                  <Text style={loginStyles.quickDemoText}>
-                    ⚡ Quick Demo: <Text style={{ fontWeight: '800', color: '#042f1e' }}>{DEMO_PHONE}</Text>
-                  </Text>
-                </TouchableOpacity>
-
-                <TouchableOpacity
-                  style={loginStyles.instantLoginPill}
-                  onPress={handleDemoRiderInstantLogin}
-                  activeOpacity={0.8}
-                >
-                  <Text style={loginStyles.instantLoginPillText}>
-                    🚀 1-Tap Demo Sign In
-                  </Text>
-                </TouchableOpacity>
-              </View>
             </View>
 
             {/* Security Note */}
@@ -2131,28 +2048,46 @@ Unauthorized users cannot log in. Please register first to join as a delivery pa
                       style={loginStyles.otpDigitInput}
                       value={digit}
                       keyboardType="numeric"
-                      maxLength={1}
+                      maxLength={6}
+                      autoComplete="sms-otp"
+                      textContentType="oneTimeCode"
+                      selectTextOnFocus
                       onChangeText={(val) => {
-                        const clean = val ? val.slice(-1) : '';
+                        const digitsOnly = val.replace(/[^0-9]/g, '');
+                        if (digitsOnly.length > 1) {
+                          // Multi-digit auto-fill from SMS or paste
+                          const incoming = digitsOnly.slice(0, 6).split('');
+                          const newDigits = ['', '', '', '', '', ''];
+                          for (let i = 0; i < incoming.length; i++) {
+                            newDigits[i] = incoming[i];
+                          }
+                          setOtpDigits(newDigits);
+                          const focusIdx = Math.min(incoming.length - 1, 5);
+                          otpInputsRef.current[focusIdx]?.focus();
+                          if (incoming.length === 6) {
+                            triggerVerifyCode(newDigits.join(''), authPhone);
+                          }
+                          return;
+                        }
+
+                        // Single character manual typing
+                        const clean = digitsOnly ? digitsOnly.slice(-1) : '';
                         const newDigits = [...otpDigits];
                         newDigits[index] = clean;
                         setOtpDigits(newDigits);
                         if (clean && index < 5) {
                           otpInputsRef.current[index + 1]?.focus();
                         }
-                        const fullCode = newDigits.filter(Boolean).join('');
-                        if (
-                          fullCode === '1234' ||
-                          fullCode === receivedOtp ||
-                          fullCode === '123456' ||
-                          fullCode === '939864' ||
-                          newDigits.every((d) => d && d.length === 1)
-                        ) {
+                        const fullCode = newDigits.join('');
+                        if (fullCode.length === 6) {
                           triggerVerifyCode(fullCode, authPhone);
                         }
                       }}
                       onKeyPress={({ nativeEvent }) => {
                         if (nativeEvent.key === 'Backspace' && !digit && index > 0) {
+                          const newDigits = [...otpDigits];
+                          newDigits[index - 1] = '';
+                          setOtpDigits(newDigits);
                           otpInputsRef.current[index - 1]?.focus();
                         }
                       }}
@@ -2250,7 +2185,7 @@ Unauthorized users cannot log in. Please register first to join as a delivery pa
                 (isVerifyingOtp || isAuthenticating) && { backgroundColor: '#065f46' },
               ]}
               onPress={() => {
-                const code = otpDigits.join('').trim() || receivedOtp || '1234';
+                const code = otpDigits.join('').trim();
                 triggerVerifyCode(code, authPhone);
               }}
               disabled={isVerifyingOtp || isAuthenticating}
@@ -2464,35 +2399,7 @@ Unauthorized users cannot log in. Please register first to join as a delivery pa
             We have dispatched an SMS OTP to <Text style={{ fontWeight: '800' }}>+91 {authPhone}</Text>
           </Text>
 
-          {/* Instant Test / Developer Code Pill */}
-          <TouchableOpacity
-            style={{
-              backgroundColor: '#042f1e',
-              borderColor: '#00e676',
-              borderWidth: 1,
-              borderRadius: 8,
-              paddingVertical: 10,
-              paddingHorizontal: 14,
-              marginVertical: 12,
-              flexDirection: 'row',
-              alignItems: 'center',
-              justifyContent: 'space-between',
-            }}
-            onPress={() => {
-              const demoArr = ['1', '2', '3', '4', '', ''];
-              setOtpDigits(demoArr);
-              triggerVerifyCode('1234', authPhone);
-            }}
-            activeOpacity={0.8}
-          >
-            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-              <Text style={{ fontSize: 14 }}>⚡</Text>
-              <Text style={{ color: '#00e676', fontSize: 13, fontWeight: '700' }}>
-                Instant Code: 1234
-              </Text>
-            </View>
-            <Text style={{ color: '#ffffff', fontSize: 12, fontWeight: '600' }}>Tap to Fill & Login →</Text>
-          </TouchableOpacity>
+
 
           {/* Auto Fill Carrier SMS Indicator Banner */}
           {otpAutoFillActive && (
@@ -2513,22 +2420,44 @@ Unauthorized users cannot log in. Please register first to join as a delivery pa
                 style={[styles.otpBox, digit ? styles.otpBoxFilled : null]}
                 value={digit}
                 keyboardType="numeric"
-                maxLength={1}
+                maxLength={6}
+                autoComplete="sms-otp"
+                textContentType="oneTimeCode"
+                selectTextOnFocus
                 onChangeText={(val) => {
+                  const digitsOnly = val.replace(/[^0-9]/g, '');
+                  if (digitsOnly.length > 1) {
+                    const incoming = digitsOnly.slice(0, 6).split('');
+                    const newDigits = ['', '', '', '', '', ''];
+                    for (let i = 0; i < incoming.length; i++) {
+                      newDigits[i] = incoming[i];
+                    }
+                    setOtpDigits(newDigits);
+                    const focusIdx = Math.min(incoming.length - 1, 5);
+                    otpInputsRef.current[focusIdx]?.focus();
+                    if (incoming.length === 6) {
+                      triggerVerifyCode(newDigits.join(''), authPhone);
+                    }
+                    return;
+                  }
+                  const single = digitsOnly ? digitsOnly.slice(-1) : '';
                   const newArr = [...otpDigits];
-                  newArr[idx] = val;
+                  newArr[idx] = single;
                   setOtpDigits(newArr);
-                  if (val && idx < 5) {
+                  if (single && idx < 5) {
                     otpInputsRef.current[idx + 1]?.focus();
                   }
-                  const fullCode = newArr.filter(Boolean).join('');
-                  if (
-                    fullCode === '1234' ||
-                    fullCode === '123456' ||
-                    fullCode === '939864' ||
-                    newArr.every((d) => d && d.length === 1)
-                  ) {
+                  const fullCode = newArr.join('');
+                  if (fullCode.length === 6) {
                     triggerVerifyCode(fullCode, authPhone);
+                  }
+                }}
+                onKeyPress={({ nativeEvent }) => {
+                  if (nativeEvent.key === 'Backspace' && !digit && idx > 0) {
+                    const newDigits = [...otpDigits];
+                    newDigits[idx - 1] = '';
+                    setOtpDigits(newDigits);
+                    otpInputsRef.current[idx - 1]?.focus();
                   }
                 }}
               />
@@ -2609,7 +2538,11 @@ Unauthorized users cannot log in. Please register first to join as a delivery pa
           };
 
           try {
-            const regRes = await fetch(`${activeApiUrl}/api/rider/register`, {
+            const controller = new AbortController();
+            const timeoutId = setTimeout(() => controller.abort(), 5000);
+            const targetUrl = activeApiUrl || resolveApiUrl();
+            const regRes = await fetch(targetUrl + '/api/rider/register', {
+              signal: controller.signal,
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
               body: JSON.stringify(newProfile),
