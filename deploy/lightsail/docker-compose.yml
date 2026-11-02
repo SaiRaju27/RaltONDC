@@ -72,13 +72,13 @@ services:
       POSTGRES_DB: ${POSTGRES_DB:-ralt_ondc_db}
     command: >
       postgres
-      -c max_connections=100
-      -c shared_buffers=256MB
-      -c effective_cache_size=768MB
-      -c work_mem=16MB
-      -c maintenance_work_mem=64MB
+      -c max_connections=50
+      -c shared_buffers=64MB
+      -c effective_cache_size=256MB
+      -c work_mem=4MB
+      -c maintenance_work_mem=16MB
       -c checkpoint_completion_target=0.9
-      -c wal_buffers=16MB
+      -c wal_buffers=4MB
       -c default_statistics_target=100
       -c random_page_cost=1.1
     ports:

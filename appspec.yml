@@ -1,0 +1,28 @@
+version: 0.0
+os: linux
+files:
+  - source: /services/ondc-lsp-service
+    destination: /var/www/ralt-ondc
+  - source: /deploy
+    destination: /var/www/ralt-ondc/deploy
+hooks:
+  ApplicationStop:
+    - location: deploy/codedeploy/ApplicationStop.sh
+      timeout: 60
+      runas: ubuntu
+  BeforeInstall:
+    - location: deploy/codedeploy/BeforeInstall.sh
+      timeout: 60
+      runas: ubuntu
+  AfterInstall:
+    - location: deploy/codedeploy/AfterInstall.sh
+      timeout: 300
+      runas: ubuntu
+  ApplicationStart:
+    - location: deploy/codedeploy/ApplicationStart.sh
+      timeout: 60
+      runas: ubuntu
+  ValidateService:
+    - location: deploy/codedeploy/ValidateService.sh
+      timeout: 60
+      runas: ubuntu

@@ -36,15 +36,17 @@ phases:
 
   post_build:
     commands:
-      - echo "=== Step 4: Post-Build & Deployment Readiness ==="
-      - echo "CodeCommit CI/CD pipeline stage completed for commit: $CODEBUILD_RESOLVED_SOURCE_VERSION"
+      - echo "=== Step 4: Post-Build & CodeDeploy Readiness ==="
+      - echo "Preparing CodeDeploy package for commit: $CODEBUILD_RESOLVED_SOURCE_VERSION"
+      - chmod +x deploy/**/*.sh || true
+      - chmod +x scripts/*.sh || true
 
 artifacts:
   files:
+    - 'appspec.yml'
     - 'docker-compose.yml'
     - 'deploy/**/*'
-    - 'services/ondc-lsp-service/dist/**/*'
-    - 'services/ondc-lsp-service/package.json'
-    - 'services/ondc-lsp-service/package-lock.json'
-    - 'services/ondc-lsp-service/Dockerfile'
-
+    - 'services/ondc-lsp-service/**/*'
+    - 'packages/**/*'
+    - 'package.json'
+    - 'package-lock.json'
