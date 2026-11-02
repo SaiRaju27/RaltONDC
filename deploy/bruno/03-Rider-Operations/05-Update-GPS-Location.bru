@@ -1,0 +1,25 @@
+meta {
+  name: 5. Update GPS Location (PostGIS)
+  type: http
+  seq: 5
+}
+
+post {
+  url: https://ralt.in/api/rider/location
+  body: json
+  auth: none
+}
+
+headers {
+  Content-Type: application/json
+}
+
+body:json {
+  {
+    "riderId": "RALT-RIDER-001",
+    "lat": 17.4375,
+    "lng": 78.3687,
+    "heading": 90,
+    "speed": 25
+  }
+}

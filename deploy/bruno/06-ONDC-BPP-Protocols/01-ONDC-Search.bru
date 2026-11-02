@@ -1,13 +1,17 @@
 meta {
-  name: ONDC Search
+  name: 1. ONDC Search (Discovery)
   type: http
-  seq: 9
+  seq: 1
 }
 
 post {
-  url: {{baseUrl}}/ondc/search
+  url: https://ralt.in/ondc/search
   body: json
   auth: none
+}
+
+headers {
+  Content-Type: application/json
 }
 
 body:json {
@@ -20,18 +24,28 @@ body:json {
       "core_version": "1.2.0",
       "bap_id": "buyer-app.ondc.org",
       "bap_uri": "https://buyer-app.ondc.org/protocol/v1",
-      "transaction_id": "tx-bruno-test",
-      "message_id": "msg-bruno-test",
+      "transaction_id": "tx-search-001",
+      "message_id": "msg-search-001",
       "timestamp": "2026-11-02T12:00:00.000Z",
       "ttl": "PT30S"
     },
     "message": {
       "intent": {
-        "category": { "id": "Immediate Delivery" },
+        "category": {
+          "id": "Immediate Delivery"
+        },
         "fulfillment": {
           "type": "Delivery",
-          "start": { "location": { "gps": "17.4399,78.3680" } },
-          "end": { "location": { "gps": "17.4589,78.3721" } }
+          "start": {
+            "location": {
+              "gps": "17.4399,78.3680"
+            }
+          },
+          "end": {
+            "location": {
+              "gps": "17.4589,78.3721"
+            }
+          }
         }
       }
     }

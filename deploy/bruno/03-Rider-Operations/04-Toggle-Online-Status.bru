@@ -1,0 +1,22 @@
+meta {
+  name: 4. Toggle Duty Status (Online / Offline)
+  type: http
+  seq: 4
+}
+
+post {
+  url: https://ralt.in/api/rider/status
+  body: json
+  auth: none
+}
+
+headers {
+  Content-Type: application/json
+}
+
+body:json {
+  {
+    "riderId": "RALT-RIDER-001",
+    "isOnline": 1
+  }
+}

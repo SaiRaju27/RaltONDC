@@ -1,0 +1,25 @@
+meta {
+  name: 3. Update Rider Profile
+  type: http
+  seq: 3
+}
+
+post {
+  url: https://ralt.in/api/rider/profile
+  body: json
+  auth: none
+}
+
+headers {
+  Content-Type: application/json
+}
+
+body:json {
+  {
+    "riderId": "RALT-RIDER-001",
+    "name": "Sai Raju",
+    "city": "Hyderabad",
+    "vehicle_number": "TS 09 EA 1234",
+    "vehicle_type": "motorcycle"
+  }
+}

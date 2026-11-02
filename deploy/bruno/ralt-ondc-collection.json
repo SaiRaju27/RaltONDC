@@ -1,328 +1,397 @@
 {
   "info": {
-    "_postman_id": "ralt-ondc-logistics-api",
-    "name": "RALT ONDC Logistics API (Production)",
-    "description": "Production Bruno / Postman collection for RALT ONDC Logistics Provider (BPP). Includes System Health, Partner Onboarding, Real-time Operations, Simulation, and ONDC BPP Protocol endpoints.",
+    "_postman_id": "ralt-ondc-logistics-complete-suite",
+    "name": "RaltONDC Logistics API",
+    "description": "Exhaustive production testing suite for Ralt ONDC Logistics Provider (BPP). All URLs are pre-filled with live HTTPS https://ralt.in endpoints with zero setup required.",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
-  "variable": [
-    {
-      "key": "baseUrl",
-      "value": "https://ralt.in",
-      "type": "string"
-    },
-    {
-      "key": "token",
-      "value": "",
-      "type": "string"
-    },
-    {
-      "key": "riderId",
-      "value": "RALT-RIDER-001",
-      "type": "string"
-    },
-    {
-      "key": "phone",
-      "value": "9876543210",
-      "type": "string"
-    }
-  ],
   "item": [
     {
-      "name": "1. System & Health",
+      "name": "01. System & Health",
       "item": [
         {
           "name": "Health Check (BPP Liveness)",
           "request": {
             "method": "GET",
-            "header": [],
-            "url": {
-              "raw": "{{baseUrl}}/health",
-              "host": ["{{baseUrl}}"],
-              "path": ["health"]
-            },
-            "description": "Checks server status, uptime, subscriber ID, and active database engine."
+            "url": "https://ralt.in/health"
           }
         },
         {
           "name": "Readiness Probe (Postgres + Redis + RabbitMQ)",
           "request": {
             "method": "GET",
-            "header": [],
-            "url": {
-              "raw": "{{baseUrl}}/ready",
-              "host": ["{{baseUrl}}"],
-              "path": ["ready"]
-            },
-            "description": "Checks readiness of all backing services: PostgreSQL, Redis, RabbitMQ, and ONDC cryptographic keypair."
+            "url": "https://ralt.in/ready"
           }
         },
         {
-          "name": "Prometheus Metrics",
+          "name": "Prometheus Metrics Scrape",
           "request": {
             "method": "GET",
-            "header": [],
-            "url": {
-              "raw": "{{baseUrl}}/metrics",
-              "host": ["{{baseUrl}}"],
-              "path": ["metrics"]
-            },
-            "description": "Scrapes Prometheus metrics for HTTP traffic, latency, and memory utilization."
+            "url": "https://ralt.in/metrics"
+          }
+        },
+        {
+          "name": "Root Service Health Status",
+          "request": {
+            "method": "GET",
+            "url": "https://ralt.in/"
           }
         }
       ]
     },
     {
-      "name": "2. Authentication & Onboarding",
+      "name": "02. Auth & Onboarding",
       "item": [
         {
-          "name": "Send OTP",
+          "name": "1. Send OTP",
           "request": {
             "method": "POST",
-            "header": [
-              { "key": "Content-Type", "value": "application/json" }
-            ],
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"phone\": \"{{phone}}\"\n}"
+              "raw": "{\n  \"phone\": \"9876543210\"\n}"
             },
-            "url": {
-              "raw": "{{baseUrl}}/api/auth/send-otp",
-              "host": ["{{baseUrl}}"],
-              "path": ["api", "auth", "send-otp"]
-            },
-            "description": "Triggers SMS dispatch via Airbrick gateway with built-in instant test fallback (OTP: 1234)."
+            "url": "https://ralt.in/api/auth/send-otp"
           }
         },
         {
-          "name": "Verify OTP & Generate JWT",
+          "name": "2. Verify OTP & Issue JWT",
           "request": {
             "method": "POST",
-            "header": [
-              { "key": "Content-Type", "value": "application/json" }
-            ],
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"phone\": \"{{phone}}\",\n  \"code\": \"1234\"\n}"
+              "raw": "{\n  \"phone\": \"9876543210\",\n  \"code\": \"1234\"\n}"
             },
-            "url": {
-              "raw": "{{baseUrl}}/api/auth/verify-otp",
-              "host": ["{{baseUrl}}"],
-              "path": ["api", "auth", "verify-otp"]
-            },
-            "description": "Verifies OTP, returns signed JWT bearer token and rider account state."
+            "url": "https://ralt.in/api/auth/verify-otp"
           }
         },
         {
-          "name": "Direct Login",
+          "name": "3. Direct Login Check",
           "request": {
             "method": "POST",
-            "header": [
-              { "key": "Content-Type", "value": "application/json" }
-            ],
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"phone\": \"{{phone}}\"\n}"
+              "raw": "{\n  \"phone\": \"9876543210\"\n}"
             },
-            "url": {
-              "raw": "{{baseUrl}}/api/auth/login",
-              "host": ["{{baseUrl}}"],
-              "path": ["api", "auth", "login"]
-            },
-            "description": "Direct login check for registered delivery partner."
+            "url": "https://ralt.in/api/auth/login"
           }
         },
         {
-          "name": "Verify Bank Account (Penny Drop)",
+          "name": "4. Save Onboarding Step",
           "request": {
             "method": "POST",
-            "header": [
-              { "key": "Content-Type", "value": "application/json" }
-            ],
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"phone\": \"9876543210\",\n  \"step\": 3,\n  \"name\": \"Sai Raju\",\n  \"city\": \"Hyderabad\",\n  \"vehicle_number\": \"TS 09 EA 1234\",\n  \"vehicle_type\": \"motorcycle\"\n}"
+            },
+            "url": "https://ralt.in/api/rider/save-step"
+          }
+        },
+        {
+          "name": "5. Register Delivery Partner",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"phone\": \"9876543211\",\n  \"name\": \"Kiran Kumar\",\n  \"city\": \"Hyderabad\",\n  \"vehicle_number\": \"TS 08 AB 5678\",\n  \"vehicle_type\": \"motorcycle\"\n}"
+            },
+            "url": "https://ralt.in/api/rider/register"
+          }
+        },
+        {
+          "name": "6. Bank Account Penny Drop Verification",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
             "body": {
               "mode": "raw",
               "raw": "{\n  \"accountNumber\": \"987654321012\",\n  \"ifsc\": \"HDFC0001234\",\n  \"accountHolderName\": \"Sai Raju\"\n}"
             },
-            "url": {
-              "raw": "{{baseUrl}}/api/rider/verify-bank",
-              "host": ["{{baseUrl}}"],
-              "path": ["api", "rider", "verify-bank"]
-            },
-            "description": "Simulates NPCI / RazorpayX ₹1 penny-drop validation with instant branch name resolution."
+            "url": "https://ralt.in/api/rider/verify-bank"
+          }
+        },
+        {
+          "name": "7. Digio KYC Request Simulation",
+          "request": {
+            "method": "GET",
+            "url": "https://ralt.in/api/kyc/request/RALT-RIDER-001"
           }
         }
       ]
     },
     {
-      "name": "3. Delivery Partner Operations",
+      "name": "03. Delivery Partner Operations",
       "item": [
         {
-          "name": "Get Partner Profile",
+          "name": "1. Get Profile By Phone",
           "request": {
             "method": "GET",
-            "header": [],
-            "url": {
-              "raw": "{{baseUrl}}/api/rider/profile?phone={{phone}}",
-              "host": ["{{baseUrl}}"],
-              "path": ["api", "rider", "profile"],
-              "query": [
-                { "key": "phone", "value": "{{phone}}" }
-              ]
-            },
-            "description": "Fetches verified partner profile, KYC documents, and current order status."
+            "url": "https://ralt.in/api/rider/profile?phone=9876543210"
           }
         },
         {
-          "name": "Toggle Duty Status (Online / Offline)",
+          "name": "2. Get Profile By Rider ID",
+          "request": {
+            "method": "GET",
+            "url": "https://ralt.in/api/rider/profile?riderId=RALT-RIDER-001"
+          }
+        },
+        {
+          "name": "3. Update Rider Profile",
           "request": {
             "method": "POST",
-            "header": [
-              { "key": "Content-Type", "value": "application/json" }
-            ],
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"riderId\": \"{{riderId}}\",\n  \"isOnline\": 1\n}"
+              "raw": "{\n  \"riderId\": \"RALT-RIDER-001\",\n  \"name\": \"Sai Raju\",\n  \"city\": \"Hyderabad\"\n}"
             },
-            "url": {
-              "raw": "{{baseUrl}}/api/rider/status",
-              "host": ["{{baseUrl}}"],
-              "path": ["api", "rider", "status"]
-            },
-            "description": "Toggles rider between online and offline in the dispatch engine."
+            "url": "https://ralt.in/api/rider/profile"
           }
         },
         {
-          "name": "Update GPS Location (PostGIS Spatial)",
+          "name": "4. Toggle Duty Status (Online / Offline)",
           "request": {
             "method": "POST",
-            "header": [
-              { "key": "Content-Type", "value": "application/json" }
-            ],
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"riderId\": \"{{riderId}}\",\n  \"lat\": 17.4375,\n  \"lng\": 78.3687,\n  \"heading\": 90,\n  \"speed\": 25\n}"
+              "raw": "{\n  \"riderId\": \"RALT-RIDER-001\",\n  \"isOnline\": 1\n}"
             },
-            "url": {
-              "raw": "{{baseUrl}}/api/rider/location",
-              "host": ["{{baseUrl}}"],
-              "path": ["api", "rider", "location"]
-            },
-            "description": "Updates rider's live latitude and longitude, updates PostGIS geometry column, and broadcasts on_track if rider has an active order."
+            "url": "https://ralt.in/api/rider/status"
           }
         },
         {
-          "name": "Get Active Orders",
+          "name": "5. Update GPS Location (PostGIS Spatial)",
           "request": {
-            "method": "GET",
-            "header": [],
-            "url": {
-              "raw": "{{baseUrl}}/api/rider/orders?riderId={{riderId}}",
-              "host": ["{{baseUrl}}"],
-              "path": ["api", "rider", "orders"],
-              "query": [
-                { "key": "riderId", "value": "{{riderId}}" }
-              ]
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"riderId\": \"RALT-RIDER-001\",\n  \"lat\": 17.4375,\n  \"lng\": 78.3687,\n  \"heading\": 90,\n  \"speed\": 25\n}"
             },
-            "description": "Returns current active order assigned to rider."
+            "url": "https://ralt.in/api/rider/location"
           }
         },
         {
-          "name": "Get Earnings & Settlement History",
+          "name": "6. Get Partner Dashboard Metrics",
           "request": {
             "method": "GET",
-            "header": [],
-            "url": {
-              "raw": "{{baseUrl}}/api/rider/earnings?riderId={{riderId}}",
-              "host": ["{{baseUrl}}"],
-              "path": ["api", "rider", "earnings"],
-              "query": [
-                { "key": "riderId", "value": "{{riderId}}" }
-              ]
-            },
-            "description": "Calculates total earnings, delivered trip count, and detailed ledger entries."
-          }
-        },
-        {
-          "name": "Get In-App Notifications",
-          "request": {
-            "method": "GET",
-            "header": [],
-            "url": {
-              "raw": "{{baseUrl}}/api/notifications?riderId={{riderId}}",
-              "host": ["{{baseUrl}}"],
-              "path": ["api", "notifications"],
-              "query": [
-                { "key": "riderId", "value": "{{riderId}}" }
-              ]
-            },
-            "description": "Retrieves dispatch notifications and payout alerts."
+            "url": "https://ralt.in/api/rider/metrics?riderId=RALT-RIDER-001"
           }
         }
       ]
     },
     {
-      "name": "4. Order Simulation & Lifecycle",
+      "name": "04. Orders & Dispatch",
       "item": [
         {
-          "name": "Simulate Incoming ONDC Order",
+          "name": "1. Get Active Orders",
           "request": {
-            "method": "POST",
-            "header": [
-              { "key": "Content-Type", "value": "application/json" }
-            ],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"restaurantName\": \"Bawarchi Biryani House\",\n  \"restaurantAddress\": \"Plot 42, Main Road, Gachibowli, Hyderabad\",\n  \"customerName\": \"Arun Kumar\",\n  \"customerPhone\": \"+91 98765 43210\",\n  \"customerAddress\": \"Flat 402, Sai Residency, Kondapur, Hyderabad\",\n  \"deliveryFee\": 65.0\n}"
-            },
-            "url": {
-              "raw": "{{baseUrl}}/api/rider/simulate-order",
-              "host": ["{{baseUrl}}"],
-              "path": ["api", "rider", "simulate-order"]
-            },
-            "description": "Simulates an instant incoming ONDC order assigned to the online partner."
+            "method": "GET",
+            "url": "https://ralt.in/api/rider/orders?riderId=RALT-RIDER-001"
           }
         },
         {
-          "name": "Complete Active Order (Instant OTP Verification)",
+          "name": "2. Get All Orders History",
+          "request": {
+            "method": "GET",
+            "url": "https://ralt.in/api/rider/all-orders"
+          }
+        },
+        {
+          "name": "3. Simulate Incoming ONDC Order",
           "request": {
             "method": "POST",
-            "header": [
-              { "key": "Content-Type", "value": "application/json" }
-            ],
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"riderId\": \"{{riderId}}\"\n}"
+              "raw": "{\n  \"restaurantName\": \"Bawarchi Biryani House\",\n  \"restaurantAddress\": \"Plot 42, Main Road, Gachibowli, Hyderabad\",\n  \"customerName\": \"Arun Kumar\",\n  \"customerPhone\": \"+91 98765 43210\",\n  \"customerAddress\": \"Flat 402, Sai Residency, Kondapur, Hyderabad\",\n  \"deliveryFee\": 60.0\n}"
             },
-            "url": {
-              "raw": "{{baseUrl}}/api/rider/complete-current",
-              "host": ["{{baseUrl}}"],
-              "path": ["api", "rider", "complete-current"]
+            "url": "https://ralt.in/api/rider/simulate-order"
+          }
+        },
+        {
+          "name": "4. Complete Active Order (Instant OTP)",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"riderId\": \"RALT-RIDER-001\"\n}"
             },
-            "description": "Verifies delivery OTP, marks order as Order-delivered, credits wallet, and records earnings entry."
+            "url": "https://ralt.in/api/rider/complete-current"
+          }
+        },
+        {
+          "name": "5. Verify Delivery OTP",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"otp\": \"1234\"\n}"
+            },
+            "url": "https://ralt.in/api/rider/orders/ralt-ondc-test/verify-otp"
+          }
+        },
+        {
+          "name": "6. Get Earnings & Settlement Ledger",
+          "request": {
+            "method": "GET",
+            "url": "https://ralt.in/api/rider/earnings?riderId=RALT-RIDER-001"
           }
         }
       ]
     },
     {
-      "name": "5. ONDC Logistics Protocol (BPP)",
+      "name": "05. In-App Notifications",
       "item": [
         {
-          "name": "ONDC /search (Protocol Discovery)",
+          "name": "1. Get Notifications",
+          "request": {
+            "method": "GET",
+            "url": "https://ralt.in/api/notifications?riderId=RALT-RIDER-001"
+          }
+        },
+        {
+          "name": "2. Dispatch Push Notification",
           "request": {
             "method": "POST",
-            "header": [
-              { "key": "Content-Type", "value": "application/json" }
-            ],
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"context\": {\n    \"domain\": \"ONDC:LOG10\",\n    \"country\": \"IND\",\n    \"city\": \"std:040\",\n    \"action\": \"search\",\n    \"core_version\": \"1.2.0\",\n    \"bap_id\": \"buyer-app.ondc.org\",\n    \"bap_uri\": \"https://buyer-app.ondc.org/protocol/v1\",\n    \"transaction_id\": \"tx-sample-001\",\n    \"message_id\": \"msg-sample-001\",\n    \"timestamp\": \"2026-11-02T12:00:00.000Z\",\n    \"ttl\": \"PT30S\"\n  },\n  \"message\": {\n    \"intent\": {\n      \"category\": { \"id\": \"Immediate Delivery\" },\n      \"fulfillment\": {\n        \"type\": \"Delivery\",\n        \"start\": { \"location\": { \"gps\": \"17.4399,78.3680\" } },\n        \"end\": { \"location\": { \"gps\": \"17.4589,78.3721\" } }\n      }\n    }\n  }\n}"
+              "raw": "{\n  \"riderId\": \"RALT-RIDER-001\",\n  \"title\": \"New High Priority Order\",\n  \"message\": \"Pickup ready at Bawarchi Biryani House\",\n  \"channel\": \"PUSH\",\n  \"type\": \"ORDER\"\n}"
             },
-            "url": {
-              "raw": "{{baseUrl}}/ondc/search",
-              "host": ["{{baseUrl}}"],
-              "path": ["ondc", "search"]
+            "url": "https://ralt.in/api/notifications/send"
+          }
+        },
+        {
+          "name": "3. Mark All Notifications Read",
+          "request": {
+            "method": "PUT",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"riderId\": \"RALT-RIDER-001\"\n}"
             },
-            "description": "ONDC buyer app queries for logistics serviceability. BPP responds with ACK and sends on_search callback."
+            "url": "https://ralt.in/api/notifications/read-all"
+          }
+        }
+      ]
+    },
+    {
+      "name": "06. ONDC BPP Protocol Suite",
+      "item": [
+        {
+          "name": "1. ONDC Search (Discovery)",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"context\": {\n    \"domain\": \"ONDC:LOG10\",\n    \"country\": \"IND\",\n    \"city\": \"std:040\",\n    \"action\": \"search\",\n    \"core_version\": \"1.2.0\",\n    \"bap_id\": \"buyer-app.ondc.org\",\n    \"bap_uri\": \"https://buyer-app.ondc.org/protocol/v1\",\n    \"transaction_id\": \"tx-search-001\",\n    \"message_id\": \"msg-search-001\",\n    \"timestamp\": \"2026-11-02T12:00:00.000Z\",\n    \"ttl\": \"PT30S\"\n  },\n  \"message\": {\n    \"intent\": {\n      \"category\": { \"id\": \"Immediate Delivery\" },\n      \"fulfillment\": {\n        \"type\": \"Delivery\",\n        \"start\": { \"location\": { \"gps\": \"17.4399,78.3680\" } },\n        \"end\": { \"location\": { \"gps\": \"17.4589,78.3721\" } }\n      }\n    }\n  }\n}"
+            },
+            "url": "https://ralt.in/ondc/search"
+          }
+        },
+        {
+          "name": "2. ONDC Init (Order Draft)",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"context\": {\n    \"domain\": \"ONDC:LOG10\",\n    \"country\": \"IND\",\n    \"city\": \"std:040\",\n    \"action\": \"init\",\n    \"core_version\": \"1.2.0\",\n    \"bap_id\": \"buyer-app.ondc.org\",\n    \"bap_uri\": \"https://buyer-app.ondc.org/protocol/v1\",\n    \"transaction_id\": \"tx-init-001\",\n    \"message_id\": \"msg-init-001\",\n    \"timestamp\": \"2026-11-02T12:00:00.000Z\",\n    \"ttl\": \"PT30S\"\n  },\n  \"message\": {\n    \"order\": {\n      \"provider\": { \"id\": \"ralt.in\" },\n      \"items\": [{ \"id\": \"Standard Delivery\", \"category_id\": \"Immediate Delivery\" }],\n      \"billing\": { \"name\": \"Arun Kumar\", \"phone\": \"+91 98765 43210\" },\n      \"fulfillments\": [{\n        \"type\": \"Delivery\",\n        \"start\": { \"location\": { \"gps\": \"17.4399,78.3680\", \"address\": { \"name\": \"Bawarchi Biryani House\", \"street\": \"Gachibowli\", \"city\": \"Hyderabad\", \"area_code\": \"500032\" } } },\n        \"end\": { \"location\": { \"gps\": \"17.4589,78.3721\", \"address\": { \"name\": \"Arun Kumar\", \"street\": \"Flat 402, Kondapur\", \"city\": \"Hyderabad\", \"area_code\": \"500084\" } } }\n      }]\n    }\n  }\n}"
+            },
+            "url": "https://ralt.in/ondc/init"
+          }
+        },
+        {
+          "name": "3. ONDC Confirm (Order Placement)",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"context\": {\n    \"domain\": \"ONDC:LOG10\",\n    \"country\": \"IND\",\n    \"city\": \"std:040\",\n    \"action\": \"confirm\",\n    \"core_version\": \"1.2.0\",\n    \"bap_id\": \"buyer-app.ondc.org\",\n    \"bap_uri\": \"https://buyer-app.ondc.org/protocol/v1\",\n    \"transaction_id\": \"tx-confirm-001\",\n    \"message_id\": \"msg-confirm-001\",\n    \"timestamp\": \"2026-11-02T12:00:00.000Z\",\n    \"ttl\": \"PT30S\"\n  },\n  \"message\": {\n    \"order\": {\n      \"id\": \"order-ondc-1001\",\n      \"state\": \"Created\",\n      \"provider\": { \"id\": \"ralt.in\" },\n      \"billing\": { \"name\": \"Arun Kumar\", \"phone\": \"+91 98765 43210\" },\n      \"@ondc/org/linked_order\": {\n        \"provider\": {\n          \"descriptor\": { \"name\": \"Bawarchi Biryani House\" },\n          \"address\": { \"street\": \"Gachibowli\", \"city\": \"Hyderabad\", \"area_code\": \"500032\" }\n        }\n      },\n      \"fulfillments\": [{\n        \"id\": \"ful-1\",\n        \"type\": \"Delivery\",\n        \"start\": { \"location\": { \"gps\": \"17.4399,78.3680\", \"descriptor\": { \"name\": \"Bawarchi Biryani House\" } } },\n        \"end\": { \"location\": { \"gps\": \"17.4589,78.3721\", \"descriptor\": { \"name\": \"Arun Kumar\" } } }\n      }]\n    }\n  }\n}"
+            },
+            "url": "https://ralt.in/ondc/confirm"
+          }
+        },
+        {
+          "name": "4. ONDC Update",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"context\": {\n    \"domain\": \"ONDC:LOG10\",\n    \"country\": \"IND\",\n    \"city\": \"std:040\",\n    \"action\": \"update\",\n    \"core_version\": \"1.2.0\",\n    \"bap_id\": \"buyer-app.ondc.org\",\n    \"bap_uri\": \"https://buyer-app.ondc.org/protocol/v1\",\n    \"transaction_id\": \"tx-update-001\",\n    \"message_id\": \"msg-update-001\",\n    \"timestamp\": \"2026-11-02T12:00:00.000Z\",\n    \"ttl\": \"PT30S\"\n  },\n  \"message\": {\n    \"update_target\": \"fulfillment\",\n    \"order\": {\n      \"id\": \"order-ondc-1001\",\n      \"state\": \"In-progress\"\n    }\n  }\n}"
+            },
+            "url": "https://ralt.in/ondc/update"
+          }
+        },
+        {
+          "name": "5. ONDC Status Check",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"context\": {\n    \"domain\": \"ONDC:LOG10\",\n    \"country\": \"IND\",\n    \"city\": \"std:040\",\n    \"action\": \"status\",\n    \"core_version\": \"1.2.0\",\n    \"bap_id\": \"buyer-app.ondc.org\",\n    \"bap_uri\": \"https://buyer-app.ondc.org/protocol/v1\",\n    \"transaction_id\": \"tx-status-001\",\n    \"message_id\": \"msg-status-001\",\n    \"timestamp\": \"2026-11-02T12:00:00.000Z\",\n    \"ttl\": \"PT30S\"\n  },\n  \"message\": {\n    \"order_id\": \"order-ondc-1001\"\n  }\n}"
+            },
+            "url": "https://ralt.in/ondc/status"
+          }
+        },
+        {
+          "name": "6. ONDC Track",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"context\": {\n    \"domain\": \"ONDC:LOG10\",\n    \"country\": \"IND\",\n    \"city\": \"std:040\",\n    \"action\": \"track\",\n    \"core_version\": \"1.2.0\",\n    \"bap_id\": \"buyer-app.ondc.org\",\n    \"bap_uri\": \"https://buyer-app.ondc.org/protocol/v1\",\n    \"transaction_id\": \"tx-track-001\",\n    \"message_id\": \"msg-track-001\",\n    \"timestamp\": \"2026-11-02T12:00:00.000Z\",\n    \"ttl\": \"PT30S\"\n  },\n  \"message\": {\n    \"order_id\": \"order-ondc-1001\"\n  }\n}"
+            },
+            "url": "https://ralt.in/ondc/track"
+          }
+        },
+        {
+          "name": "7. ONDC Cancel",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"context\": {\n    \"domain\": \"ONDC:LOG10\",\n    \"country\": \"IND\",\n    \"city\": \"std:040\",\n    \"action\": \"cancel\",\n    \"core_version\": \"1.2.0\",\n    \"bap_id\": \"buyer-app.ondc.org\",\n    \"bap_uri\": \"https://buyer-app.ondc.org/protocol/v1\",\n    \"transaction_id\": \"tx-cancel-001\",\n    \"message_id\": \"msg-cancel-001\",\n    \"timestamp\": \"2026-11-02T12:00:00.000Z\",\n    \"ttl\": \"PT30S\"\n  },\n  \"message\": {\n    \"order_id\": \"order-ondc-1001\",\n    \"cancellation_reason_id\": \"001\"\n  }\n}"
+            },
+            "url": "https://ralt.in/ondc/cancel"
+          }
+        },
+        {
+          "name": "8. Mock BAP Callback Receiver",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"message\": {\n    \"ack\": {\n      \"status\": \"ACK\"\n    }\n  }\n}"
+            },
+            "url": "https://ralt.in/mock/bap/on_search"
+          }
+        }
+      ]
+    },
+    {
+      "name": "07. Admin Operations",
+      "item": [
+        {
+          "name": "Reset Entire Database",
+          "request": {
+            "method": "POST",
+            "url": "https://ralt.in/api/admin/reset-db"
           }
         }
       ]

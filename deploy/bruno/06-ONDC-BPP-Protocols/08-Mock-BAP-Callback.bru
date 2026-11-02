@@ -1,0 +1,25 @@
+meta {
+  name: 8. Mock BAP Callback Receiver
+  type: http
+  seq: 8
+}
+
+post {
+  url: https://ralt.in/mock/bap/on_search
+  body: json
+  auth: none
+}
+
+headers {
+  Content-Type: application/json
+}
+
+body:json {
+  {
+    "message": {
+      "ack": {
+        "status": "ACK"
+      }
+    }
+  }
+}

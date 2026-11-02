@@ -1,0 +1,21 @@
+meta {
+  name: 4. Complete Active Order (Instant OTP)
+  type: http
+  seq: 4
+}
+
+post {
+  url: https://ralt.in/api/rider/complete-current
+  body: json
+  auth: none
+}
+
+headers {
+  Content-Type: application/json
+}
+
+body:json {
+  {
+    "riderId": "RALT-RIDER-001"
+  }
+}

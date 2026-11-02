@@ -1,0 +1,23 @@
+meta {
+  name: 6. Bank Account Penny Drop Verification
+  type: http
+  seq: 6
+}
+
+post {
+  url: https://ralt.in/api/rider/verify-bank
+  body: json
+  auth: none
+}
+
+headers {
+  Content-Type: application/json
+}
+
+body:json {
+  {
+    "accountNumber": "987654321012",
+    "ifsc": "HDFC0001234",
+    "accountHolderName": "Sai Raju"
+  }
+}

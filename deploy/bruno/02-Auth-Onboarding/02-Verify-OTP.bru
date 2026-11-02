@@ -1,0 +1,22 @@
+meta {
+  name: 2. Verify OTP & Issue JWT
+  type: http
+  seq: 2
+}
+
+post {
+  url: https://ralt.in/api/auth/verify-otp
+  body: json
+  auth: none
+}
+
+headers {
+  Content-Type: application/json
+}
+
+body:json {
+  {
+    "phone": "9876543210",
+    "code": "1234"
+  }
+}

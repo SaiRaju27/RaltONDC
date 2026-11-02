@@ -1,0 +1,40 @@
+meta {
+  name: 4. ONDC Update (Order Update)
+  type: http
+  seq: 4
+}
+
+post {
+  url: https://ralt.in/ondc/update
+  body: json
+  auth: none
+}
+
+headers {
+  Content-Type: application/json
+}
+
+body:json {
+  {
+    "context": {
+      "domain": "ONDC:LOG10",
+      "country": "IND",
+      "city": "std:040",
+      "action": "update",
+      "core_version": "1.2.0",
+      "bap_id": "buyer-app.ondc.org",
+      "bap_uri": "https://buyer-app.ondc.org/protocol/v1",
+      "transaction_id": "tx-update-001",
+      "message_id": "msg-update-001",
+      "timestamp": "2026-11-02T12:00:00.000Z",
+      "ttl": "PT30S"
+    },
+    "message": {
+      "update_target": "fulfillment",
+      "order": {
+        "id": "order-ondc-1001",
+        "state": "In-progress"
+      }
+    }
+  }
+}

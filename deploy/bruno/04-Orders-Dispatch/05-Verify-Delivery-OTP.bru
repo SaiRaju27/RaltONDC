@@ -1,0 +1,21 @@
+meta {
+  name: 5. Verify Delivery OTP
+  type: http
+  seq: 5
+}
+
+post {
+  url: https://ralt.in/api/rider/orders/ralt-ondc-test/verify-otp
+  body: json
+  auth: none
+}
+
+headers {
+  Content-Type: application/json
+}
+
+body:json {
+  {
+    "otp": "1234"
+  }
+}

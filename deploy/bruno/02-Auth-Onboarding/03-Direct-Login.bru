@@ -1,0 +1,21 @@
+meta {
+  name: 3. Direct Login Check
+  type: http
+  seq: 3
+}
+
+post {
+  url: https://ralt.in/api/auth/login
+  body: json
+  auth: none
+}
+
+headers {
+  Content-Type: application/json
+}
+
+body:json {
+  {
+    "phone": "9876543210"
+  }
+}

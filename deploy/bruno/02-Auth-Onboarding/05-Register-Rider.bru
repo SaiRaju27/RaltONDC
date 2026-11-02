@@ -1,0 +1,25 @@
+meta {
+  name: 5. Register Delivery Partner
+  type: http
+  seq: 5
+}
+
+post {
+  url: https://ralt.in/api/rider/register
+  body: json
+  auth: none
+}
+
+headers {
+  Content-Type: application/json
+}
+
+body:json {
+  {
+    "phone": "9876543211",
+    "name": "Kiran Kumar",
+    "city": "Hyderabad",
+    "vehicle_number": "TS 08 AB 5678",
+    "vehicle_type": "motorcycle"
+  }
+}

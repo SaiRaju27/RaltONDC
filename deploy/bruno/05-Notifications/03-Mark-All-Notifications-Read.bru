@@ -1,0 +1,21 @@
+meta {
+  name: 3. Mark All Notifications Read
+  type: http
+  seq: 3
+}
+
+put {
+  url: https://ralt.in/api/notifications/read-all
+  body: json
+  auth: none
+}
+
+headers {
+  Content-Type: application/json
+}
+
+body:json {
+  {
+    "riderId": "RALT-RIDER-001"
+  }
+}

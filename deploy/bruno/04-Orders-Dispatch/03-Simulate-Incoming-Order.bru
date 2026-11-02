@@ -1,0 +1,26 @@
+meta {
+  name: 3. Simulate Incoming ONDC Order
+  type: http
+  seq: 3
+}
+
+post {
+  url: https://ralt.in/api/rider/simulate-order
+  body: json
+  auth: none
+}
+
+headers {
+  Content-Type: application/json
+}
+
+body:json {
+  {
+    "restaurantName": "Bawarchi Biryani House",
+    "restaurantAddress": "Plot 42, Main Road, Gachibowli, Hyderabad",
+    "customerName": "Arun Kumar",
+    "customerPhone": "+91 98765 43210",
+    "customerAddress": "Flat 402, Sai Residency, Kondapur, Hyderabad",
+    "deliveryFee": 60.0
+  }
+}

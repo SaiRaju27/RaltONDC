@@ -1,0 +1,77 @@
+meta {
+  name: 2. ONDC Init (Order Draft)
+  type: http
+  seq: 2
+}
+
+post {
+  url: https://ralt.in/ondc/init
+  body: json
+  auth: none
+}
+
+headers {
+  Content-Type: application/json
+}
+
+body:json {
+  {
+    "context": {
+      "domain": "ONDC:LOG10",
+      "country": "IND",
+      "city": "std:040",
+      "action": "init",
+      "core_version": "1.2.0",
+      "bap_id": "buyer-app.ondc.org",
+      "bap_uri": "https://buyer-app.ondc.org/protocol/v1",
+      "transaction_id": "tx-init-001",
+      "message_id": "msg-init-001",
+      "timestamp": "2026-11-02T12:00:00.000Z",
+      "ttl": "PT30S"
+    },
+    "message": {
+      "order": {
+        "provider": {
+          "id": "ralt.in"
+        },
+        "items": [
+          {
+            "id": "Standard Delivery",
+            "category_id": "Immediate Delivery"
+          }
+        ],
+        "billing": {
+          "name": "Arun Kumar",
+          "phone": "+91 98765 43210"
+        },
+        "fulfillments": [
+          {
+            "type": "Delivery",
+            "start": {
+              "location": {
+                "gps": "17.4399,78.3680",
+                "address": {
+                  "name": "Bawarchi Biryani House",
+                  "street": "Gachibowli",
+                  "city": "Hyderabad",
+                  "area_code": "500032"
+                }
+              }
+            },
+            "end": {
+              "location": {
+                "gps": "17.4589,78.3721",
+                "address": {
+                  "name": "Arun Kumar",
+                  "street": "Flat 402, Kondapur",
+                  "city": "Hyderabad",
+                  "area_code": "500084"
+                }
+              }
+            }
+          }
+        ]
+      }
+    }
+  }
+}
