@@ -1,0 +1,10 @@
+{
+  "name": "@ralt-ondc/database",
+  "version": "1.2.6",
+  "description": "PostgreSQL 16 + PostGIS Schemas and Migrations for RALT ONDC Logistics",
+  "private": true,
+  "main": "init-dbs.sql",
+  "scripts": {
+    "migrate": "docker compose exec -T postgres psql -U postgres -d ralt_ondc_db < init-dbs.sql"
+  }
+}

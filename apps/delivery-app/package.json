@@ -1,0 +1,32 @@
+{
+  "name": "@ralt-ondc/delivery-app",
+  "version": "1.2.6",
+  "main": "index.js",
+  "scripts": {
+    "start": "NODE_OPTIONS='-r ./polyfill.js' expo start",
+    "tunnel": "NODE_OPTIONS='-r ./polyfill.js' expo start --tunnel -c",
+    "android": "NODE_OPTIONS='-r ./polyfill.js' expo start --android",
+    "ios": "NODE_OPTIONS='-r ./polyfill.js' expo start --ios",
+    "web": "NODE_OPTIONS='-r ./polyfill.js' expo start --web"
+  },
+  "dependencies": {
+    "@expo/metro-runtime": "~58.0.16",
+    "@expo/vector-icons": "^15.1.1",
+    "expo": "^58.0.22",
+    "expo-asset": "~58.0.19",
+    "expo-constants": "~58.0.14",
+    "expo-status-bar": "~58.0.4",
+    "react": "19.3.0",
+    "react-dom": "19.3.0",
+    "react-native": "0.88.1",
+    "react-native-svg": "^15.16.0",
+    "react-native-web": "^0.21.4"
+  },
+  "devDependencies": {
+    "@babel/core": "^7.20.0",
+    "@expo/ngrok": "^4.1.0",
+    "@types/react": "~19.3.0",
+    "typescript": "~6.0.3"
+  },
+  "private": true
+}

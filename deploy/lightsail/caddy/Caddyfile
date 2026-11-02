@@ -1,0 +1,56 @@
+{
+    admin off
+    auto_https off # Set to 'on' or omit when pointing DNS with valid SSL domain
+}
+
+:80 {
+    # Health check probe for Lightsail Load Balancer
+    handle /health {
+        reverse_proxy backend:5000
+    }
+
+    handle /ready {
+        reverse_proxy backend:5000
+    }
+
+    # Prometheus Scraper Endpoint
+    handle /metrics {
+        reverse_proxy backend:5000
+    }
+
+    # Fleet WebSocket Real-time Gateway (Persistent, no timeout drops)
+    handle /ws* {
+        reverse_proxy backend:5000 {
+            header_up Host {host}
+            header_up X-Real-IP {remote}
+            header_up X-Forwarded-For {remote}
+            header_up X-Forwarded-Proto {scheme}
+        }
+    }
+
+    # All API & Webhook Ingress
+    handle /* {
+        reverse_proxy backend:5000 {
+            header_up Host {host}
+            header_up X-Real-IP {remote}
+            header_up X-Forwarded-For {remote}
+            header_up X-Forwarded-Proto {scheme}
+        }
+    }
+
+    # Enterprise Security Headers
+    header {
+        Strict-Transport-Security "max-age=31536000; includeSubDomains; preload"
+        X-Content-Type-Options "nosniff"
+        X-Frame-Options "DENY"
+        X-XSS-Protection "1; mode=block"
+        Referrer-Policy "strict-origin-when-cross-origin"
+    }
+
+    # Structured JSON Access Logging for Promtail / Loki
+    log {
+        output stdout
+        format json
+    }
+}
+

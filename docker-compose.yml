@@ -1,14 +1,112 @@
 name: ralt-ondc
 
 services:
-  ondc-lsp-backend:
+  # ============================================================================
+  # 1. RALT ONDC Logistics Provider (BPP) Backend
+  # ============================================================================
+  backend:
     build:
-      context: ./backend
+      context: ./services/ondc-lsp-service
       dockerfile: Dockerfile
     container_name: ralt-ondc-backend
+    restart: unless-stopped
     ports:
-      - "5000:5000"
+      - "${HOST_PORT:-5001}:5000"
+    environment:
+      PORT: 5000
+      NODE_ENV: development
+      POSTGRES_HOST: postgres
+      POSTGRES_PORT: 5432
+      POSTGRES_USER: ${POSTGRES_USER:-postgres}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
+      POSTGRES_DB: ${POSTGRES_DB:-ralt_ondc_db}
+      REDIS_URL: redis://redis:6379
+      RABBITMQ_URL: amqp://${RABBITMQ_USER:-guest}:${RABBITMQ_PASS:-guest}@rabbitmq:5672
+      JWT_SECRET: ${JWT_SECRET:-ralt_ondc_jwt_dev_secret_2026}
     env_file:
-      - ./backend/.env
-    restart: always
+      - ./services/ondc-lsp-service/.env
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+    networks:
+      - ralt-ondc-net
 
+  # ============================================================================
+  # 2. PostgreSQL 16 + PostGIS Spatial Datastore
+  # ============================================================================
+  postgres:
+    image: postgis/postgis:16-3.4-alpine
+    container_name: ralt-ondc-postgres
+    restart: unless-stopped
+    shm_size: 256mb
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-postgres}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
+      POSTGRES_DB: ${POSTGRES_DB:-ralt_ondc_db}
+    ports:
+      - "5432:5432"
+    volumes:
+      - ./packages/database/init-dbs.sql:/docker-entrypoint-initdb.d/init-dbs.sql:ro
+      - postgres_ondc_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-postgres}"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    networks:
+      - ralt-ondc-net
+
+  # ============================================================================
+  # 3. Redis In-Memory Geospatial Cache & Pub/Sub
+  # ============================================================================
+  redis:
+    image: redis:7-alpine
+    container_name: ralt-ondc-redis
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_ondc_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    networks:
+      - ralt-ondc-net
+
+  # ============================================================================
+  # 4. RabbitMQ Message Broker (Async Queues & DLX)
+  # ============================================================================
+  rabbitmq:
+    image: rabbitmq:3.13-management-alpine
+    container_name: ralt-ondc-rabbitmq
+    restart: unless-stopped
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+    environment:
+      RABBITMQ_DEFAULT_USER: ${RABBITMQ_USER:-guest}
+      RABBITMQ_DEFAULT_PASS: ${RABBITMQ_PASS:-guest}
+    volumes:
+      - rabbitmq_ondc_data:/var/lib/rabbitmq
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "-q", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - ralt-ondc-net
+
+networks:
+  ralt-ondc-net:
+    driver: bridge
+
+volumes:
+  postgres_ondc_data:
+  redis_ondc_data:
+  rabbitmq_ondc_data:

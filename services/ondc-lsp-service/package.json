@@ -1,0 +1,46 @@
+{
+  "name": "@ralt-ondc/lsp-service",
+  "version": "1.2.6",
+  "description": "RALT ONDC Logistics Service Provider (LSP) Beckn Adapter & Dispatch Backend",
+  "main": "dist/server.js",
+  "scripts": {
+    "dev": "ts-node-dev --respawn --transpile-only src/server.ts",
+    "build": "tsc",
+    "start": "node dist/server.js"
+  },
+  "dependencies": {
+    "amqplib": "^2.2.1",
+    "axios": "^1.7.7",
+    "cors": "^2.8.5",
+    "dotenv": "^16.4.5",
+    "express": "^4.21.1",
+    "express-rate-limit": "^8.7.2",
+    "helmet": "^8.3.0",
+    "ioredis": "^6.0.0",
+    "jsonwebtoken": "^9.0.3",
+    "ondc-crypto-sdk-nodejs": "^2.1.1",
+    "pg": "^8.23.1",
+    "pino": "^10.4.0",
+    "pino-pretty": "^13.2.0",
+    "prom-client": "^15.1.3",
+    "sqlite3": "^6.0.1",
+    "uuid": "^11.0.2",
+    "ws": "^8.18.0",
+    "zod": "^4.6.7"
+  },
+  "devDependencies": {
+    "@types/amqplib": "^0.10.8",
+    "@types/cors": "^2.8.17",
+    "@types/express": "^4.17.21",
+    "@types/ioredis": "^4.28.10",
+    "@types/jsonwebtoken": "^9.0.10",
+    "@types/node": "^20.10.0",
+    "@types/pg": "^8.23.1",
+    "@types/sqlite3": "^5.1.0",
+    "@types/uuid": "^10.0.0",
+    "@types/ws": "^8.5.13",
+    "ts-node": "^10.9.2",
+    "ts-node-dev": "^2.0.0",
+    "typescript": "^5.3.3"
+  }
+}

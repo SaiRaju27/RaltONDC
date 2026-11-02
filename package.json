@@ -1,0 +1,38 @@
+{
+  "name": "ralt-ondc-monorepo",
+  "version": "1.2.6",
+  "private": true,
+  "description": "RALT ONDC Logistics Service Provider (BPP) & Delivery Partner Fleet Monorepo",
+  "workspaces": [
+    "apps/*",
+    "services/*",
+    "packages/*"
+  ],
+  "scripts": {
+    "build": "pnpm --filter '@ralt-ondc/*' build || npm --prefix services/ondc-lsp-service run build",
+    "test": "npm --prefix services/ondc-lsp-service run build",
+    "mobile:web": "npm --prefix apps/delivery-app run web",
+    "mobile:android": "npm --prefix apps/delivery-app run android",
+    "mobile:ios": "npm --prefix apps/delivery-app run ios",
+    "docker:up": "docker compose up -d",
+    "docker:down": "docker compose down",
+    "docker:logs": "docker compose logs -f",
+    "release": "semantic-release",
+    "release:dry": "node scripts/release-preview.js",
+    "version:sync": "node scripts/sync-versions.js",
+    "clean": "rm -rf node_modules apps/*/node_modules services/*/node_modules services/*/dist"
+  },
+  "devDependencies": {
+    "@semantic-release/changelog": "^6.0.3",
+    "@semantic-release/commit-analyzer": "^13.0.1",
+    "@semantic-release/exec": "^7.1.0",
+    "@semantic-release/git": "^10.0.1",
+    "@semantic-release/github": "^11.0.8",
+    "@semantic-release/release-notes-generator": "^14.1.1",
+    "conventional-changelog-conventionalcommits": "^8.0.0",
+    "semantic-release": "^24.2.9"
+  },
+  "engines": {
+    "node": ">=20.0.0"
+  }
+}

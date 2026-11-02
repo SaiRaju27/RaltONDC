@@ -1,90 +1,179 @@
-# RaltONDC - ONDC Logistics Service Provider (LSP) & Rider Fleet Platform
+# RaltONDC - ONDC Logistics Service Provider (LSP) & Delivery Partner Fleet
 
-A dedicated, standalone solution for **RALT** operating as an **ONDC Logistics Service Provider (BPP)** in the **`P2P - ONDC:LOG10`** domain (Point-to-Point Hyperlocal Food & Retail Delivery).
+A dedicated, enterprise-grade solution for **RALT** operating as an **ONDC Logistics Service Provider (BPP)** in the **`P2P - ONDC:LOG10`** domain (Point-to-Point Hyperlocal Food & Retail Delivery).
+
+Engineered to match the high-reliability production standards of **Ralt Enterprise**:
+- **PostgreSQL 16 + PostGIS:** Real spatial proximity dispatch (`ST_DWithin`, `ST_Distance`) with GIST indexing.
+- **Enterprise Security:** Helmet, CORS, Rate Limiters, JWT Rider authentication, Zod validation, and Ed25519 digital signatures.
+- **Logging & Observability:** Structured JSON Pino logger with OpenTelemetry correlation (`trace.id`/`span.id`), Prometheus metrics scraper (`/metrics`), `/health`, and `/ready` probes.
+- **Multi-Channel Notification System:** Expo Push notifications for the Delivery Partner App, SMS alerts via Airbrick, and real-time In-App WebSocket events.
+- **Event-Driven Queues:** RabbitMQ 3.13 message broker with durable queues (`ondc.orders.dispatch`, `ondc.notifications.push`) and Redis 7 Geospatial caching.
+- **Production CI/CD & Lightsail Runner:** Zero-downtime rolling reload with pre-flight checks, automated backup snapshots, health probes, and auto-rollback.
 
 ---
 
 ## 📁 Project Architecture
 
 ```
-d:\RALT\RaltONDC\
-├── backend/                  # ONDC Logistics Engine & Dispatch Server (Node.js + TypeScript)
-│   ├── src/
-│   │   ├── config.ts         # Loads ONDC credentials (ralt.in, UKID, Ed25519 keys)
-│   │   ├── crypto/auth.ts    # ONDC Ed25519 digital signature creation & verification
-│   │   ├── controllers/
-│   │   │   ├── ondcController.ts   # /search, /init, /confirm, /status, /track, /cancel
-│   │   │   └── riderController.ts  # Rider APIs (status, location, OTP verification)
-│   │   ├── services/
-│   │   │   ├── ondcClient.ts       # Outgoing Beckn callbacks (on_search, on_confirm, etc.)
-│   │   │   ├── orderManager.ts     # Order lifecycle & 4-digit customer delivery OTP
-│   │   │   └── riderManager.ts     # Real-time fleet tracking & WebSocket dispatch
-│   │   ├── public/index.html       # Web dashboard for monitoring live ONDC deliveries
-│   │   └── server.ts
-│   ├── .env                  # Your official ONDC preprod keys & subscriber ID
-│   ├── Dockerfile
-│   └── package.json
+RaltONDC/
+├── Makefile                          # Master CLI for containers, datastores, mobile app & Lightsail
+├── package.json                      # Monorepo workspaces manifest (apps/*, services/*, packages/*)
+├── pnpm-workspace.yaml               # pnpm monorepo workspace definition
+├── docker-compose.yml                # Full local stack (Backend, PostGIS, Redis, RabbitMQ)
+├── .env.example                      # Master environment variables template
+├── .releaserc.json                   # Semantic Release configuration (Conventional Commits & Tags)
+├── CHANGELOG.md                      # Auto-maintained release changelog
 │
-├── mobile-app/               # Delivery Partner Mobile App (React Native / Expo)
-│   ├── App.tsx               # Full-featured Rider App (Deliveries, Live Task, OTP, Earnings)
-│   ├── app.json
-│   └── package.json
+├── apps/
+│   └── delivery-app/                 # 1 Delivery Partner Mobile App (Expo / React Native)
+│       ├── App.tsx                   # Complete Rider App (Deliveries, Live Task, OTP, Earnings)
+│       ├── OnboardingFlow.tsx        # Digital KYC & Profile Setup
+│       ├── DeliveryDashboard.tsx     # Active Orders, Live Status & Route Tracking
+│       ├── index.js                  # Explicit Metro Root Entrypoint
+│       ├── metro.config.js           # Monorepo Metro resolution config
+│       ├── polyfill.js
+│       ├── app.json
+│       └── package.json              # @ralt-ondc/delivery-app
 │
-└── docker-compose.yml        # Docker configuration for production deployment
+├── services/
+│   └── ondc-lsp-service/             # ONDC Logistics Engine & Dispatch Server (Node.js 20 + TypeScript)
+│       ├── src/
+│       │   ├── config.ts             # Centralized configuration with defaults & env overrides
+│       │   ├── database.ts           # PostgreSQL + PostGIS pool with spatial queries & fallback
+│       │   ├── logger.ts             # Pino structured logger with HTTP & correlation middleware
+│       │   ├── observability.ts      # Prometheus metrics registry (/metrics) & default metrics
+│       │   ├── security.ts           # Helmet, CORS, Rate Limiters, JWT tokens & Zod schemas
+│       │   ├── crypto/auth.ts        # ONDC Ed25519 digital signature creation & verification
+│       │   ├── controllers/
+│       │   │   ├── ondcController.ts # /search, /init, /confirm, /status, /track, /cancel
+│       │   │   └── riderController.ts# Rider APIs (profile, status, location, OTP, notifications)
+│       │   ├── services/
+│       │   │   ├── ondcClient.ts     # Outgoing Beckn callbacks (on_search, on_confirm, etc.)
+│       │   │   ├── orderManager.ts   # Order lifecycle, PostGIS spatial dispatch & 4-digit OTP
+│       │   │   ├── riderManager.ts   # PostGIS proximity search & WebSocket fleet tracking
+│       │   │   ├── notificationService.ts # Multi-channel notifications (Expo Push, SMS, DB audit)
+│       │   │   ├── queueService.ts   # RabbitMQ message queues & consumers with fallback
+│       │   │   └── redisService.ts   # Redis Geospatial (GEOADD/GEOSEARCH) & Pub/Sub
+│       │   └── server.ts             # Express + WebSocket HTTP server with graceful shutdown
+│       ├── Dockerfile                # Multi-stage production container with non-root user & dumb-init
+│       └── package.json              # @ralt-ondc/lsp-service
+│
+├── packages/
+│   └── database/                     # PostGIS Database Schemas & Migrations Package
+│       ├── migrations/
+│       │   └── 001_initial_postgis_schema.sql
+│       ├── init-dbs.sql              # Master PostGIS schema, triggers, indexes & seed data
+│       └── package.json              # @ralt-ondc/database
+│
+├── deploy/                           # Deployment Infrastructure & Manifests
+│   ├── docker/
+│   │   └── docker-compose.yml        # Development container orchestration
+│   ├── lightsail/
+│   │   ├── docker-compose.yml        # Production stack with Caddy v2, PostGIS, Redis & RabbitMQ
+│   │   ├── caddy/Caddyfile           # Reverse proxy with automated SSL, rate limiting & WebSocket
+│   │   ├── deploy-lightsail.sh       # Automated deployment runner with auto-rollback
+│   │   ├── backup-db.sh              # PostGIS automated backup utility
+│   │   └── README.md                 # Lightsail sizing, security & deployment architecture guide
+│   └── nginx/
+│       └── nginx.conf                # Hardened Nginx configuration with SSL & WebSocket proxy
+│
+├── scripts/
+│   ├── deploy-lightsail.sh           # Host provisioning & deployment script
+│   ├── backup-db.sh                  # Database backup runner
+│   ├── release-preview.js            # Semantic release preview utility
+│   └── sync-versions.js              # Monorepo version synchronizer across all manifests
+│
+└── .github/workflows/
+    ├── cd-lightsail.yml              # Automated GitHub Actions CI/CD for Docker buildx & SSH deploy
+    └── release.yml                   # Automated Semantic Release & Versioning pipeline
 ```
 
 ---
 
-## 🚀 Quick Start Guide
+## ⚡ Quick Start with `make`
 
-### 1. Start the ONDC Backend & Dashboard
+The project includes an interactive, color-coded `Makefile` matching the Ralt Enterprise standard.
 
-Open your terminal:
-
-```bash
-cd d:\RALT\RaltONDC\backend
-npm start
-```
-
-* Backend runs at: `http://localhost:5000`
-* **Live ONDC Dashboard:** Open `http://localhost:5000` in your browser to view active deliveries, rider statuses, and trigger test orders.
-
----
-
-### 2. Start the Rider Mobile App
-
-In a second terminal window:
+Run `make help` to inspect all available targets:
 
 ```bash
-cd d:\RALT\RaltONDC\mobile-app
-npm install
-npm run web    # Runs instantly in your browser!
+make help
 ```
 
-*(You can also run `npx expo start` and scan the QR code using the **Expo Go** app on your Android or iPhone).*
+### 1. Launch Backing Datastores (PostGIS, Redis, RabbitMQ)
+```bash
+make infra
+```
 
-#### Rider App Features:
-1. **Online / Offline Switch:** Control rider availability.
-2. **Deliveries Tab:** See incoming ONDC food delivery assignments (₹50 payout tag, pickup restaurant, customer drop).
-3. **Live Task Tab:** Step-by-step delivery workflow:
-   * *I Have Reached Restaurant*
-   * *Confirm Order Picked Up*
-   * *Start Journey to Customer*
-   * *Verify 4-Digit Customer OTP & Complete Delivery*
-4. **Earnings Tab:** Track today's ₹50 per delivery settlements.
-5. **+ Test ONDC Order Button:** Tap to simulate an immediate Biryani delivery and test the rider flow on your screen!
+### 2. Launch the Full Stack (Backend + Datastores)
+```bash
+make up
+```
+
+Endpoints available immediately:
+- **ONDC BPP Server:** `http://localhost:5000`
+- **Prometheus Metrics:** `http://localhost:5000/metrics`
+- **Liveness & Readiness:** `http://localhost:5000/health` | `http://localhost:5000/ready`
+- **RabbitMQ Dashboard:** `http://localhost:15672` (guest / guest)
+- **PostgreSQL PostGIS:** `localhost:5432` (postgres / postgres)
+- **Redis CLI:** `localhost:6379`
+
+### 3. Launch the Delivery Partner Mobile App
+```bash
+# In Web Browser (Port 8081)
+make mobile-web
+
+# On Android Emulator
+make mobile-android
+
+# On iOS Simulator
+make mobile-ios
+
+# With Expo Tunnel (for testing on physical mobile device)
+make mobile-tunnel
+```
 
 ---
 
 ## 🌐 Connecting to the ONDC Workbench
 
 1. **Expose your server to the internet:**
-   Because ONDC sends callbacks to your webhook URL (`https://ralt.in/ondc`):
    ```bash
    ngrok http 5000
    ```
 2. **In the ONDC Portal:**
-   * Go to **Task 2.b** and click **Go to Workbench**.
-   * Run the test suite: the Workbench will send a simulated delivery request to your backend.
-   * Your backend will quote ₹50, assign the order to your Rider App, and stream real-time updates back to ONDC!
+   - In **Task 2.b**, navigate to **Workbench**.
+   - Set callback URL to `https://<your-ngrok-domain>/ondc`.
+   - Run the automated test suite.
+   - Your backend will quote the delivery fee, match the closest available delivery partner via PostGIS, dispatch the assignment to the mobile app, and stream real-time tracking back to the ONDC Network!
 
+---
+
+## 🚢 AWS Lightsail Deployment
+
+See [`deploy/lightsail/README.md`](deploy/lightsail/README.md) for full architecture and configuration details.
+
+```bash
+# Trigger the automated deployment runner on your Lightsail host:
+make lightsail-deploy
+
+# Probe all production endpoints for HTTP 200 OK:
+make lightsail-health
+```
+
+---
+
+## 🏷️ Semantic Release & Versioning
+
+This repository follows the **Ralt Enterprise Semantic Release standard**:
+
+- **Conventional Commits**: Commit messages follow standard format (`feat:`, `fix:`, `perf:`, `refactor:`, `BREAKING CHANGE:`).
+- **Automated GitHub Actions**: [`.github/workflows/release.yml`](.github/workflows/release.yml) automatically calculates the next semantic version, updates the changelog, syncs all package manifests, tags the release (`vX.Y.Z`), and publishes GitHub releases.
+- **Local Preview**:
+  ```bash
+  # Preview next calculated semantic version from conventional commits:
+  make release-dry
+
+  # Synchronize monorepo versions across apps, services, and packages manually:
+  make version-sync v=1.2.7
+  ```
