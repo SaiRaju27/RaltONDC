@@ -6,6 +6,12 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 
+## [1.5.2](https://github.com/SaiRaju27/RaltONDC/compare/v1.5.1...v1.5.2) (2026-11-02)
+
+### Bug Fixes
+
+* **auth:** resolve Expo demo rider login and enable cloud-first fallback with active backend toggle ([7d699bd](https://github.com/SaiRaju27/RaltONDC/commit/7d699bddea6ccf3f736a75935f57c35fbc1747a7))
+
 ## [1.5.1](https://github.com/SaiRaju27/RaltONDC/compare/v1.5.0...v1.5.1) (2026-11-02)
 
 ### Performance Improvements
