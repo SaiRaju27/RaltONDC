@@ -148,3 +148,4 @@ export function interpolateLatLng(a: LatLng, b: LatLng, fraction: number): LatLn
     lng: Number((a.lng + (b.lng - a.lng) * f).toFixed(6)),
   };
 }
+
