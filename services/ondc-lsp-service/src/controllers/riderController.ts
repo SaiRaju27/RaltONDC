@@ -232,11 +232,7 @@ export class RiderController {
       }
 
       if (mode === 'register' && existingRider && existingRider.onboarding_completed === 1) {
-        return res.status(400).json({
-          success: false,
-          error: `Mobile number +91 ${cleanPhone} is already registered. Please sign in instead.`,
-          isRegistered: true,
-        });
+        logger.info({ phone: cleanPhone }, 'Registration OTP requested for existing registered partner');
       }
 
       const defaultOtp = '1234';

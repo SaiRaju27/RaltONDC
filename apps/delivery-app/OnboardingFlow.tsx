@@ -403,7 +403,9 @@ export const OnboardingFlow: React.FC<OnboardingFlowProps> = ({
     }
   };
   const [mobileNumber, setMobileNumber] = useState<string>(initialCleanPhone);
-  const [isPhoneVerified, setIsPhoneVerified] = useState<boolean>(false);
+  const [isPhoneVerified, setIsPhoneVerified] = useState<boolean>(
+    Boolean(authPhone && authPhone.replace(/[^0-9]/g, '').length === 10)
+  );
   const [showPhoneOtpModal, setShowPhoneOtpModal] = useState<boolean>(false);
   const [phoneOtpInput, setPhoneOtpInput] = useState<string>('');
   const [isSendingPhoneOtp, setIsSendingPhoneOtp] = useState<boolean>(false);
@@ -761,7 +763,7 @@ export const OnboardingFlow: React.FC<OnboardingFlowProps> = ({
     );
   };
 
-  // Step 1: Mobile Number OTP Dispatch (Airbrick Carrier + Backend API)
+  // Step 1: Mobile Number OTP Dispatch (Fast dual-path: Backend + Direct Airbrick Carrier Fallback)
   const handleSendPhoneOtp = async () => {
     const clean = mobileNumber.replace(/[^0-9]/g, '').slice(-10);
     if (clean.length !== 10) {
@@ -770,45 +772,53 @@ export const OnboardingFlow: React.FC<OnboardingFlowProps> = ({
     }
 
     setIsSendingPhoneOtp(true);
-    const baseUrl = apiUrl || 'http://localhost:5001';
+    const baseUrl = apiUrl || resolveApiUrl() || 'http://localhost:5001';
     let dispatched = false;
     let fallbackCode = '';
 
+    // 1. Try backend proxy carrier route with 3500ms timeout
     try {
+      const controller = new AbortController();
+      const timer = setTimeout(() => controller.abort(), 3500);
       const res = await fetch(`${baseUrl}/api/auth/send-otp`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ phone: clean, mode: 'register' }),
+        signal: controller.signal,
       });
-      const data = await res.json();
+      clearTimeout(timer);
+      const data = await res.json().catch(() => null);
 
-      if (!res.ok || data.success === false) {
-        setIsSendingPhoneOtp(false);
-        Alert.alert('Registration Notice', data.error || 'Could not dispatch verification code.');
-        return;
+      if (res.ok && (data?.type === 'success' || data?.success === true)) {
+        dispatched = true;
+        if (data?.testOtp) {
+          fallbackCode = data.testOtp;
+        }
       }
-
-      if (data.testOtp) {
-        fallbackCode = data.testOtp;
-      }
-      dispatched = true;
     } catch (e) {
-      console.warn('Backend send-otp failed, trying Airbrick carrier fallback:', e);
+      console.warn('Backend send-otp failed, falling back to direct Airbrick carrier dispatch:', e);
     }
 
-    // Direct Airbrick Carrier Fallback (Only if backend was unreachable)
+    // 2. Direct Airbrick Carrier Fallback (Fast, reliable direct carrier SMS from device)
     if (!dispatched) {
       try {
-        const abRes = await fetch(`https://abapi.airbrick.com/api/v1/otp/%2B91${clean}`);
+        const abController = new AbortController();
+        const abTimer = setTimeout(() => abController.abort(), 4000);
+        const abRes = await fetch(`https://abapi.airbrick.com/api/v1/otp/%2B91${clean}`, {
+          signal: abController.signal,
+        });
+        clearTimeout(abTimer);
         const abData = await abRes.json().catch(() => null);
         if (abData && (abData.type === 'success' || abData.success === true)) {
           dispatched = true;
         }
-      } catch (e) {}
+      } catch (abErr) {
+        console.warn('Direct Airbrick carrier dispatch warning:', abErr);
+      }
     }
 
     setIsSendingPhoneOtp(false);
-    setPhoneOtpDispatchedCode('');
+    setPhoneOtpDispatchedCode(fallbackCode);
     setPhoneOtpTimer(45);
     setPhoneOtpInput('');
     setShowPhoneOtpModal(true);
@@ -831,17 +841,21 @@ export const OnboardingFlow: React.FC<OnboardingFlowProps> = ({
     }
 
     setIsVerifyingPhoneOtp(true);
-    const baseUrl = apiUrl || 'http://localhost:5001';
+    const baseUrl = apiUrl || resolveApiUrl() || 'http://localhost:5001';
     let verified = false;
 
     try {
+      const controller = new AbortController();
+      const timer = setTimeout(() => controller.abort(), 3500);
       const res = await fetch(`${baseUrl}/api/auth/verify-otp`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ phone: clean, code: cleanOtp, mode: 'register' }),
+        body: JSON.stringify({ phone: clean, code: cleanOtp, otp: cleanOtp, mode: 'register' }),
+        signal: controller.signal,
       });
-      const data = await res.json();
-      if (res.ok && data.success) {
+      clearTimeout(timer);
+      const data = await res.json().catch(() => null);
+      if (res.ok && data?.success) {
         verified = true;
       }
     } catch (e) {
@@ -853,8 +867,13 @@ export const OnboardingFlow: React.FC<OnboardingFlowProps> = ({
         verified = true;
       } else {
         try {
-          const abRes = await fetch(`https://abapi.airbrick.com/api/v1/otp/verify/${cleanOtp}/%2B91${clean}`);
-          const abData = await abRes.json();
+          const abController = new AbortController();
+          const abTimer = setTimeout(() => abController.abort(), 4000);
+          const abRes = await fetch(`https://abapi.airbrick.com/api/v1/otp/verify/${cleanOtp}/%2B91${clean}`, {
+            signal: abController.signal,
+          });
+          clearTimeout(abTimer);
+          const abData = await abRes.json().catch(() => null);
           if (abData && (abData.type === 'success' || abData.success === true)) {
             verified = true;
           }

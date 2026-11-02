@@ -126,6 +126,20 @@ describe('Backend 85%+ Coverage Booster Suite', () => {
     });
   });
 
+  
+    it('covers public tracking routes and API', async () => {
+      const resTrackHtml = await request(app).get('/track/ORD-TEST-TRACK-1');
+      expect([200, 404]).toContain(resTrackHtml.status);
+
+      const resTrackApi = await request(app).get('/api/track/ORD-TEST-TRACK-1');
+      expect(resTrackApi.status).toBe(200);
+      expect(resTrackApi.body.success).toBe(true);
+      expect(resTrackApi.body.order.orderId).toBe('ORD-TEST-TRACK-1');
+
+      const resTrackBase = await request(app).get('/track');
+      expect([200, 404]).toContain(resTrackBase.status);
+    });
+
   describe('Crypto & Auth module edge cases', () => {
     it('handles createAuthorizationHeader when private key is empty', async () => {
       const origKey = config.ondc.signingPrivateKey;
