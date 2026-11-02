@@ -5,6 +5,20 @@ All notable changes to the **RALT ONDC Logistics Provider (BPP)** platform will 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+
+## 1.0.0 (2026-11-02)
+
+### Features
+
+* **architecture:** monorepo reorganization, semantic release, and enterprise delivery app enhancements ([dec831e](https://github.com/SaiRaju27/RaltONDC/commit/dec831eb322a1562c3e89fd8be0c81ba1228c15e))
+* **test:** add full frontend and backend test suites with 85%+ coverage, security scans, and CI/CD quality gates ([83591e7](https://github.com/SaiRaju27/RaltONDC/commit/83591e712a81b96d29b00fb45a98f64da09acd1c))
+
+### Bug Fixes
+
+* **ci:** add in-memory fallbacks for redis/queue services and fix test teardown ([f7872d0](https://github.com/SaiRaju27/RaltONDC/commit/f7872d0b47c3438e96bac8c33a94ff90de30ce8c))
+* **ci:** hoist shared type declarations to root, add declarations fallback, and fix CI npm install in workspaces ([417ee36](https://github.com/SaiRaju27/RaltONDC/commit/417ee36121cf54ab35cb1d91c54dd34c1f07d2db))
+* **ci:** update semantic release dependencies, configure manual CD trigger, and resolve delivery-app tsconfig types ([c860c24](https://github.com/SaiRaju27/RaltONDC/commit/c860c2455fd05770a772c4d018d9df0b2a6a3cf0))
+
 ## [1.2.6] - 2026-11-02
 
 ### Features
@@ -13,4 +27,3 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **PostGIS Geospatial Matching**: High-performance spatial indexing with `ST_DWithin` and `ST_Distance` spherical matching for rider proximity.
 - **Enterprise Delivery Partner App**: Single responsive delivery app supporting mobile (iOS, Android, PWA) and desktop widescreen layouts.
 - **Automated CI/CD**: Zero-downtime deployment pipeline to AWS Lightsail with automated health probing, rollback, and daily PostGIS snapshots.
-
