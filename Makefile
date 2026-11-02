@@ -65,6 +65,8 @@ env: ## Verify environment configuration files
 install: ## Install dependencies across services, apps, and packages
 	@echo -e "${COLOR_INFO}Installing monorepo dependencies across workspace...${COLOR_RESET}"
 	@npm install
+	@echo -e "${COLOR_INFO}Ensuring delivery app dependencies are installed...${COLOR_RESET}"
+	@test -d apps/delivery-app/node_modules/expo || (cd apps/delivery-app && npm install --no-audit --no-fund)
 	@echo -e "${COLOR_INFO}Building ONDC LSP backend service...${COLOR_RESET}"
 	@cd services/ondc-lsp-service && npm run build
 	@echo -e "${COLOR_SUCCESS}All project dependencies installed successfully!${COLOR_RESET}"
@@ -134,10 +136,12 @@ rabbit: check-engine env ## Start only RabbitMQ container
 
 mobile: ## Run Delivery Partner App in interactive Expo CLI
 	@echo -e "${COLOR_INFO}Launching Delivery Partner Mobile App...${COLOR_RESET}"
+	@test -d apps/delivery-app/node_modules/expo || (cd apps/delivery-app && npm install --no-audit --no-fund)
 	@cd apps/delivery-app && NODE_OPTIONS="-r ./polyfill.js" npx expo start
 
 mobile-web: ## Launch Delivery Partner App in Web Browser (Port 8081)
 	@echo -e "${COLOR_INFO}Launching Delivery Partner Mobile App in Web Browser (Port 8081)...${COLOR_RESET}"
+	@test -d apps/delivery-app/node_modules/expo || (cd apps/delivery-app && npm install --no-audit --no-fund)
 	@cd apps/delivery-app && NODE_OPTIONS="-r ./polyfill.js" npx expo start --web --port 8081
 
 mobile-android: ## Launch Delivery Partner App on Android Emulator
