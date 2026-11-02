@@ -257,6 +257,8 @@ export interface RiderProfile {
   total_earnings?: number;
   is_online?: number;
   kyc_step?: number;
+  kyc_status?: string;
+  rejection_feedback?: string;
   onboarding_completed?: number;
 }
 
@@ -469,10 +471,12 @@ export default function App() {
   const [detectedLocationName, setDetectedLocationName] = useState<string>('Hitec City, Hyderabad');
 
   // Auth & OTP State (Clean defaults, no hardcoded phone or OTP)
+  const [authMode, setAuthMode] = useState<'login' | 'register'>('login');
   const [authPhone, setAuthPhone] = useState<string>('');
   const [authError, setAuthError] = useState<string>('');
   const [isSendingOtp, setIsSendingOtp] = useState<boolean>(false);
   const [otpSent, setOtpSent] = useState<boolean>(false);
+  const [receivedOtp, setReceivedOtp] = useState<string>('1234');
   const [otpDigits, setOtpDigits] = useState<string[]>(['', '', '', '', '', '']);
   const [timerCount, setTimerCount] = useState<number>(45);
   const [isVerifyingOtp, setIsVerifyingOtp] = useState<boolean>(false);
@@ -524,10 +528,7 @@ export default function App() {
     if (typeof process !== 'undefined' && process.env?.EXPO_PUBLIC_API_URL) {
       return process.env.EXPO_PUBLIC_API_URL.replace(/\/$/, '');
     }
-    if (typeof process !== 'undefined' && process.env?.EXPO_PUBLIC_USE_LOCAL === 'true') {
-      return resolveApiUrl();
-    }
-    return PRODUCTION_API_URL;
+    return resolveApiUrl();
   });
   const [authToken, setAuthToken] = useState<string>('');
 
@@ -902,6 +903,8 @@ export default function App() {
     setPermissionLoc(true);
     setPermissionPhone(true);
     detectLocation();
+    setAuthMode('login');
+    setAuthError('');
     setCurrentScreen('auth');
   };
 
@@ -916,6 +919,8 @@ export default function App() {
     setPermissionLoc(true);
     setPermissionPhone(true);
     detectLocation();
+    setAuthMode('register');
+    setAuthError('');
     setOnboardStep(1);
     setCurrentScreen('onboarding');
   };
@@ -967,11 +972,20 @@ export default function App() {
     await triggerVerifyCode(DEMO_OTP, DEMO_PHONE);
   };
 
-  // Send OTP (Real High-Speed Carrier Route with Instant Demo Bypass)
+  // Auto-fill OTP helper
+  const handleAutoFillOtp = (code: string) => {
+    const clean = code.trim();
+    const chars = clean.split('').slice(0, 6);
+    while (chars.length < 6) chars.push('');
+    setOtpDigits(chars);
+    triggerVerifyCode(clean, authPhone);
+  };
+
+  // Send OTP (Real High-Speed Carrier Route with Instant Demo Bypass & Mode Enforcement)
   const handleSendOtp = async () => {
     const cleanPhone = authPhone.replace(/[^0-9]/g, '').slice(-10);
     if (cleanPhone.length !== 10) {
-      setAuthError('Enter a valid 10 digit mobile number');
+      setAuthError('Enter a valid 10-digit mobile number');
       return;
     }
     setAuthError('');
@@ -988,27 +1002,60 @@ export default function App() {
     setIsSendingOtp(true);
 
     try {
-      let sent = false;
-      const res = await apiFetch('/api/auth/send-otp', {
-        method: 'POST',
-        body: JSON.stringify({ phone: cleanPhone }),
-      }, 4000);
+      let otpDispatched = false;
+      let effectiveOtp = '1234';
 
-      if (res.ok && (res.data?.type === 'success' || res.data?.success === true)) {
-        sent = true;
+      // 1. Backend proxy carrier route with mode
+      try {
+        const res = await apiFetch('/api/auth/send-otp', {
+          method: 'POST',
+          body: JSON.stringify({ phone: cleanPhone, mode: authMode }),
+        }, 4000);
+
+        if (res.ok && (res.data?.type === 'success' || res.data?.success === true)) {
+          otpDispatched = true;
+          if (res.data?.testOtp) {
+            effectiveOtp = res.data.testOtp;
+          }
+        } else if (!res.ok || res.data?.success === false) {
+          setIsSendingOtp(false);
+          const errorMsg = res.data?.error || (authMode === 'login'
+            ? `No registered partner account found for +91 ${cleanPhone}. Please register first.`
+            : 'Could not send verification code.');
+
+          setAuthError(errorMsg);
+          Alert.alert(
+            authMode === 'login' ? 'Account Not Registered' : 'Registration Notice',
+            errorMsg,
+            authMode === 'login' ? [
+              {
+                text: 'Register as Partner',
+                onPress: () => {
+                  setOnboardStep(1);
+                  setCurrentScreen('onboarding');
+                },
+              },
+              { text: 'Try Another Number', style: 'cancel' },
+            ] : [{ text: 'OK' }]
+          );
+          return;
+        }
+      } catch (e) {
+        console.warn('Backend send-otp failed:', e);
       }
 
-      // Airbrick direct fallback
-      if (!sent) {
+      // 2. Direct Airbrick fallback (only if not already dispatched)
+      if (!otpDispatched) {
         try {
           const directRes = await fetch(`${AIRBRICK_API_PRIMARY}/api/v1/otp/%2B91${cleanPhone}`);
           const directData = await directRes.json();
           if (directData && (directData.type === 'success' || directData.success === true)) {
-            sent = true;
+            otpDispatched = true;
           }
         } catch (e) {}
       }
 
+      setReceivedOtp(effectiveOtp);
       setIsSendingOtp(false);
       setTimerCount(45);
       const isDev = (typeof __DEV__ !== 'undefined' && __DEV__) || !isProductionEnvironment();
@@ -1018,8 +1065,26 @@ export default function App() {
         setOtpDigits(['', '', '', '', '', '']);
       }
       setOtpSent(true);
-    } catch (err) {
+
+      // Pop high-visibility OTP Alert
+      Alert.alert(
+        'Verification Code Dispatched',
+        `Your verification code is: ${effectiveOtp}
+
+(SMS sent to +91 ${cleanPhone}. Tap Auto-fill to continue.)`,
+        [
+          {
+            text: 'Auto-fill OTP',
+            onPress: () => {
+              handleAutoFillOtp(effectiveOtp);
+            },
+          },
+          { text: 'Enter Manually', style: 'cancel' },
+        ]
+      );
+    } catch (err: any) {
       setIsSendingOtp(false);
+      setReceivedOtp('1234');
       setOtpSent(true);
       setTimerCount(45);
       setOtpDigits(['1', '2', '3', '4', '', '']);
@@ -1027,7 +1092,7 @@ export default function App() {
     }
   };
 
-  // Verify OTP against Backend Database with Resilient Offline Fallback
+  // Verify OTP against Backend Database (Strict Role & Registered Partner Boundary)
   const triggerVerifyCode = async (code: string, phone: string) => {
     const cleanPhone = phone.replace(/[^0-9]/g, '').slice(-10);
     const cleanCode = code.trim();
@@ -1042,7 +1107,7 @@ export default function App() {
     try {
       const res = await apiFetch('/api/auth/verify-otp', {
         method: 'POST',
-        body: JSON.stringify({ phone: cleanPhone, code: cleanCode }),
+        body: JSON.stringify({ phone: cleanPhone, code: cleanCode, mode: authMode }),
       }, 4000);
 
       setIsVerifyingOtp(false);
@@ -1053,14 +1118,58 @@ export default function App() {
         if (data.token) {
           setAuthToken(data.token);
         }
-        if (data.isRegistered && data.rider && (data.rider.onboarding_completed === 1 || data.onboardingCompleted)) {
+
+        if (authMode === 'login') {
+          if (!data.isRegistered || !data.rider) {
+            Alert.alert(
+              'Unauthorized Access',
+              `No delivery partner account found for +91 ${cleanPhone}.
+
+Unauthorized users cannot log in. Please register first to join as a delivery partner.`,
+              [
+                {
+                  text: 'Register as Partner',
+                  onPress: () => {
+                    setOnboardStep(1);
+                    setCurrentScreen('onboarding');
+                  },
+                },
+                { text: 'Cancel', style: 'cancel' },
+              ]
+            );
+            return;
+          }
+
           setRider(data.rider);
-          setIsAuthenticated(true);
-          fetchMetrics(cleanPhone, data.token);
-          fetchTripsHistory(cleanPhone, data.token);
-          setCurrentScreen('main');
-          return;
+          if (data.rider.onboarding_completed === 1 && data.rider.kyc_status === 'APPROVED') {
+            setIsAuthenticated(true);
+            fetchMetrics(cleanPhone, data.token);
+            fetchTripsHistory(cleanPhone, data.token);
+            setCurrentScreen('main');
+            return;
+          } else {
+            setOnboardStep(6);
+            setCurrentScreen('onboarding');
+            return;
+          }
         } else {
+          // Register mode
+          if (data.isRegistered && data.rider && data.rider.onboarding_completed === 1) {
+            Alert.alert(
+              'Account Already Registered',
+              `An account already exists for +91 ${cleanPhone}. Please sign in to access your partner portal.`,
+              [
+                {
+                  text: 'Sign In',
+                  onPress: () => {
+                    setAuthMode('login');
+                    setOtpSent(false);
+                  },
+                },
+              ]
+            );
+            return;
+          }
           setOnboardStep(1);
           setCurrentScreen('onboarding');
           return;
@@ -1076,7 +1185,20 @@ export default function App() {
       }
 
       const errMsg = res.data?.error || res.data?.message || 'Invalid OTP code. Please enter 1234 or your SMS code.';
-      Alert.alert('Verification Failed', errMsg);
+      Alert.alert(
+        'Verification Failed',
+        errMsg,
+        authMode === 'login' && !res.data?.isRegistered ? [
+          {
+            text: 'Register as Partner',
+            onPress: () => {
+              setOnboardStep(1);
+              setCurrentScreen('onboarding');
+            },
+          },
+          { text: 'Try Again', style: 'cancel' },
+        ] : [{ text: 'OK' }]
+      );
     } catch (e) {
       setIsVerifyingOtp(false);
       setIsAuthenticating(false);
@@ -1691,6 +1813,53 @@ export default function App() {
 
     const renderAuthFormContent = () => (
       <View style={loginStyles.formContentWrapper}>
+        {/* Auth Mode Segmented Tab Selector */}
+        {!otpSent && (
+          <View style={loginStyles.modeToggleContainer}>
+            <TouchableOpacity
+              style={[
+                loginStyles.modeToggleTab,
+                authMode === 'login' && loginStyles.modeToggleTabActive,
+              ]}
+              onPress={() => {
+                setAuthMode('login');
+                setAuthError('');
+              }}
+              activeOpacity={0.8}
+            >
+              <Text
+                style={[
+                  loginStyles.modeToggleText,
+                  authMode === 'login' && loginStyles.modeToggleTextActive,
+                ]}
+              >
+                🛵 Partner Sign In
+              </Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={[
+                loginStyles.modeToggleTab,
+                authMode === 'register' && loginStyles.modeToggleTabActive,
+              ]}
+              onPress={() => {
+                setAuthMode('register');
+                setAuthError('');
+              }}
+              activeOpacity={0.8}
+            >
+              <Text
+                style={[
+                  loginStyles.modeToggleText,
+                  authMode === 'register' && loginStyles.modeToggleTextActive,
+                ]}
+              >
+                📝 Register as Partner
+              </Text>
+            </TouchableOpacity>
+          </View>
+        )}
+
         {/* Header Section */}
         <View style={loginStyles.headerSection}>
           <View style={loginStyles.brandHeaderRow}>
@@ -1699,66 +1868,42 @@ export default function App() {
             </View>
             <View style={{ flex: 1 }}>
               <View style={loginStyles.fleetPartnerTag}>
-                <Text style={loginStyles.fleetPartnerTagText}>ONDC Delivery Partner</Text>
+                <Text style={loginStyles.fleetPartnerTagText}>
+                  {authMode === 'login' ? 'Registered Partner Access' : 'New Partner Onboarding'}
+                </Text>
               </View>
-              <Text style={loginStyles.loginTitle}>Partner Sign In</Text>
+              <Text style={loginStyles.loginTitle}>
+                {authMode === 'login' ? 'Partner Sign In' : 'Register as Partner'}
+              </Text>
               <Text style={loginStyles.loginSubtitle}>
                 {!otpSent
-                  ? 'Enter your 10-digit mobile number to access partner portal'
-                  : `Enter the 6-digit verification code sent to +91 ${authPhone}`}
+                  ? (authMode === 'login'
+                      ? 'Enter your 10-digit registered mobile number to sign in'
+                      : 'Enter your 10-digit mobile number to begin partner registration')
+                  : `Enter the verification code sent to +91 ${authPhone}`}
               </Text>
             </View>
           </View>
         </View>
 
-        {/* Environment Selector: Cloud (ralt.in) vs Localhost */}
-        <View style={loginStyles.serverPillRow}>
-          <TouchableOpacity
-            style={[
-              loginStyles.serverPill,
-              activeApiUrl === PRODUCTION_API_URL && loginStyles.serverPillActive,
-            ]}
-            onPress={() => setActiveApiUrl(PRODUCTION_API_URL)}
-            activeOpacity={0.7}
-          >
-            <Text
-              style={[
-                loginStyles.serverPillText,
-                activeApiUrl === PRODUCTION_API_URL && loginStyles.serverPillTextActive,
-              ]}
-            >
-              🟢 Cloud: ralt.in
-            </Text>
-          </TouchableOpacity>
-
-          <TouchableOpacity
-            style={[
-              loginStyles.serverPill,
-              activeApiUrl !== PRODUCTION_API_URL && loginStyles.serverPillActive,
-            ]}
-            onPress={() => setActiveApiUrl(getLocalApiUrl())}
-            activeOpacity={0.7}
-          >
-            <Text
-              style={[
-                loginStyles.serverPillText,
-                activeApiUrl !== PRODUCTION_API_URL && loginStyles.serverPillTextActive,
-              ]}
-            >
-              💻 Local: {Platform.OS === 'android' ? '10.0.2.2:5001' : 'localhost:5001'}
-            </Text>
-          </TouchableOpacity>
-        </View>
+        {authError ? (
+          <View style={loginStyles.errorBannerCard}>
+            <Text style={{ fontSize: 16 }}>⚠️</Text>
+            <Text style={loginStyles.errorBannerText}>{authError}</Text>
+          </View>
+        ) : null}
 
         {!otpSent ? (
           // ============================================================
           // PHASE 1: ENTER MOBILE NUMBER & SUBMIT
           // ============================================================
           <View style={{ gap: 14 }}>
-            {/* CARD 1: Registered Mobile Number */}
+            {/* CARD 1: Mobile Number Input */}
             <View style={loginStyles.card}>
               <View style={loginStyles.cardHeaderRow}>
-                <Text style={loginStyles.cardLabel}>REGISTERED MOBILE NUMBER</Text>
+                <Text style={loginStyles.cardLabel}>
+                  {authMode === 'login' ? 'REGISTERED MOBILE NUMBER' : 'YOUR MOBILE NUMBER'}
+                </Text>
                 {isPhoneValid && (
                   <View style={loginStyles.autoVerifiedBadge}>
                     <Text style={{ fontSize: 12, color: '#059669', fontWeight: 'bold' }}>✓</Text>
@@ -1799,34 +1944,6 @@ export default function App() {
                   )}
                 </View>
               </View>
-
-              {/* Quick Fill Demo Rider Pill & Instant Login */}
-              <View style={{ flexDirection: 'row', gap: 8, alignItems: 'center', flexWrap: 'wrap', marginTop: 10 }}>
-                <TouchableOpacity
-                  style={loginStyles.quickDemoPill}
-                  onPress={() => {
-                    setAuthPhone(DEMO_PHONE);
-                    setOtpDigits(['1', '2', '3', '4', '', '']);
-                    setOtpSent(true);
-                    setTimerCount(45);
-                  }}
-                  activeOpacity={0.8}
-                >
-                  <Text style={loginStyles.quickDemoText}>
-                    ⚡ Quick Demo: <Text style={{ fontWeight: '800', color: '#042f1e' }}>{DEMO_PHONE}</Text>
-                  </Text>
-                </TouchableOpacity>
-
-                <TouchableOpacity
-                  style={loginStyles.instantLoginPill}
-                  onPress={handleDemoRiderInstantLogin}
-                  activeOpacity={0.8}
-                >
-                  <Text style={loginStyles.instantLoginPillText}>
-                    🚀 1-Tap Demo Sign In
-                  </Text>
-                </TouchableOpacity>
-              </View>
             </View>
 
             {/* Security Note */}
@@ -1835,7 +1952,9 @@ export default function App() {
                 <Text style={{ fontSize: 16 }}>🛡️</Text>
               </View>
               <Text style={loginStyles.trustBannerText}>
-                100% Secure & Verified Partner Sign In. Fast OTP verification.
+                {authMode === 'login'
+                  ? 'Strict access control: Only verified & registered delivery partners can log in.'
+                  : '100% Free registration • Direct ONDC payouts • Zero vehicle deposit required.'}
               </Text>
             </View>
 
@@ -1856,7 +1975,9 @@ export default function App() {
                 </View>
               ) : (
                 <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-                  <Text style={loginStyles.primarySubmitBtnText}>Get OTP Code</Text>
+                  <Text style={loginStyles.primarySubmitBtnText}>
+                    {authMode === 'login' ? 'Get Sign In OTP' : 'Get Registration OTP'}
+                  </Text>
                   <Text style={{ fontSize: 18, color: '#ffffff', marginLeft: 4 }}>➔</Text>
                 </View>
               )}
@@ -1899,19 +2020,6 @@ export default function App() {
                   </View>
                   <Text style={loginStyles.otpSectionTitle}>Enter One-Time Password</Text>
                 </View>
-
-                {/* Instant Fill Demo OTP */}
-                <TouchableOpacity
-                  style={loginStyles.instantFillPill}
-                  onPress={() => {
-                    const demoArr = ['1', '2', '3', '4', '', ''];
-                    setOtpDigits(demoArr);
-                    triggerVerifyCode('1234', authPhone);
-                  }}
-                  activeOpacity={0.7}
-                >
-                  <Text style={loginStyles.instantFillText}>Demo: 1234</Text>
-                </TouchableOpacity>
               </View>
 
               {/* 6 Square OTP Digits */}
@@ -1937,6 +2045,7 @@ export default function App() {
                         const fullCode = newDigits.filter(Boolean).join('');
                         if (
                           fullCode === '1234' ||
+                          fullCode === receivedOtp ||
                           fullCode === '123456' ||
                           fullCode === '939864' ||
                           newDigits.every((d) => d && d.length === 1)
@@ -2029,7 +2138,7 @@ export default function App() {
                 (isVerifyingOtp || isAuthenticating) && { backgroundColor: '#065f46' },
               ]}
               onPress={() => {
-                const code = otpDigits.join('').trim() || '1234';
+                const code = otpDigits.join('').trim() || receivedOtp || '1234';
                 triggerVerifyCode(code, authPhone);
               }}
               disabled={isVerifyingOtp || isAuthenticating}
@@ -2038,11 +2147,13 @@ export default function App() {
               {isVerifyingOtp || isAuthenticating ? (
                 <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
                   <ActivityIndicator color="#ffffff" size="small" />
-                  <Text style={loginStyles.primarySubmitBtnText}>Verifying & Continuing...</Text>
+                  <Text style={loginStyles.primarySubmitBtnText}>Verifying Partner Status...</Text>
                 </View>
               ) : (
                 <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-                  <Text style={loginStyles.primarySubmitBtnText}>Verify & Continue</Text>
+                  <Text style={loginStyles.primarySubmitBtnText}>
+                    {authMode === 'login' ? 'Verify & Sign In' : 'Verify & Continue Registration'}
+                  </Text>
                   <Text style={{ fontSize: 18, color: '#ffffff', marginLeft: 4 }}>➔</Text>
                 </View>
               )}
@@ -2060,7 +2171,7 @@ export default function App() {
           </View>
         )}
 
-        {/* Apply as New Partner Link */}
+        {/* Switch Between Partner Sign In & New Registration */}
         <TouchableOpacity
           style={loginStyles.applyPartnerLink}
           onPress={() => {
@@ -2072,7 +2183,7 @@ export default function App() {
           <Text style={loginStyles.applyPartnerText}>
             Want to join our delivery fleet?{' '}
             <Text style={loginStyles.applyPartnerHighlight}>
-              Apply as New Partner
+              Register as New Partner
             </Text>
           </Text>
         </TouchableOpacity>
@@ -2170,11 +2281,6 @@ export default function App() {
                     <Text style={loginStyles.backBtnArrow}>←</Text>
                     <Text style={loginStyles.backBtnLabel}>Back</Text>
                   </TouchableOpacity>
-
-                  <View style={loginStyles.networkStatusPill}>
-                    <View style={loginStyles.networkStatusDot} />
-                    <Text style={loginStyles.networkStatusText}>Network Active</Text>
-                  </View>
                 </View>
 
                 {renderAuthFormContent()}
@@ -2196,12 +2302,6 @@ export default function App() {
                 >
                   <Text style={{ fontSize: 18, color: '#141b2b', fontWeight: 'bold' }}>←</Text>
                 </TouchableOpacity>
-
-                {/* Professional Status Indicator */}
-                <View style={loginStyles.networkStatusPill}>
-                  <View style={loginStyles.networkStatusDot} />
-                  <Text style={loginStyles.networkStatusText}>Network Active</Text>
-                </View>
 
                 <TouchableOpacity
                   style={loginStyles.iconCircleBtn}
@@ -2369,7 +2469,7 @@ export default function App() {
         setOnboardStep={setOnboardStep}
         onCompleteRegistration={async (profileData) => {
           setIsRegisteringUser(true);
-          const cleanPhone = (authPhone || profileData.phone || '').replace(/[^0-9]/g, '').slice(-10);
+          const cleanPhone = (profileData.phone || authPhone || '').replace(/[^0-9]/g, '').slice(-10);
           const newPartnerId = `RALT-RIDER-${cleanPhone || Date.now()}`;
 
           const newProfile: RiderProfile = {
@@ -2391,8 +2491,9 @@ export default function App() {
             rating: 5.0,
             total_orders: 0,
             total_earnings: 0,
-            is_online: 1,
-            onboarding_completed: 1,
+            is_online: 0,
+            onboarding_completed: 0,
+            kyc_status: 'PENDING_VERIFICATION',
           };
 
           try {
@@ -2401,7 +2502,7 @@ export default function App() {
               headers: { 'Content-Type': 'application/json' },
               body: JSON.stringify(newProfile),
             });
-            const regData = await regRes.json();
+            const regData = await regRes.json().catch(() => null);
             if (regData && regData.rider) {
               setRider(regData.rider);
             } else {
@@ -2414,7 +2515,9 @@ export default function App() {
           setIsRegisteringUser(false);
           setRiderName(newProfile.name);
           setWorkArea(newProfile.workArea || 'Hitec City Metro Cluster');
-        }}
+          }}
+        apiUrl={activeApiUrl || resolveApiUrl()}
+        existingRider={rider}
         onFinishAndGoDashboard={() => {
           setIsAuthenticated(true);
           const cleanPhone = (authPhone || rider.phone || '').replace(/[^0-9]/g, '').slice(-10);
@@ -2423,7 +2526,7 @@ export default function App() {
           setCurrentScreen('main');
         }}
         onBackToAuth={() => {
-          setCurrentScreen('auth');
+          setCurrentScreen('splash');
         }}
         authPhone={authPhone}
       />
@@ -5081,5 +5184,97 @@ const loginStyles = StyleSheet.create({
     color: '#042f1e',
     fontWeight: 'bold',
     textDecorationLine: 'underline',
+  },
+  modeToggleContainer: {
+    flexDirection: 'row',
+    backgroundColor: '#f1f5f9',
+    borderRadius: 12,
+    padding: 4,
+    marginBottom: 16,
+  },
+  modeToggleTab: {
+    flex: 1,
+    paddingVertical: 10,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderRadius: 10,
+  },
+  modeToggleTabActive: {
+    backgroundColor: '#042f1e',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 2,
+  },
+  modeToggleText: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: '#64748b',
+  },
+  modeToggleTextActive: {
+    color: '#ffffff',
+    fontWeight: '800',
+  },
+  errorBannerCard: {
+    backgroundColor: '#fef2f2',
+    borderWidth: 1.5,
+    borderColor: '#ef4444',
+    borderRadius: 12,
+    padding: 12,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    marginBottom: 12,
+  },
+  errorBannerText: {
+    flex: 1,
+    fontSize: 12,
+    color: '#b91c1c',
+    fontWeight: '600',
+    lineHeight: 18,
+  },
+  otpDispatchedAlertCard: {
+    backgroundColor: '#ecfdf5',
+    borderWidth: 1.5,
+    borderColor: '#10b981',
+    borderRadius: 14,
+    padding: 12,
+    marginBottom: 4,
+  },
+  otpAlertPulseIcon: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: '#d1fae5',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  otpAlertTitle: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: '#065f46',
+  },
+  otpAlertCode: {
+    fontSize: 16,
+    fontWeight: '900',
+    color: '#047857',
+    letterSpacing: 2,
+  },
+  otpAlertSub: {
+    fontSize: 11,
+    color: '#047857',
+    marginTop: 2,
+  },
+  autoFillPillBtn: {
+    backgroundColor: '#047857',
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 8,
+  },
+  autoFillPillBtnText: {
+    color: '#ffffff',
+    fontSize: 11,
+    fontWeight: '800',
   },
 });

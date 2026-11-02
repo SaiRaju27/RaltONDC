@@ -316,68 +316,110 @@ export async function initDatabase() {
     await initSqlite();
   }
 
-  // Ensure default seed rider exists
-  const existingRider = await get('SELECT id FROM riders WHERE id = ? OR phone LIKE ? LIMIT 1', [
-    'RALT-RIDER-001',
-    '%9876543210'
-  ]);
-
-  if (!existingRider) {
-    const now = new Date().toISOString();
+  // Ensure documents and chunking tables exist across engines
+  if (activeEngine === 'postgres') {
     await run(`
-      INSERT INTO riders (
-        id, name, phone, city, address, vehicle_number, vehicle_type,
-        is_online, lat, lng, father_name, dob, gender,
-        emergency_name, emergency_phone, emergency_relation,
-        aadhaar_number, pan_number, dl_number, dl_expiry, insurance_number,
-        bank_account_number, bank_ifsc, bank_name, account_holder_name, upi_id,
-        penny_drop_status, selfie_url, training_completed, kyc_status,
-        kyc_step, onboarding_completed, rating, total_orders, total_earnings,
-        created_at, updated_at
-      ) VALUES (
-        'RALT-RIDER-001', 'Sai Raju', '+91 9876543210', 'Hyderabad', 'Hitec City, Hyderabad', 'TS 09 EA 1234', 'motorcycle',
-        1, 17.4375, 78.3687, 'Ram Raju', '1998-05-15', 'Male',
-        'Emergency Contact', '+91 9876500000', 'Brother',
-        '548912349876', 'ABCDE1234F', 'TS0920190012345', '2030-12-31', 'POL-9921',
-        '987654321012', 'HDFC0001234', 'HDFC Bank', 'Sai Raju', 'sairaju@okhdfcbank',
-        'VERIFIED', '', 1, 'APPROVED',
-        5, 1, 5.0, 0, 0.0,
-        ?, ?
+      CREATE TABLE IF NOT EXISTS rider_documents (
+        id VARCHAR(64) PRIMARY KEY,
+        rider_id VARCHAR(64) NOT NULL,
+        doc_type VARCHAR(64) NOT NULL,
+        doc_number VARCHAR(64),
+        file_name VARCHAR(255) NOT NULL,
+        mime_type VARCHAR(128) NOT NULL,
+        file_size INTEGER NOT NULL,
+        file_data TEXT NOT NULL,
+        status VARCHAR(32) DEFAULT 'PENDING_VERIFICATION',
+        rejection_reason TEXT,
+        verified_by VARCHAR(64),
+        verified_at TIMESTAMP WITH TIME ZONE,
+        created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
       )
-    `, [now, now]);
-    logger.info('Seeded default active delivery partner: RALT-RIDER-001 (Sai Raju)');
+    `);
+    await run(`
+      CREATE TABLE IF NOT EXISTS document_upload_sessions (
+        session_id VARCHAR(64) PRIMARY KEY,
+        rider_id VARCHAR(64) NOT NULL,
+        doc_type VARCHAR(64) NOT NULL,
+        doc_number VARCHAR(64),
+        file_name VARCHAR(255) NOT NULL,
+        mime_type VARCHAR(128) NOT NULL,
+        total_chunks INTEGER NOT NULL,
+        total_size INTEGER NOT NULL,
+        uploaded_chunks INTEGER DEFAULT 0,
+        status VARCHAR(32) DEFAULT 'UPLOADING',
+        created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+      )
+    `);
+    await run(`
+      CREATE TABLE IF NOT EXISTS document_chunks (
+        id BIGSERIAL PRIMARY KEY,
+        session_id VARCHAR(64) NOT NULL,
+        chunk_index INTEGER NOT NULL,
+        chunk_data TEXT NOT NULL,
+        created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+      )
+    `);
+    try { await run('ALTER TABLE riders ADD COLUMN IF NOT EXISTS rejection_feedback TEXT'); } catch (_) {}
+  } else {
+    await run(`
+      CREATE TABLE IF NOT EXISTS rider_documents (
+        id TEXT PRIMARY KEY,
+        rider_id TEXT NOT NULL,
+        doc_type TEXT NOT NULL,
+        doc_number TEXT,
+        file_name TEXT NOT NULL,
+        mime_type TEXT NOT NULL,
+        file_size INTEGER NOT NULL,
+        file_data TEXT NOT NULL,
+        status TEXT DEFAULT 'PENDING_VERIFICATION',
+        rejection_reason TEXT,
+        verified_by TEXT,
+        verified_at TEXT,
+        created_at TEXT,
+        updated_at TEXT
+      )
+    `);
+    await run(`
+      CREATE TABLE IF NOT EXISTS document_upload_sessions (
+        session_id TEXT PRIMARY KEY,
+        rider_id TEXT NOT NULL,
+        doc_type TEXT NOT NULL,
+        doc_number TEXT,
+        file_name TEXT NOT NULL,
+        mime_type TEXT NOT NULL,
+        total_chunks INTEGER NOT NULL,
+        total_size INTEGER NOT NULL,
+        uploaded_chunks INTEGER DEFAULT 0,
+        status TEXT DEFAULT 'UPLOADING',
+        created_at TEXT
+      )
+    `);
+    await run(`
+      CREATE TABLE IF NOT EXISTS document_chunks (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        session_id TEXT NOT NULL,
+        chunk_index INTEGER NOT NULL,
+        chunk_data TEXT NOT NULL,
+        created_at TEXT
+      )
+    `);
+    try { await run('ALTER TABLE riders ADD COLUMN rejection_feedback TEXT'); } catch (_) {}
   }
+
+  // Database tables ready - No hardcoded mock/dummy riders seeded
+  logger.info('Database schema verified. Ready for real delivery partner registrations.');
 }
 
 export async function resetEntireDatabase() {
+  await run('DELETE FROM document_chunks');
+  await run('DELETE FROM document_upload_sessions');
+  await run('DELETE FROM rider_documents');
   await run('DELETE FROM orders');
   await run('DELETE FROM earnings');
   await run('DELETE FROM notifications');
   await run('DELETE FROM riders');
-
-  const now = new Date().toISOString();
-  await run(`
-    INSERT INTO riders (
-      id, name, phone, city, address, vehicle_number, vehicle_type,
-      is_online, lat, lng, father_name, dob, gender,
-      emergency_name, emergency_phone, emergency_relation,
-      aadhaar_number, pan_number, dl_number, dl_expiry, insurance_number,
-      bank_account_number, bank_ifsc, bank_name, account_holder_name, upi_id,
-      penny_drop_status, selfie_url, training_completed, kyc_status,
-      kyc_step, onboarding_completed, rating, total_orders, total_earnings,
-      created_at, updated_at
-    ) VALUES (
-      'RALT-RIDER-001', 'Sai Raju', '+91 9876543210', 'Hyderabad', 'Hitec City, Hyderabad', 'TS 09 EA 1234', 'motorcycle',
-      1, 17.4375, 78.3687, 'Ram Raju', '1998-05-15', 'Male',
-      'Emergency Contact', '+91 9876500000', 'Brother',
-      '548912349876', 'ABCDE1234F', 'TS0920190012345', '2030-12-31', 'POL-9921',
-      '987654321012', 'HDFC0001234', 'HDFC Bank', 'Sai Raju', 'sairaju@okhdfcbank',
-      'VERIFIED', '', 1, 'APPROVED',
-      5, 1, 5.0, 0, 0.0,
-      ?, ?
-    )
-  `, [now, now]);
-  logger.info('Database reset complete: 1 clean active delivery partner restored.');
+  logger.info('Database reset complete: all tables cleared cleanly.');
 }
 
 export async function isDatabaseHealthy(): Promise<boolean> {

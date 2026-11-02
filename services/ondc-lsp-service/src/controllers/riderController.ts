@@ -5,6 +5,7 @@ import { ondcClient } from '../services/ondcClient';
 import { notificationService } from '../services/notificationService';
 import { resetEntireDatabase } from '../database';
 import { signRiderToken, SendOtpSchema, VerifyOtpSchema, LocationUpdateSchema, StatusUpdateSchema } from '../security';
+import { config } from '../config';
 import { logger } from '../logger';
 
 export class RiderController {
@@ -96,12 +97,33 @@ export class RiderController {
       }
 
       const rider = await riderManager.createOrUpdateRider({
-        ...data,
-        id: data.id || `RALT-RID-${cleanPhone}`,
+        id: data.id || `RALT-RIDER-${cleanPhone}`,
+        name: data.name || 'Delivery Partner',
         phone: `+91 ${cleanPhone}`,
-        is_online: 1,
-        kyc_status: 'APPROVED',
-        onboarding_completed: 1
+        city: data.city || 'Hyderabad',
+        vehicle_type: data.vehicle_type || data.vehicleType || 'motorcycle',
+        vehicle_number: data.vehicle_number || data.vehiclePlate || '',
+        dl_number: data.dl_number || data.dlNumber || '',
+        aadhaar_number: data.aadhaar_number || data.aadhaarNumber || '',
+        pan_number: data.pan_number || data.panNumber || '',
+        bank_account_number: data.bank_account_number || data.bankAccount || '',
+        bank_ifsc: data.bank_ifsc || data.bankIfsc || '',
+        bank_name: data.bank_name || 'Primary Bank',
+        account_holder_name: data.account_holder_name || data.name || '',
+        upi_id: data.upi_id || data.upiId || '',
+        dob: data.dob || '',
+        is_online: 0,
+        kyc_status: data.kyc_status || 'PENDING_VERIFICATION',
+        onboarding_completed: data.onboarding_completed !== undefined ? data.onboarding_completed : 0,
+        ...data,
+      });
+
+      // Broadcast to Admin consoles immediately
+      riderManager.broadcastToAll({
+        type: 'NEW_RIDER_REGISTERED',
+        riderId: rider.id,
+        phone: rider.phone,
+        name: rider.name
       });
 
       const token = signRiderToken(rider.id, rider.phone);
@@ -193,27 +215,59 @@ export class RiderController {
   public static async sendOtp(req: Request, res: Response) {
     try {
       const phoneInput = (req.body?.phone || req.query?.phone || '').toString();
+      const mode = (req.body?.mode || req.query?.mode || '').toString().toLowerCase();
       const cleanPhone = phoneInput.replace(/[^0-9]/g, '').slice(-10);
 
       if (cleanPhone.length !== 10) {
         return res.status(400).json({ success: false, error: 'Valid 10-digit mobile number required' });
       }
 
+      const existingRider = await riderManager.getRiderByPhone(cleanPhone);
+      if (mode === 'login' && !existingRider) {
+        return res.status(404).json({
+          success: false,
+          error: `No registered partner account found for +91 ${cleanPhone}. Please register first to join as a delivery partner.`,
+          isRegistered: false,
+        });
+      }
+
+      if (mode === 'register' && existingRider && existingRider.onboarding_completed === 1) {
+        return res.status(400).json({
+          success: false,
+          error: `Mobile number +91 ${cleanPhone} is already registered. Please sign in instead.`,
+          isRegistered: true,
+        });
+      }
+
       const defaultOtp = '1234';
       RiderController.otpCache.set(cleanPhone, defaultOtp);
 
-      // Trigger Airbrick carrier dispatch in background
+      // Trigger Airbrick carrier dispatch with timeout
+      let airbrickDispatched = false;
       try {
-        fetch(`https://abapi.airbrick.com/api/v1/otp/%2B91${cleanPhone}`).catch(() => {});
-      } catch (_) {}
+        const abUrl = `${config.notifications.airbrickApiBase || 'https://abapi.airbrick.com'}/api/v1/otp/%2B91${cleanPhone}`;
+        logger.info({ phone: cleanPhone, abUrl }, 'Dispatching SMS OTP via Airbrick Gateway...');
+        const abRes = await fetch(abUrl, {
+          signal: AbortSignal.timeout(6000)
+        });
+        const abData: any = await abRes.json().catch(() => null);
+        logger.info({ phone: cleanPhone, status: abRes.status, abData }, 'Airbrick SMS OTP response');
+        if (abRes.ok && abData && (abData.type === 'success' || abData.success === true)) {
+          airbrickDispatched = true;
+        }
+      } catch (e: any) {
+        logger.warn({ err: e.message, phone: cleanPhone }, 'Airbrick dispatch timeout or network warning');
+      }
 
-      logger.info({ phone: cleanPhone }, 'OTP dispatched for partner authentication');
+      logger.info({ phone: cleanPhone, mode, airbrickDispatched }, 'OTP dispatched for partner authentication');
 
       return res.json({
         success: true,
         type: 'success',
         message: `OTP sent successfully to +91 ${cleanPhone}`,
-        testOtp: defaultOtp
+        testOtp: defaultOtp,
+        isRegistered: !!existingRider,
+        airbrickDispatched,
       });
     } catch (err: any) {
       logger.error({ err: err.message }, 'Error in sendOtp');
@@ -225,6 +279,7 @@ export class RiderController {
     try {
       const phone = req.body?.phone || req.query?.phone || '';
       const code = req.body?.code || req.query?.code || '';
+      const mode = (req.body?.mode || req.query?.mode || '').toString().toLowerCase();
       const cleanPhone = phone.toString().replace(/[^0-9]/g, '').slice(-10);
       const cleanCode = code.toString().trim();
 
@@ -244,8 +299,13 @@ export class RiderController {
       let airbrickError = '';
       if (!isMatch) {
         try {
-          const upstream = await fetch(`https://abapi.airbrick.com/api/v1/otp/verify/${cleanCode}/%2B91${cleanPhone}`);
+          const abVerifyUrl = `${config.notifications.airbrickApiBase || 'https://abapi.airbrick.com'}/api/v1/otp/verify/${cleanCode}/%2B91${cleanPhone}`;
+          logger.info({ abVerifyUrl }, 'Verifying OTP code with Airbrick Gateway...');
+          const upstream = await fetch(abVerifyUrl, {
+            signal: AbortSignal.timeout(6000)
+          });
           const data: any = await upstream.json().catch(() => null);
+          logger.info({ cleanPhone, abVerifyStatus: upstream.status, data }, 'Airbrick verify response');
           if (data && (data.type === 'success' || data.success === true)) {
             isMatch = true;
           } else if (data && (data.message || data.error)) {
@@ -256,7 +316,9 @@ export class RiderController {
               isMatch = true;
             }
           }
-        } catch (_) {}
+        } catch (e: any) {
+          logger.warn({ err: e.message }, 'Airbrick verification error');
+        }
       }
 
       if (!isMatch) {
@@ -267,6 +329,26 @@ export class RiderController {
       }
 
       const rider = await riderManager.getRiderByPhone(cleanPhone);
+
+      // Strict enforcement: Only registered partners can log in
+      if (mode === 'login' && !rider) {
+        return res.status(403).json({
+          success: false,
+          error: `Access Denied: No delivery partner account found for +91 ${cleanPhone}. Please register as a new partner first.`,
+          isRegistered: false,
+          rider: null
+        });
+      }
+
+      if (mode === 'register' && rider && rider.onboarding_completed === 1) {
+        return res.status(400).json({
+          success: false,
+          error: `This mobile number is already registered and onboarded. Please use Partner Sign In.`,
+          isRegistered: true,
+          rider
+        });
+      }
+
       const token = rider ? signRiderToken(rider.id, rider.phone) : signRiderToken(`pending_${cleanPhone}`, cleanPhone);
 
       return res.json({

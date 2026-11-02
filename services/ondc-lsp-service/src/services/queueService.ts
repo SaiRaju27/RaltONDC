@@ -8,12 +8,14 @@ export class QueueService {
   private channel: any = null;
   private isConnected: boolean = false;
   private retryTimeout: NodeJS.Timeout | null = null;
+  private customConsumers: Array<{ queue: string; handler: (payload: any) => Promise<void> }> = [];
 
   public static QUEUES = {
     NOTIFICATIONS_PUSH: 'ondc.notifications.push',
     NOTIFICATIONS_SMS: 'ondc.notifications.sms',
     ORDER_DISPATCH: 'ondc.orders.dispatch',
     BAP_CALLBACKS: 'ondc.callbacks.outbound',
+    DOCUMENT_ASSEMBLE: 'ondc.documents.assemble',
   };
 
   constructor() {
@@ -36,7 +38,12 @@ export class QueueService {
       }
 
       // Register background consumers
-      this.registerConsumers();
+      await this.registerConsumers();
+
+      // Register any queued custom consumers
+      for (const { queue, handler } of this.customConsumers) {
+        await this.bindConsumer(queue, handler);
+      }
 
       this.connection.on('error', (err: any) => {
         this.isConnected = false;
@@ -83,6 +90,43 @@ export class QueueService {
   }
 
   /**
+   * Alias for publishToQueue for worker compatibility
+   */
+  public async publish(queue: string, message: any): Promise<boolean> {
+    return this.publishToQueue(queue, message);
+  }
+
+  /**
+   * Register a custom queue consumer
+   */
+  public async registerConsumer(queue: string, handler: (payload: any) => Promise<void>) {
+    this.customConsumers.push({ queue, handler });
+    if (this.isConnected && this.channel) {
+      await this.bindConsumer(queue, handler);
+    }
+  }
+
+  private async bindConsumer(queue: string, handler: (payload: any) => Promise<void>) {
+    try {
+      await this.channel.assertQueue(queue, { durable: true });
+      await this.channel.consume(queue, async (msg: any) => {
+        if (!msg) return;
+        try {
+          const payload = JSON.parse(msg.content.toString());
+          await handler(payload);
+          this.channel?.ack(msg);
+        } catch (err: any) {
+          logger.error({ err: err.message, queue }, 'Error in consumer processing');
+          this.channel?.nack(msg, false, false);
+        }
+      });
+      logger.info({ queue }, 'Custom RabbitMQ consumer registered');
+    } catch (err: any) {
+      logger.warn({ err: err.message, queue }, 'Failed to bind custom consumer');
+    }
+  }
+
+  /**
    * Background Queue Consumers
    */
   private async registerConsumers() {
@@ -126,6 +170,12 @@ export class QueueService {
         await notificationService.dispatch({ ...message, channel: 'PUSH' });
       } else if (queue === QueueService.QUEUES.NOTIFICATIONS_SMS) {
         await notificationService.dispatch({ ...message, channel: 'SMS' });
+      } else {
+        // Trigger matching custom consumer in-process
+        const custom = this.customConsumers.find((c) => c.queue === queue);
+        if (custom) {
+          await custom.handler(message);
+        }
       }
     } catch (err: any) {
       logger.warn({ err: err.message, queue }, 'Error in queue direct fallback handler');

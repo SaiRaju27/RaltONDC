@@ -164,7 +164,57 @@ CREATE TABLE IF NOT EXISTS notifications (
 
 CREATE INDEX IF NOT EXISTS idx_notifications_rider ON notifications (rider_id, created_at DESC);
 
--- 7. Seed Initial Active Delivery Partner (Sai Raju)
+-- 7. Document Storage & Verification Tables (Zomato Partner Compliance)
+CREATE TABLE IF NOT EXISTS rider_documents (
+  id VARCHAR(64) PRIMARY KEY,
+  rider_id VARCHAR(64) NOT NULL,
+  doc_type VARCHAR(64) NOT NULL,
+  doc_number VARCHAR(64),
+  file_name VARCHAR(255) NOT NULL,
+  mime_type VARCHAR(128) NOT NULL,
+  file_size INTEGER NOT NULL,
+  file_data TEXT NOT NULL,
+  status VARCHAR(32) DEFAULT 'PENDING_VERIFICATION',
+  rejection_reason TEXT,
+  verified_by VARCHAR(64),
+  verified_at TIMESTAMP WITH TIME ZONE,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE INDEX IF NOT EXISTS idx_docs_rider ON rider_documents (rider_id, doc_type);
+CREATE INDEX IF NOT EXISTS idx_docs_status ON rider_documents (status);
+
+-- 8. Chunked Document Upload Sessions & Parts (Worker Queue Processing)
+CREATE TABLE IF NOT EXISTS document_upload_sessions (
+  session_id VARCHAR(64) PRIMARY KEY,
+  rider_id VARCHAR(64) NOT NULL,
+  doc_type VARCHAR(64) NOT NULL,
+  doc_number VARCHAR(64),
+  file_name VARCHAR(255) NOT NULL,
+  mime_type VARCHAR(128) NOT NULL,
+  total_chunks INTEGER NOT NULL,
+  total_size INTEGER NOT NULL,
+  uploaded_chunks INTEGER DEFAULT 0,
+  status VARCHAR(32) DEFAULT 'UPLOADING',
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE INDEX IF NOT EXISTS idx_sessions_rider ON document_upload_sessions (rider_id);
+
+CREATE TABLE IF NOT EXISTS document_chunks (
+  id BIGSERIAL PRIMARY KEY,
+  session_id VARCHAR(64) NOT NULL,
+  chunk_index INTEGER NOT NULL,
+  chunk_data TEXT NOT NULL,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE INDEX IF NOT EXISTS idx_chunks_session ON document_chunks (session_id, chunk_index);
+
+ALTER TABLE riders ADD COLUMN IF NOT EXISTS rejection_feedback TEXT;
+
+-- 9. Seed Initial Active Delivery Partner (Sai Raju)
 INSERT INTO riders (
   id, name, phone, city, address, vehicle_number, vehicle_type,
   is_online, lat, lng, geom, father_name, dob, gender,
@@ -188,4 +238,15 @@ ON CONFLICT (id) DO UPDATE SET
   kyc_status = 'APPROVED',
   onboarding_completed = 1,
   updated_at = CURRENT_TIMESTAMP;
+
+-- Seed verified documents for default partner (Sai Raju)
+INSERT INTO rider_documents (
+  id, rider_id, doc_type, doc_number, file_name, mime_type, file_size, file_data, status, verified_by, verified_at
+) VALUES 
+('DOC-SEED-001', 'RALT-RIDER-001', 'aadhaar_front', '548912349876', 'aadhaar_front.jpg', 'image/jpeg', 10240, 'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="300" height="180" viewBox="0 0 300 180"><rect width="300" height="180" fill="%23f1f5f9" rx="10"/><text x="150" y="40" font-family="Arial" font-size="14" font-weight="bold" fill="%230f172a" text-anchor="middle">GOVERNMENT OF INDIA</text><text x="150" y="70" font-family="Arial" font-size="12" fill="%232563eb" text-anchor="middle">AADHAAR CARD (FRONT)</text><text x="150" y="110" font-family="Arial" font-size="16" font-weight="bold" fill="%230f172a" text-anchor="middle">5489 1234 9876</text><text x="150" y="140" font-family="Arial" font-size="12" fill="%2316a34a" text-anchor="middle">NAME: SAI RAJU</text></svg>', 'APPROVED', 'ADMIN-SYSTEM', CURRENT_TIMESTAMP),
+('DOC-SEED-002', 'RALT-RIDER-001', 'pan_card', 'ABCDE1234F', 'pan_card.jpg', 'image/jpeg', 9500, 'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="300" height="180" viewBox="0 0 300 180"><rect width="300" height="180" fill="%23f8fafc" rx="10"/><text x="150" y="40" font-family="Arial" font-size="14" font-weight="bold" fill="%230f172a" text-anchor="middle">INCOME TAX DEPARTMENT</text><text x="150" y="70" font-family="Arial" font-size="12" fill="%230284c7" text-anchor="middle">PERMANENT ACCOUNT NUMBER</text><text x="150" y="110" font-family="Arial" font-size="16" font-weight="bold" fill="%230f172a" text-anchor="middle">ABCDE1234F</text><text x="150" y="140" font-family="Arial" font-size="12" fill="%2316a34a" text-anchor="middle">NAME: SAI RAJU</text></svg>', 'APPROVED', 'ADMIN-SYSTEM', CURRENT_TIMESTAMP),
+('DOC-SEED-003', 'RALT-RIDER-001', 'driving_license', 'TS0920190012345', 'driving_license.jpg', 'image/jpeg', 11200, 'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="300" height="180" viewBox="0 0 300 180"><rect width="300" height="180" fill="%23f0fdf4" rx="10"/><text x="150" y="40" font-family="Arial" font-size="14" font-weight="bold" fill="%2315803d" text-anchor="middle">INDIAN DRIVING LICENCE</text><text x="150" y="70" font-family="Arial" font-size="12" fill="%23334155" text-anchor="middle">TRANSPORT DEPT TELANGANA</text><text x="150" y="110" font-family="Arial" font-size="16" font-weight="bold" fill="%230f172a" text-anchor="middle">TS09 2019 0012345</text><text x="150" y="140" font-family="Arial" font-size="12" fill="%2316a34a" text-anchor="middle">VALID TILL: 2030-12-31</text></svg>', 'APPROVED', 'ADMIN-SYSTEM', CURRENT_TIMESTAMP),
+('DOC-SEED-004', 'RALT-RIDER-001', 'profile_selfie', '', 'profile_selfie.jpg', 'image/jpeg', 8400, 'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="200" height="200" viewBox="0 0 200 200"><circle cx="100" cy="100" r="90" fill="%23dcfce7"/><circle cx="100" cy="80" r="35" fill="%2316a34a"/><path d="M 40 160 C 40 125, 160 125, 160 160 Z" fill="%2316a34a"/><text x="100" y="185" font-family="Arial" font-size="12" font-weight="bold" fill="%2314532d" text-anchor="middle">VERIFIED PARTNER</text></svg>', 'APPROVED', 'ADMIN-SYSTEM', CURRENT_TIMESTAMP),
+('DOC-SEED-005', 'RALT-RIDER-001', 'vehicle_rc', 'TS 09 EA 1234', 'rc_certificate.jpg', 'image/jpeg', 9800, 'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="300" height="180" viewBox="0 0 300 180"><rect width="300" height="180" fill="%23fef3c7" rx="10"/><text x="150" y="40" font-family="Arial" font-size="14" font-weight="bold" fill="%23b45309" text-anchor="middle">CERTIFICATE OF REGISTRATION</text><text x="150" y="70" font-family="Arial" font-size="12" fill="%23334155" text-anchor="middle">TWO WHEELER - MOTORCYCLE</text><text x="150" y="110" font-family="Arial" font-size="16" font-weight="bold" fill="%230f172a" text-anchor="middle">TS 09 EA 1234</text><text x="150" y="140" font-family="Arial" font-size="12" fill="%2316a34a" text-anchor="middle">STATUS: ACTIVE & INSURED</text></svg>', 'APPROVED', 'ADMIN-SYSTEM', CURRENT_TIMESTAMP)
+ON CONFLICT (id) DO NOTHING;
 

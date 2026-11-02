@@ -1,6 +1,7 @@
 import express from 'express';
 import http from 'http';
 import path from 'path';
+import fs from 'fs';
 import { WebSocketServer, WebSocket } from 'ws';
 import { config } from './config';
 import { initDatabase, isDatabaseHealthy, closeDatabase, getActiveEngine } from './database';
@@ -18,6 +19,9 @@ import {
 import { metricsMiddleware, getMetrics, activeWebSocketConnections } from './observability';
 import { ONDCController } from './controllers/ondcController';
 import { RiderController } from './controllers/riderController';
+import { DocumentController } from './controllers/documentController';
+import { AdminController } from './controllers/adminController';
+import { documentWorker } from './services/documentWorker';
 import { riderManager } from './services/riderManager';
 import { orderManager } from './services/orderManager';
 
@@ -39,7 +43,11 @@ app.use(express.json({ limit: '5mb' }));
 app.use(express.urlencoded({ extended: true, limit: '5mb' }));
 
 // Static asset delivery for Web Dashboard & Delivery Partner App
-const publicDir = path.join(__dirname, 'public');
+const publicDir = fs.existsSync(path.join(__dirname, 'public'))
+  ? path.join(__dirname, 'public')
+  : fs.existsSync(path.join(process.cwd(), 'public'))
+  ? path.join(process.cwd(), 'public')
+  : path.join(__dirname, '..', 'public');
 app.use(express.static(publicDir));
 
 // =============================================================================
@@ -94,6 +102,12 @@ app.get('/', (req: any, res: any) => {
   });
 });
 
+app.get(['/admin', '/admin/*'], (req: any, res: any) => {
+  res.sendFile(path.join(publicDir, 'admin.html'), (err: any) => {
+    if (err) res.status(200).send('RALT Admin Portal Active');
+  });
+});
+
 app.get(['/rider', '/rider/*'], (req: any, res: any) => {
   res.sendFile(path.join(publicDir, 'rider', 'index.html'), (err: any) => {
     if (err) res.status(200).send('RALT Delivery Partner Portal');
@@ -136,6 +150,24 @@ app.post('/api/rider/orders/:orderId/verify-otp', apiRateLimiter, requireRiderAu
 app.all(['/api/rider/complete-current'], apiRateLimiter, requireRiderAuth, RiderController.completeCurrentOrder);
 app.post('/api/rider/simulate-order', apiRateLimiter, RiderController.simulateIncomingOrder);
 app.all('/api/admin/reset-db', RiderController.resetDatabase);
+
+// =============================================================================
+// CHUNKED DOCUMENT UPLOADS (Worker Node Assembly)
+// =============================================================================
+app.post('/api/documents/upload/init', apiRateLimiter, DocumentController.initUpload);
+app.post('/api/documents/upload/chunk', apiRateLimiter, DocumentController.uploadChunk);
+app.get('/api/documents/rider/:riderId', apiRateLimiter, DocumentController.getRiderDocuments);
+app.get('/api/documents/:docId/preview', DocumentController.previewDocument);
+
+// =============================================================================
+// ADMIN VERIFICATION & PARTNER ONBOARDING REVIEW APIS
+// =============================================================================
+app.get('/api/admin/stats', apiRateLimiter, AdminController.getStats);
+app.get('/api/admin/riders', apiRateLimiter, AdminController.listRiders);
+app.get('/api/admin/riders/:id', apiRateLimiter, AdminController.getRiderDetails);
+app.post('/api/admin/documents/:docId/verify', apiRateLimiter, AdminController.verifyDocument);
+app.post('/api/admin/riders/:id/review', apiRateLimiter, AdminController.reviewRider);
+app.post('/api/admin/riders/:id/toggle-status', apiRateLimiter, AdminController.togglePartnerStatus);
 
 // =============================================================================
 // 5. ENTERPRISE NOTIFICATION SYSTEM REST APIS
@@ -221,6 +253,7 @@ async function start() {
 
   // Initialize PostGIS Database
   await initDatabase();
+  await documentWorker.init();
 
   server.listen(config.port, () => {
     logger.info({

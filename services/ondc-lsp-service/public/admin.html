@@ -1,0 +1,1609 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>RALT Logistics • Fleet Partner Operations & KYC Portal</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --brand-primary: #042f1e;
+      --brand-primary-light: #0a4d33;
+      --brand-accent: #00855d;
+      --brand-accent-hover: #006b4b;
+      --brand-mint: #e6f4ef;
+      --brand-surface: #f8fafc;
+      --brand-card: #ffffff;
+      --brand-border: #e2e8f0;
+      --brand-border-focus: #00855d;
+      --text-main: #0f172a;
+      --text-muted: #64748b;
+      --text-sub: #475569;
+      --status-approved-bg: #dcfce7;
+      --status-approved-text: #166534;
+      --status-approved-border: #bbf7d0;
+      --status-pending-bg: #fef3c7;
+      --status-pending-text: #92400e;
+      --status-pending-border: #fde68a;
+      --status-action-bg: #ffe4e6;
+      --status-action-text: #9f1239;
+      --status-action-border: #fecdd3;
+      --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+      --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.07), 0 2px 4px -2px rgba(0, 0, 0, 0.05);
+      --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.08), 0 4px 6px -4px rgba(0, 0, 0, 0.04);
+      --shadow-xl: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.05);
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, sans-serif;
+      background-color: var(--brand-surface);
+      color: var(--text-main);
+      min-height: 100vh;
+      line-height: 1.5;
+    }
+
+    /* Top Navigation Header */
+    .header {
+      background: var(--brand-primary);
+      color: #ffffff;
+      padding: 16px 32px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 20px;
+      box-shadow: var(--shadow-md);
+      position: sticky;
+      top: 0;
+      z-index: 50;
+    }
+
+    .brand-group {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+    }
+
+    .brand-logo-icon {
+      width: 42px;
+      height: 42px;
+      border-radius: 12px;
+      background: linear-gradient(135deg, #00855d 0%, #059669 100%);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 22px;
+      box-shadow: 0 4px 12px rgba(0, 133, 93, 0.4);
+    }
+
+    .brand-title {
+      font-size: 19px;
+      font-weight: 800;
+      letter-spacing: -0.4px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .brand-tag {
+      font-size: 11px;
+      font-weight: 700;
+      text-transform: uppercase;
+      background: rgba(255, 255, 255, 0.15);
+      color: #a7f3d0;
+      border: 1px solid rgba(255, 255, 255, 0.25);
+      padding: 3px 8px;
+      border-radius: 6px;
+      letter-spacing: 0.5px;
+    }
+
+    .brand-sub {
+      font-size: 12px;
+      color: #94a3b8;
+      font-weight: 500;
+      margin-top: 1px;
+    }
+
+    .header-actions {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .status-badge {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 12px;
+      font-weight: 600;
+      padding: 6px 14px;
+      border-radius: 20px;
+      background: rgba(16, 185, 129, 0.15);
+      color: #34d399;
+      border: 1px solid rgba(16, 185, 129, 0.3);
+    }
+
+    .status-badge.disconnected {
+      background: rgba(239, 68, 68, 0.15);
+      color: #f87171;
+      border-color: rgba(239, 68, 68, 0.3);
+    }
+
+    .live-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: #10b981;
+      box-shadow: 0 0 10px #10b981;
+      animation: pulseDot 2s infinite;
+    }
+
+    .disconnected .live-dot {
+      background: #ef4444;
+      box-shadow: 0 0 10px #ef4444;
+      animation: none;
+    }
+
+    @keyframes pulseDot {
+      0%, 100% { opacity: 1; transform: scale(1); }
+      50% { opacity: 0.4; transform: scale(0.85); }
+    }
+
+    .btn {
+      font-family: inherit;
+      font-size: 13px;
+      font-weight: 600;
+      padding: 8px 16px;
+      border-radius: 8px;
+      border: none;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      transition: all 0.15s ease-in-out;
+      text-decoration: none;
+    }
+
+    .btn-header {
+      background: rgba(255, 255, 255, 0.12);
+      color: #ffffff;
+      border: 1px solid rgba(255, 255, 255, 0.2);
+    }
+    .btn-header:hover {
+      background: rgba(255, 255, 255, 0.2);
+    }
+
+    .btn-primary {
+      background: var(--brand-accent);
+      color: #ffffff;
+      box-shadow: 0 2px 4px rgba(0, 133, 93, 0.2);
+    }
+    .btn-primary:hover {
+      background: var(--brand-accent-hover);
+    }
+
+    .btn-secondary {
+      background: #ffffff;
+      color: var(--text-sub);
+      border: 1px solid var(--brand-border);
+    }
+    .btn-secondary:hover {
+      background: #f1f5f9;
+      color: var(--text-main);
+    }
+
+    .btn-danger {
+      background: #fee2e2;
+      color: #b91c1c;
+      border: 1px solid #fecaca;
+    }
+    .btn-danger:hover {
+      background: #fecaca;
+    }
+
+    .btn-success {
+      background: #00855d;
+      color: #ffffff;
+    }
+    .btn-success:hover {
+      background: #006b4b;
+    }
+
+    /* Main Container Layout */
+    .container {
+      max-width: 1400px;
+      margin: 0 auto;
+      padding: 28px 32px 60px;
+    }
+
+    /* KPI Metrics Cards Grid */
+    .kpi-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+      gap: 16px;
+      margin-bottom: 24px;
+    }
+
+    .kpi-card {
+      background: var(--brand-card);
+      border: 1px solid var(--brand-border);
+      border-radius: 14px;
+      padding: 20px;
+      box-shadow: var(--shadow-sm);
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      transition: all 0.2s ease;
+    }
+    .kpi-card:hover {
+      border-color: #cbd5e1;
+      box-shadow: var(--shadow-md);
+      transform: translateY(-2px);
+    }
+
+    .kpi-label {
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--text-muted);
+      margin-bottom: 8px;
+    }
+
+    .kpi-value {
+      font-size: 30px;
+      font-weight: 800;
+      letter-spacing: -0.5px;
+      color: var(--text-main);
+    }
+
+    .kpi-sub {
+      font-size: 12px;
+      color: var(--text-muted);
+      margin-top: 4px;
+    }
+
+    .kpi-icon {
+      width: 44px;
+      height: 44px;
+      border-radius: 12px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 20px;
+    }
+    .kpi-icon.blue { background: #eff6ff; color: #2563eb; }
+    .kpi-icon.amber { background: #fffbeb; color: #d97706; }
+    .kpi-icon.green { background: #f0fdf4; color: #16a34a; }
+    .kpi-icon.rose { background: #fff1f2; color: #e11d48; }
+
+    /* Filter & Search Bar */
+    .table-controls {
+      background: var(--brand-card);
+      border: 1px solid var(--brand-border);
+      border-radius: 14px;
+      padding: 16px 20px;
+      margin-bottom: 16px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: 16px;
+      box-shadow: var(--shadow-sm);
+    }
+
+    .filter-tabs {
+      display: flex;
+      gap: 8px;
+      background: #f1f5f9;
+      padding: 4px;
+      border-radius: 10px;
+    }
+
+    .filter-tab {
+      padding: 8px 16px;
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--text-sub);
+      background: transparent;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      transition: all 0.15s ease;
+    }
+    .filter-tab:hover {
+      color: var(--text-main);
+    }
+    .filter-tab.active {
+      background: #ffffff;
+      color: var(--brand-primary);
+      box-shadow: var(--shadow-sm);
+      font-weight: 700;
+    }
+
+    .filter-count {
+      font-size: 11px;
+      padding: 2px 7px;
+      border-radius: 10px;
+      background: #e2e8f0;
+      color: var(--text-sub);
+    }
+    .filter-tab.active .filter-count {
+      background: var(--brand-mint);
+      color: var(--brand-accent);
+    }
+
+    .search-box {
+      position: relative;
+      flex: 1;
+      max-width: 380px;
+      min-width: 240px;
+    }
+
+    .search-input {
+      width: 100%;
+      font-family: inherit;
+      font-size: 13px;
+      padding: 9px 14px 9px 36px;
+      border-radius: 8px;
+      border: 1px solid var(--brand-border);
+      background: #ffffff;
+      color: var(--text-main);
+      outline: none;
+      transition: border 0.15s ease;
+    }
+    .search-input:focus {
+      border-color: var(--brand-border-focus);
+      box-shadow: 0 0 0 3px rgba(0, 133, 93, 0.1);
+    }
+
+    .search-icon {
+      position: absolute;
+      left: 12px;
+      top: 50%;
+      transform: translateY(-50%);
+      color: var(--text-muted);
+      font-size: 14px;
+      pointer-events: none;
+    }
+
+    /* Main Table */
+    .table-container {
+      background: var(--brand-card);
+      border: 1px solid var(--brand-border);
+      border-radius: 14px;
+      overflow: hidden;
+      box-shadow: var(--shadow-sm);
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      text-align: left;
+    }
+
+    th {
+      background: #f8fafc;
+      color: var(--text-muted);
+      font-size: 11px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.6px;
+      padding: 14px 20px;
+      border-bottom: 1px solid var(--brand-border);
+    }
+
+    td {
+      padding: 16px 20px;
+      border-bottom: 1px solid #f1f5f9;
+      font-size: 13px;
+      vertical-align: middle;
+    }
+
+    tr:last-child td {
+      border-bottom: none;
+    }
+
+    tr:hover td {
+      background: #fcfdfd;
+    }
+
+    .rider-cell {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .rider-avatar {
+      width: 42px;
+      height: 42px;
+      border-radius: 50%;
+      background: var(--brand-mint);
+      color: var(--brand-accent);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 15px;
+      font-weight: 700;
+      overflow: hidden;
+      flex-shrink: 0;
+      border: 2px solid #ffffff;
+      box-shadow: 0 0 0 1px #cbd5e1;
+    }
+    .rider-avatar img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+    }
+
+    .rider-name {
+      font-weight: 700;
+      color: var(--text-main);
+      font-size: 14px;
+    }
+
+    .rider-sub {
+      font-size: 12px;
+      color: var(--text-muted);
+      font-family: 'JetBrains Mono', monospace;
+      margin-top: 1px;
+    }
+
+    .vehicle-tag {
+      font-size: 11px;
+      font-weight: 700;
+      background: #f1f5f9;
+      color: var(--text-sub);
+      padding: 3px 8px;
+      border-radius: 6px;
+      display: inline-block;
+      margin-bottom: 2px;
+    }
+
+    .vehicle-plate {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 12px;
+      color: var(--text-main);
+      font-weight: 600;
+    }
+
+    .docs-indicator {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      flex-wrap: wrap;
+    }
+
+    .doc-mini-pill {
+      font-size: 11px;
+      font-weight: 600;
+      padding: 3px 8px;
+      border-radius: 6px;
+    }
+    .doc-mini-pill.approved { background: var(--status-approved-bg); color: var(--status-approved-text); }
+    .doc-mini-pill.pending { background: var(--status-pending-bg); color: var(--status-pending-text); }
+    .doc-mini-pill.rejected { background: var(--status-action-bg); color: var(--status-action-text); }
+
+    .status-chip {
+      font-size: 12px;
+      font-weight: 700;
+      padding: 5px 12px;
+      border-radius: 20px;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      border: 1px solid transparent;
+    }
+    .status-chip.approved {
+      background: var(--status-approved-bg);
+      color: var(--status-approved-text);
+      border-color: var(--status-approved-border);
+    }
+    .status-chip.pending_verification {
+      background: var(--status-pending-bg);
+      color: var(--status-pending-text);
+      border-color: var(--status-pending-border);
+    }
+    .status-chip.action_required,
+    .status-chip.rejected {
+      background: var(--status-action-bg);
+      color: var(--status-action-text);
+      border-color: var(--status-action-border);
+    }
+
+    .empty-state {
+      text-align: center;
+      padding: 64px 24px;
+      color: var(--text-muted);
+    }
+
+    .empty-state-icon {
+      font-size: 48px;
+      margin-bottom: 12px;
+      opacity: 0.8;
+    }
+
+    .empty-state-title {
+      font-size: 16px;
+      font-weight: 700;
+      color: var(--text-main);
+      margin-bottom: 6px;
+    }
+
+    .empty-state-sub {
+      font-size: 13px;
+      max-width: 400px;
+      margin: 0 auto;
+      line-height: 1.6;
+    }
+
+    /* Modal / Drawer for Review */
+    .modal-backdrop {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: rgba(15, 23, 42, 0.6);
+      backdrop-filter: blur(4px);
+      z-index: 100;
+      display: none;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+    }
+    .modal-backdrop.open {
+      display: flex;
+    }
+
+    .modal-card {
+      background: #ffffff;
+      border-radius: 16px;
+      max-width: 1050px;
+      width: 100%;
+      max-height: 90vh;
+      display: flex;
+      flex-direction: column;
+      box-shadow: var(--shadow-xl);
+      overflow: hidden;
+      animation: modalSlide 0.2s ease-out;
+    }
+
+    @keyframes modalSlide {
+      from { transform: scale(0.96); opacity: 0; }
+      to { transform: scale(1); opacity: 1; }
+    }
+
+    .modal-header {
+      padding: 20px 24px;
+      border-bottom: 1px solid var(--brand-border);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      background: #f8fafc;
+    }
+
+    .modal-body {
+      padding: 24px;
+      overflow-y: auto;
+      flex: 1;
+    }
+
+    .modal-footer {
+      padding: 16px 24px;
+      border-top: 1px solid var(--brand-border);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      background: #f8fafc;
+    }
+
+    .applicant-overview {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      gap: 14px;
+      background: #f8fafc;
+      border: 1px solid var(--brand-border);
+      border-radius: 12px;
+      padding: 16px;
+      margin-bottom: 24px;
+    }
+
+    .overview-item {
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+    }
+
+    .overview-label {
+      font-size: 11px;
+      font-weight: 600;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    .overview-val {
+      font-size: 13px;
+      font-weight: 700;
+      color: var(--text-main);
+    }
+
+    .doc-section-title {
+      font-size: 15px;
+      font-weight: 800;
+      color: var(--text-main);
+      margin-bottom: 16px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    /* Document Matrix Grid */
+    .doc-matrix {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+      gap: 16px;
+    }
+
+    .doc-card {
+      background: #ffffff;
+      border: 1px solid var(--brand-border);
+      border-radius: 12px;
+      overflow: hidden;
+      box-shadow: var(--shadow-sm);
+      display: flex;
+      flex-direction: column;
+      transition: all 0.2s ease;
+    }
+    .doc-card:hover {
+      border-color: #cbd5e1;
+      box-shadow: var(--shadow-md);
+    }
+
+    .doc-card-header {
+      padding: 12px 16px;
+      background: #f8fafc;
+      border-bottom: 1px solid var(--brand-border);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+    }
+
+    .doc-card-title {
+      font-size: 13px;
+      font-weight: 700;
+      color: var(--text-main);
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .doc-card-preview {
+      height: 180px;
+      background: #f1f5f9;
+      position: relative;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      overflow: hidden;
+      cursor: pointer;
+    }
+
+    .doc-card-preview img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      transition: transform 0.2s ease;
+    }
+    .doc-card-preview:hover img {
+      transform: scale(1.03);
+    }
+
+    .doc-card-preview .zoom-hint {
+      position: absolute;
+      bottom: 8px;
+      right: 8px;
+      background: rgba(0, 0, 0, 0.75);
+      color: #ffffff;
+      font-size: 11px;
+      font-weight: 600;
+      padding: 3px 8px;
+      border-radius: 6px;
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      opacity: 0;
+      transition: opacity 0.2s ease;
+    }
+    .doc-card-preview:hover .zoom-hint {
+      opacity: 1;
+    }
+
+    .doc-card-footer {
+      padding: 12px 16px;
+      border-top: 1px solid var(--brand-border);
+      background: #ffffff;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+    }
+
+    .reject-drawer {
+      padding: 12px 16px;
+      background: #fff1f2;
+      border-top: 1px solid #fecdd3;
+      display: none;
+      flex-direction: column;
+      gap: 8px;
+    }
+    .reject-drawer.open {
+      display: flex;
+    }
+
+    .reject-input {
+      font-family: inherit;
+      font-size: 12px;
+      padding: 8px 10px;
+      border: 1px solid #fca5a5;
+      border-radius: 6px;
+      width: 100%;
+      outline: none;
+    }
+    .reject-input:focus {
+      border-color: #ef4444;
+      box-shadow: 0 0 0 2px rgba(239, 68, 68, 0.15);
+    }
+
+    /* Lightbox Modal */
+    .lightbox-backdrop {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: rgba(0, 0, 0, 0.9);
+      z-index: 200;
+      display: none;
+      align-items: center;
+      justify-content: center;
+      padding: 24px;
+    }
+    .lightbox-backdrop.open {
+      display: flex;
+    }
+
+    .lightbox-img {
+      max-width: 90vw;
+      max-height: 85vh;
+      border-radius: 8px;
+      box-shadow: 0 20px 40px rgba(0,0,0,0.5);
+      object-fit: contain;
+    }
+
+    .lightbox-close {
+      position: absolute;
+      top: 20px;
+      right: 24px;
+      color: #ffffff;
+      font-size: 28px;
+      cursor: pointer;
+      background: none;
+      border: none;
+    }
+
+    /* Toast Container */
+    .toast-container {
+      position: fixed;
+      bottom: 24px;
+      right: 24px;
+      z-index: 300;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    .toast {
+      background: var(--brand-primary);
+      color: #ffffff;
+      padding: 12px 18px;
+      border-radius: 10px;
+      font-size: 13px;
+      font-weight: 600;
+      box-shadow: var(--shadow-lg);
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      border-left: 4px solid var(--brand-accent);
+      animation: toastIn 0.25s ease-out;
+    }
+    .toast.success { border-left-color: #10b981; }
+    .toast.error { border-left-color: #ef4444; }
+
+    @keyframes toastIn {
+      from { transform: translateY(20px); opacity: 0; }
+      to { transform: translateY(0); opacity: 1; }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Top Navigation Header -->
+  <header class="header">
+    <div class="brand-group">
+      <div class="brand-logo-icon">🌿</div>
+      <div>
+        <div class="brand-title">
+          <span>RALT Logistics</span>
+          <span class="brand-tag">Fleet Portal</span>
+        </div>
+        <div class="brand-sub">Partner Verification & Compliance Operations</div>
+      </div>
+    </div>
+
+    <div class="header-actions">
+      <div id="wsStatusBadge" class="status-badge">
+        <span class="live-dot"></span>
+        <span id="wsStatusText">Connecting...</span>
+      </div>
+
+      <button class="btn btn-header" onclick="loadDashboardData()" title="Reload table and metrics">
+        <span>🔄</span> Refresh
+      </button>
+
+      <button class="btn btn-header" onclick="confirmResetDatabase()" title="Wipe test data and reset database cleanly">
+        <span>🗑️</span> Reset DB
+      </button>
+    </div>
+  </header>
+
+  <!-- Main Container -->
+  <main class="container">
+    <!-- KPI Overview Cards -->
+    <section class="kpi-grid">
+      <div class="kpi-card">
+        <div>
+          <div class="kpi-label">Total Applicants</div>
+          <div id="kpiTotal" class="kpi-value">0</div>
+          <div class="kpi-sub">Lifetime registered delivery partners</div>
+        </div>
+        <div class="kpi-icon blue">👥</div>
+      </div>
+
+      <div class="kpi-card" style="border-left: 4px solid #f59e0b;">
+        <div>
+          <div class="kpi-label">Pending Approval (KYC)</div>
+          <div id="kpiPending" class="kpi-value" style="color: #b45309;">0</div>
+          <div class="kpi-sub">Awaiting verification by admin</div>
+        </div>
+        <div class="kpi-icon amber">⏳</div>
+      </div>
+
+      <div class="kpi-card" style="border-left: 4px solid #e11d48;">
+        <div>
+          <div class="kpi-label">Action Required</div>
+          <div id="kpiAction" class="kpi-value" style="color: #be123c;">0</div>
+          <div class="kpi-sub">Rejected documents awaiting re-upload</div>
+        </div>
+        <div class="kpi-icon rose">⚠️</div>
+      </div>
+
+      <div class="kpi-card" style="border-left: 4px solid #00855d;">
+        <div>
+          <div class="kpi-label">Approved & Active</div>
+          <div id="kpiApproved" class="kpi-value" style="color: #047857;">0</div>
+          <div class="kpi-sub">Verified & ready to accept orders</div>
+        </div>
+        <div class="kpi-icon green">✅</div>
+      </div>
+    </section>
+
+    <!-- Table Controls (Filter Tabs + Search) -->
+    <div class="table-controls">
+      <div class="filter-tabs">
+        <button class="filter-tab active" data-filter="all" onclick="setFilter('all', this)">
+          All Applicants <span id="badgeAll" class="filter-count">0</span>
+        </button>
+        <button class="filter-tab" data-filter="pending" onclick="setFilter('pending', this)">
+          Pending Review <span id="badgePending" class="filter-count">0</span>
+        </button>
+        <button class="filter-tab" data-filter="action_required" onclick="setFilter('action_required', this)">
+          Action Required <span id="badgeAction" class="filter-count">0</span>
+        </button>
+        <button class="filter-tab" data-filter="approved" onclick="setFilter('approved', this)">
+          Approved & Active <span id="badgeApproved" class="filter-count">0</span>
+        </button>
+      </div>
+
+      <div class="search-box">
+        <span class="search-icon">🔍</span>
+        <input
+          type="text"
+          id="searchInput"
+          class="search-input"
+          placeholder="Search by name, phone, vehicle, or ID..."
+          oninput="handleSearch(this.value)"
+        />
+      </div>
+    </div>
+
+    <!-- Applicants Table -->
+    <div class="table-container">
+      <table>
+        <thead>
+          <tr>
+            <th>Partner Name & ID</th>
+            <th>Vehicle & Hub</th>
+            <th>Uploaded Documents</th>
+            <th>KYC Status</th>
+            <th>Registered Time</th>
+            <th style="text-align: right;">Operations Action</th>
+          </tr>
+        </thead>
+        <tbody id="ridersTableBody">
+          <tr>
+            <td colspan="6" class="empty-state">
+              <div class="empty-state-icon">📂</div>
+              <div class="empty-state-title">No Delivery Partners Registered Yet</div>
+              <div class="empty-state-sub">
+                When a new delivery partner submits their onboarding application from the mobile app, they will appear here in real-time.
+              </div>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </main>
+
+  <!-- Review Modal / Inspection Drawer -->
+  <div id="reviewModal" class="modal-backdrop" onclick="if(event.target === this) closeReviewModal()">
+    <div class="modal-card">
+      <!-- Header -->
+      <div class="modal-header">
+        <div style="display: flex; align-items: center; gap: 14px;">
+          <div class="rider-avatar" style="width: 48px; height: 48px; font-size: 18px;">
+            <span id="modalAvatarText">👤</span>
+          </div>
+          <div>
+            <div id="modalRiderName" style="font-size: 17px; font-weight: 800; color: var(--text-main);">Partner Name</div>
+            <div id="modalRiderSub" style="font-size: 12px; color: var(--text-muted); font-family: 'JetBrains Mono', monospace;">ID: RALT-RIDER-XXXX</div>
+          </div>
+        </div>
+
+        <button class="btn btn-secondary" onclick="closeReviewModal()">✕ Close</button>
+      </div>
+
+      <!-- Body -->
+      <div class="modal-body">
+        <!-- Applicant Details Overview Grid -->
+        <div class="applicant-overview">
+          <div class="overview-item">
+            <span class="overview-label">Mobile Number</span>
+            <span id="modalPhone" class="overview-val">+91 9876543210</span>
+          </div>
+          <div class="overview-item">
+            <span class="overview-label">Operating Hub / City</span>
+            <span id="modalHub" class="overview-val">Hitec City (Hyderabad)</span>
+          </div>
+          <div class="overview-item">
+            <span class="overview-label">Date of Birth (DOB)</span>
+            <span id="modalDob" class="overview-val">15-05-1998</span>
+          </div>
+          <div class="overview-item">
+            <span class="overview-label">Vehicle Type & Plate</span>
+            <span id="modalVehicle" class="overview-val">Motorcycle • TS 09 EA 1234</span>
+          </div>
+          <div class="overview-item">
+            <span class="overview-label">Driving License (DL)</span>
+            <span id="modalDl" class="overview-val">DL-1420110012345</span>
+          </div>
+          <div class="overview-item">
+            <span class="overview-label">Aadhaar & PAN Number</span>
+            <span id="modalAadhaarPan" class="overview-val">543298761234 • ABCDE1234F</span>
+          </div>
+          <div class="overview-item">
+            <span class="overview-label">Bank Payout Account</span>
+            <span id="modalBank" class="overview-val">HDFC Bank • A/C 987654321012</span>
+          </div>
+          <div class="overview-item">
+            <span class="overview-label">Overall KYC Status</span>
+            <span id="modalKycChip" class="overview-val">
+              <span class="status-chip pending_verification">Pending Review</span>
+            </span>
+          </div>
+        </div>
+
+        <!-- Feedback Banner if rejected -->
+        <div id="modalFeedbackBanner" style="display: none; background: #fff1f2; border: 1px solid #fecdd3; border-radius: 10px; padding: 12px 16px; margin-bottom: 20px; align-items: center; gap: 12px;">
+          <span style="font-size: 20px;">⚠️</span>
+          <div>
+            <div style="font-size: 13px; font-weight: 700; color: #9f1239;">Rejection Feedback Sent to Partner App:</div>
+            <div id="modalFeedbackText" style="font-size: 12px; color: #be123c; margin-top: 2px;">Document blurry or unreadable</div>
+          </div>
+        </div>
+
+        <!-- Documents Section Header -->
+        <div class="doc-section-title">
+          <span>Uploaded KYC & Onboarding Documents</span>
+          <span id="modalDocCount" style="font-size: 12px; color: var(--text-muted); font-weight: 600;">0 Attached</span>
+        </div>
+
+        <!-- Documents Matrix Grid -->
+        <div id="modalDocMatrix" class="doc-matrix">
+          <!-- Populated dynamically -->
+        </div>
+      </div>
+
+      <!-- Footer Decisions -->
+      <div class="modal-footer">
+        <div style="font-size: 12px; color: var(--text-muted); max-width: 500px;">
+          Approving sets partner status to <strong>APPROVED & ACTIVE</strong> and allows them to receive live delivery orders on their phone.
+        </div>
+        <div style="display: flex; gap: 10px;">
+          <button class="btn btn-secondary" onclick="closeReviewModal()">Cancel</button>
+          <button id="btnRejectPartner" class="btn btn-danger" onclick="promptRejectPartner()">
+            <span>⚠️</span> Request Re-upload
+          </button>
+          <button id="btnApproveAll" class="btn btn-success" onclick="approveAllDocuments()">
+            <span>✓</span> Approve & Activate Partner
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Lightbox Fullscreen Preview -->
+  <div id="lightbox" class="lightbox-backdrop" onclick="closeLightbox()">
+    <button class="lightbox-close" onclick="closeLightbox()">✕</button>
+    <img id="lightboxImg" class="lightbox-img" src="" alt="Document Preview" onclick="event.stopPropagation()">
+  </div>
+
+  <!-- Toast Notification Container -->
+  <div id="toastContainer" class="toast-container"></div>
+
+  <script>
+    // State management
+    let currentFilter = 'all';
+    let currentSearch = '';
+    let currentRider = null;
+    let ws = null;
+    let searchTimeout = null;
+
+    const DOC_NAMES = {
+      'aadhaar_front': 'Aadhaar Card (Front) • UIDAI Paperless eKYC',
+      'aadhaar_back': 'Aadhaar Card (Back) • Address & QR Verification',
+      'pan_card': 'PAN Card Identity • Income Tax Dept',
+      'driving_license': 'Driving License (DL) • MoRTH Sarathi Registry',
+      'vehicle_rc': 'Vehicle Registration (RC) • Vahan State Registry',
+      'profile_selfie': 'Live Profile Selfie • Biometric Face Match',
+      'profile_photo': 'Live Profile Selfie'
+    };
+
+    const REJECTION_PRESETS = [
+      'Image is blurry or text is unreadable',
+      'Corners or essential details are cropped out',
+      'Document has expired',
+      'Name or DOB does not match application details',
+      'Wrong document category uploaded',
+      'Suspected fraudulent or invalid document'
+    ];
+
+    window.addEventListener('DOMContentLoaded', () => {
+      initWebSocket();
+      loadDashboardData();
+      // Poll every 3 seconds for continuous live synchronization
+      setInterval(() => loadDashboardData(false), 3000);
+    });
+
+    // 1. WebSocket Real-Time Connection
+    function initWebSocket() {
+      const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+      const wsUrl = `${protocol}//${window.location.host}/ws?riderId=ADMIN_OPERATIONS`;
+
+      const badge = document.getElementById('wsStatusBadge');
+      const text = document.getElementById('wsStatusText');
+
+      try {
+        ws = new WebSocket(wsUrl);
+
+        ws.onopen = () => {
+          badge.className = 'status-badge';
+          text.innerText = 'Connected (Live /ws)';
+        };
+
+        ws.onmessage = (event) => {
+          try {
+            const data = JSON.parse(event.data);
+            handleIncomingWsEvent(data);
+          } catch (e) {
+            console.warn('WS frame parse error:', e);
+          }
+        };
+
+        ws.onclose = () => {
+          badge.className = 'status-badge disconnected';
+          text.innerText = 'Disconnected';
+          setTimeout(initWebSocket, 4000);
+        };
+
+        ws.onerror = () => {
+          badge.className = 'status-badge disconnected';
+          text.innerText = 'Connection Error';
+        };
+      } catch (err) {
+        console.error('WS init failed:', err);
+      }
+    }
+
+    function handleIncomingWsEvent(data) {
+      if (!data || !data.type) return;
+
+      if (data.type === 'NEW_RIDER_REGISTERED') {
+        showToast(`🎉 New applicant registered: ${data.name || 'Delivery Partner'} (${data.phone || ''})`, 'success');
+        loadDashboardData(false);
+      } else if (data.type === 'DOCUMENT_UPLOADED') {
+        showToast(`📄 Document attached: ${data.docType || 'Document'} for ${data.riderId}`, 'info');
+        loadDashboardData(false);
+        if (currentRider && currentRider.id === data.riderId) {
+          inspectRider(currentRider.id);
+        }
+      } else if (data.type === 'DOCUMENT_VERIFICATION_UPDATED' || data.type === 'ADMIN_DOCUMENT_VERIFIED') {
+        loadDashboardData(false);
+        if (currentRider && currentRider.id === data.riderId) {
+          inspectRider(currentRider.id);
+        }
+      }
+    }
+
+    // 2. Fetch Dashboard Data
+    async function loadDashboardData(showLoading = true) {
+      try {
+        // Fetch stats
+        const statsRes = await fetch('/api/admin/stats');
+        const statsData = await statsRes.json();
+        if (statsData.success) {
+          const s = statsData.stats;
+          document.getElementById('kpiTotal').innerText = s.totalPartners || 0;
+          document.getElementById('kpiPending').innerText = s.pendingPartners || 0;
+          document.getElementById('kpiAction').innerText = s.actionRequiredPartners || 0;
+          document.getElementById('kpiApproved').innerText = s.approvedPartners || 0;
+
+          document.getElementById('badgeAll').innerText = s.totalPartners || 0;
+          document.getElementById('badgePending').innerText = s.pendingPartners || 0;
+          document.getElementById('badgeAction').innerText = s.actionRequiredPartners || 0;
+          document.getElementById('badgeApproved').innerText = s.approvedPartners || 0;
+        }
+
+        // Fetch riders
+        const queryParams = new URLSearchParams({
+          filter: currentFilter,
+          search: currentSearch
+        });
+        const ridersRes = await fetch(`/api/admin/riders?${queryParams.toString()}`);
+        const ridersData = await ridersRes.json();
+        if (ridersData.success) {
+          renderRidersTable(ridersData.riders);
+        }
+      } catch (err) {
+        console.error('Error loading dashboard data:', err);
+      }
+    }
+
+    // 3. Render Table Rows
+    function renderRidersTable(riders) {
+      const tbody = document.getElementById('ridersTableBody');
+      if (!riders || riders.length === 0) {
+        tbody.innerHTML = `
+          <tr>
+            <td colspan="6" class="empty-state">
+              <div class="empty-state-icon">📂</div>
+              <div class="empty-state-title">No Delivery Partners Found</div>
+              <div class="empty-state-sub">
+                No delivery partners matching current filter (${currentFilter}). Real applicants will appear here once registered.
+              </div>
+            </td>
+          </tr>
+        `;
+        return;
+      }
+
+      tbody.innerHTML = riders.map(r => {
+        const kycStatus = (r.kyc_status || 'PENDING_VERIFICATION').toLowerCase();
+        const totalDocs = parseInt(r.total_docs || '0', 10);
+        const approvedDocs = parseInt(r.approved_docs || '0', 10);
+        const pendingDocs = parseInt(r.pending_docs || '0', 10);
+        const rejectedDocs = parseInt(r.rejected_docs || '0', 10);
+
+        let statusBadgeClass = 'pending_verification';
+        let statusLabel = 'Under Review ⏳';
+        if (kycStatus === 'approved' || r.onboarding_completed === 1) {
+          statusBadgeClass = 'approved';
+          statusLabel = 'Approved & Active ✓';
+        } else if (kycStatus === 'action_required' || kycStatus === 'rejected' || rejectedDocs > 0) {
+          statusBadgeClass = 'action_required';
+          statusLabel = 'Action Required ⚠️';
+        }
+
+        const dateStr = r.created_at ? new Date(r.created_at).toLocaleDateString('en-IN', {
+          day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit'
+        }) : 'Recently';
+
+        const initial = (r.name || 'D').charAt(0).toUpperCase();
+
+        return `
+          <tr>
+            <td>
+              <div class="rider-cell">
+                <div class="rider-avatar">
+                  ${r.profile_photo_url ? `<img src="${r.profile_photo_url}" />` : initial}
+                </div>
+                <div>
+                  <div class="rider-name">${escapeHtml(r.name || 'Delivery Partner')}</div>
+                  <div class="rider-sub">${escapeHtml(r.phone || '')} • ${escapeHtml(r.id)}</div>
+                </div>
+              </div>
+            </td>
+            <td>
+              <div>
+                <div class="vehicle-tag">${escapeHtml((r.vehicle_type || 'Motorcycle').toUpperCase())}</div>
+                <div class="vehicle-plate">${escapeHtml(r.vehicle_number || 'Pending')} • ${escapeHtml(r.city || 'Hyderabad')}</div>
+              </div>
+            </td>
+            <td>
+              <div class="docs-indicator">
+                <span class="doc-mini-pill ${approvedDocs > 0 ? 'approved' : 'pending'}">
+                  ✓ ${approvedDocs} Approved
+                </span>
+                ${pendingDocs > 0 ? `<span class="doc-mini-pill pending">⏳ ${pendingDocs} Pending</span>` : ''}
+                ${rejectedDocs > 0 ? `<span class="doc-mini-pill rejected">✕ ${rejectedDocs} Issues</span>` : ''}
+                ${totalDocs === 0 ? `<span class="doc-mini-pill" style="background: #f1f5f9; color: #64748b;">No docs</span>` : ''}
+              </div>
+            </td>
+            <td>
+              <span class="status-chip ${statusBadgeClass}">
+                ${statusLabel}
+              </span>
+            </td>
+            <td style="color: var(--text-muted); font-size: 12px;">
+              ${dateStr}
+            </td>
+            <td style="text-align: right;">
+              <button class="btn btn-secondary" onclick="inspectRider('${r.id}')" style="padding: 7px 14px; font-size: 12px; font-weight: 700;">
+                Review Application →
+              </button>
+            </td>
+          </tr>
+        `;
+      }).join('');
+    }
+
+    // 4. Inspect Rider Details Modal
+    async function inspectRider(riderId) {
+      try {
+        const res = await fetch(`/api/admin/riders/${riderId}`);
+        const data = await res.json();
+        if (!data.success || !data.rider) {
+          showToast('Could not load partner application details', 'error');
+          return;
+        }
+
+        currentRider = data.rider;
+        const docs = data.documents || [];
+
+        // Fill modal fields
+        document.getElementById('modalAvatarText').innerText = (currentRider.name || 'D').charAt(0).toUpperCase();
+        document.getElementById('modalRiderName').innerText = currentRider.name || 'Delivery Partner';
+        document.getElementById('modalRiderSub').innerText = `ID: ${currentRider.id} • Registered Mobile: ${currentRider.phone || 'N/A'}`;
+        document.getElementById('modalPhone').innerText = currentRider.phone || 'N/A';
+        document.getElementById('modalHub').innerText = `${currentRider.city || 'Hyderabad'} (${currentRider.work_area || 'Hitec City Hub'})`;
+        document.getElementById('modalDob').innerText = currentRider.dob || 'Not specified';
+        document.getElementById('modalVehicle').innerText = `${(currentRider.vehicle_type || 'motorcycle').toUpperCase()} • ${currentRider.vehicle_number || 'N/A'}`;
+        document.getElementById('modalDl').innerText = currentRider.dl_number || 'N/A';
+        document.getElementById('modalAadhaarPan').innerText = `Aadhaar: ${currentRider.aadhaar_number || 'N/A'} • PAN: ${currentRider.pan_number || 'N/A'}`;
+        document.getElementById('modalBank').innerText = `${currentRider.bank_name || 'Bank'} • A/C: ${currentRider.bank_account_number || 'N/A'} (IFSC: ${currentRider.bank_ifsc || 'N/A'})`;
+
+        const kycStatus = (currentRider.kyc_status || 'PENDING_VERIFICATION').toUpperCase();
+        const kycChip = document.getElementById('modalKycChip');
+        if (kycStatus === 'APPROVED' || currentRider.onboarding_completed === 1) {
+          kycChip.innerHTML = `<span class="status-chip approved">APPROVED & ACTIVE ✓</span>`;
+        } else if (kycStatus === 'ACTION_REQUIRED' || kycStatus === 'REJECTED') {
+          kycChip.innerHTML = `<span class="status-chip action_required">ACTION REQUIRED / REJECTED ⚠️</span>`;
+        } else {
+          kycChip.innerHTML = `<span class="status-chip pending_verification">PENDING REVIEW ⏳</span>`;
+        }
+
+        // Feedback Banner
+        const feedbackBanner = document.getElementById('modalFeedbackBanner');
+        const feedbackText = document.getElementById('modalFeedbackText');
+        if (currentRider.rejection_feedback) {
+          feedbackBanner.style.display = 'flex';
+          feedbackText.innerText = currentRider.rejection_feedback;
+        } else {
+          feedbackBanner.style.display = 'none';
+        }
+
+        document.getElementById('modalDocCount').innerText = `${docs.length} Document${docs.length === 1 ? '' : 's'} Attached`;
+
+        renderDocumentCards(docs);
+
+        // Open Modal
+        document.getElementById('reviewModal').classList.add('open');
+      } catch (err) {
+        console.error('Inspect error:', err);
+        showToast('Error loading application details', 'error');
+      }
+    }
+
+    // 5. Render Document Cards in Inspection Modal
+    function renderDocumentCards(docs) {
+      const container = document.getElementById('modalDocMatrix');
+      if (!docs || docs.length === 0) {
+        container.innerHTML = `
+          <div style="grid-column: 1 / -1; text-align: center; padding: 36px; background: #f8fafc; border: 1px dashed var(--brand-border); border-radius: 12px; color: var(--text-muted);">
+            No documents uploaded yet by this applicant.
+          </div>
+        `;
+        return;
+      }
+
+      container.innerHTML = docs.map(d => {
+        const title = DOC_NAMES[d.doc_type] || d.file_name || d.doc_type;
+        const status = (d.status || 'PENDING_VERIFICATION').toUpperCase();
+
+        let statusBadge = `<span class="status-chip pending_verification" style="font-size: 11px; padding: 3px 8px;">Pending</span>`;
+        if (status === 'APPROVED') {
+          statusBadge = `<span class="status-chip approved" style="font-size: 11px; padding: 3px 8px;">Approved ✓</span>`;
+        } else if (status === 'REJECTED') {
+          statusBadge = `<span class="status-chip action_required" style="font-size: 11px; padding: 3px 8px;">Rejected ✕</span>`;
+        }
+
+        const previewSrc = `/api/documents/${d.id}/preview`;
+
+        return `
+          <div class="doc-card">
+            <div class="doc-card-header">
+              <div class="doc-card-title">
+                <span>📄</span>
+                <span title="${escapeHtml(title)}" style="max-width: 200px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
+                  ${escapeHtml(title)}
+                </span>
+              </div>
+              ${statusBadge}
+            </div>
+
+            <div class="doc-card-preview" onclick="openLightbox('${previewSrc}')">
+              <img src="${previewSrc}" alt="${escapeHtml(title)}" onerror="this.src='data:image/svg+xml;utf8,<svg xmlns=\\'http://www.w3.org/2000/svg\\' width=\\'100\\' height=\\'100\\'><text x=\\'50%\\' y=\\'50%\\' dominant-baseline=\\'middle\\' text-anchor=\\'middle\\' font-size=\\'14\\' fill=\\'%2394a3b8\\'>Preview</text></svg>'" />
+              <div class="zoom-hint">🔍 Tap to Zoom</div>
+            </div>
+
+            ${d.rejection_reason ? `
+              <div style="background: #fff1f2; padding: 8px 14px; font-size: 11px; color: #be123c; border-top: 1px solid #fecdd3;">
+                <strong>Reason:</strong> ${escapeHtml(d.rejection_reason)}
+              </div>
+            ` : ''}
+
+            <div class="doc-card-footer">
+              <button class="btn btn-danger" onclick="toggleRejectDrawer('${d.id}')" style="padding: 6px 12px; font-size: 12px;">
+                ✕ Reject
+              </button>
+              <button class="btn btn-success" onclick="verifyDoc('${d.id}', 'APPROVED')" style="padding: 6px 14px; font-size: 12px;">
+                ✓ Approve
+              </button>
+            </div>
+
+            <div id="rejectDrawer_${d.id}" class="reject-drawer">
+              <div style="font-size: 11px; font-weight: 700; color: #9f1239;">Select Rejection Reason:</div>
+              <select class="reject-input" onchange="applyPresetReason('${d.id}', this.value)">
+                <option value="">-- Choose Common Reason --</option>
+                ${REJECTION_PRESETS.map(p => `<option value="${escapeHtml(p)}">${escapeHtml(p)}</option>`).join('')}
+              </select>
+              <textarea id="customReason_${d.id}" class="reject-input" rows="2" placeholder="Or enter specific feedback for delivery partner..."></textarea>
+              <div style="display: flex; justify-content: flex-end; gap: 8px; margin-top: 4px;">
+                <button class="btn btn-secondary" onclick="toggleRejectDrawer('${d.id}')" style="padding: 4px 10px; font-size: 11px;">Cancel</button>
+                <button class="btn btn-danger" onclick="submitDocRejection('${d.id}')" style="padding: 4px 12px; font-size: 11px;">Confirm Reject</button>
+              </div>
+            </div>
+          </div>
+        `;
+      }).join('');
+    }
+
+    // 6. Verify Individual Document
+    async function verifyDoc(docId, status, rejectionReason = null) {
+      try {
+        const res = await fetch(`/api/admin/documents/${docId}/verify`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            status,
+            rejectionReason: status === 'REJECTED' ? rejectionReason : undefined,
+            adminId: 'ADMIN-OPS-SUPERVISOR'
+          })
+        });
+
+        const data = await res.json();
+        if (data.success) {
+          showToast(`Document ${status.toLowerCase()} successfully`, status === 'APPROVED' ? 'success' : 'error');
+          if (currentRider) {
+            inspectRider(currentRider.id);
+          }
+          loadDashboardData(false);
+        } else {
+          showToast(data.error || 'Failed to update document status', 'error');
+        }
+      } catch (err) {
+        showToast('Network error verifying document', 'error');
+      }
+    }
+
+    function toggleRejectDrawer(docId) {
+      const drawer = document.getElementById(`rejectDrawer_${docId}`);
+      if (drawer) {
+        drawer.classList.toggle('open');
+      }
+    }
+
+    function applyPresetReason(docId, value) {
+      if (value) {
+        const textarea = document.getElementById(`customReason_${docId}`);
+        if (textarea) textarea.value = value;
+      }
+    }
+
+    function submitDocRejection(docId) {
+      const textarea = document.getElementById(`customReason_${docId}`);
+      const reason = textarea ? textarea.value.trim() : '';
+      if (!reason) {
+        alert('Please specify a rejection reason or feedback for the partner.');
+        return;
+      }
+      verifyDoc(docId, 'REJECTED', reason);
+    }
+
+    // 7. Approve All & Activate Partner
+    async function approveAllDocuments() {
+      if (!currentRider) return;
+      if (!confirm(`Are you sure you want to approve ${currentRider.name || 'this delivery partner'} and activate them for live delivery dispatch duty?`)) {
+        return;
+      }
+
+      try {
+        const res = await fetch(`/api/admin/riders/${currentRider.id}/review`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            action: 'APPROVE_ALL',
+            adminId: 'ADMIN-OPS-SUPERVISOR'
+          })
+        });
+
+        const data = await res.json();
+        if (data.success) {
+          showToast('🎉 Partner approved & activated successfully! Push notification sent.', 'success');
+          inspectRider(currentRider.id);
+          loadDashboardData(false);
+        } else {
+          showToast(data.error || 'Failed to approve partner', 'error');
+        }
+      } catch (err) {
+        showToast('Error approving partner application', 'error');
+      }
+    }
+
+    // 8. Reject Entire Application / Request Re-upload
+    async function promptRejectPartner() {
+      if (!currentRider) return;
+      const reason = prompt('Please enter the feedback/reason for requesting re-upload from the partner:', 'Some documents are unreadable. Please re-upload clear photos.');
+      if (!reason) return;
+
+      try {
+        const res = await fetch(`/api/admin/riders/${currentRider.id}/review`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            action: 'REJECT_ALL',
+            feedback: reason,
+            adminId: 'ADMIN-OPS-SUPERVISOR'
+          })
+        });
+
+        const data = await res.json();
+        if (data.success) {
+          showToast('Application marked Action Required. Notification sent to partner.', 'error');
+          inspectRider(currentRider.id);
+          loadDashboardData(false);
+        } else {
+          showToast(data.error || 'Failed to reject application', 'error');
+        }
+      } catch (err) {
+        showToast('Error rejecting partner application', 'error');
+      }
+    }
+
+    // 9. Reset Database Utility
+    async function confirmResetDatabase() {
+      if (!confirm('Are you sure you want to completely clear the database? All applications and documents will be cleared cleanly.')) {
+        return;
+      }
+
+      try {
+        const res = await fetch('/api/admin/reset-db', { method: 'POST' });
+        const data = await res.json();
+        if (data.success) {
+          showToast('Database reset complete. All test data cleared.', 'info');
+          closeReviewModal();
+          loadDashboardData();
+        }
+      } catch (err) {
+        showToast('Error resetting database', 'error');
+      }
+    }
+
+    function closeReviewModal() {
+      document.getElementById('reviewModal').classList.remove('open');
+      currentRider = null;
+    }
+
+    // Lightbox Controls
+    function openLightbox(src) {
+      document.getElementById('lightboxImg').src = src;
+      document.getElementById('lightbox').classList.add('open');
+    }
+
+    function closeLightbox() {
+      document.getElementById('lightbox').classList.remove('open');
+    }
+
+    // Filter and Search Controls
+    function setFilter(filter, btn) {
+      currentFilter = filter;
+      document.querySelectorAll('.filter-tab').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      loadDashboardData();
+    }
+
+    function handleSearch(val) {
+      clearTimeout(searchTimeout);
+      searchTimeout = setTimeout(() => {
+        currentSearch = val.trim();
+        loadDashboardData(false);
+      }, 300);
+    }
+
+    // Toast Notifications
+    function showToast(message, type = 'info') {
+      const container = document.getElementById('toastContainer');
+      const toast = document.createElement('div');
+      toast.className = `toast ${type}`;
+      toast.innerText = message;
+      container.appendChild(toast);
+
+      setTimeout(() => {
+        toast.style.opacity = '0';
+        toast.style.transition = 'opacity 0.3s ease';
+        setTimeout(() => toast.remove(), 300);
+      }, 3500);
+    }
+
+    function escapeHtml(str) {
+      if (!str) return '';
+      return String(str)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#039;');
+    }
+  </script>
+</body>
+</html>

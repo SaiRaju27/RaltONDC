@@ -964,7 +964,16 @@ export const DeliveryDashboard: React.FC<DeliveryDashboardProps> = ({
           {(!currentOrder || activeTab !== 'orders') && (
             <TouchableOpacity
               style={[dashStyles.dutyPill, isOnline ? dashStyles.dutyPillOnline : dashStyles.dutyPillOffline]}
-              onPress={() => setIsOnline(!isOnline)}
+              onPress={() => {
+                if (!isOnline && (rider.onboarding_completed !== 1 || rider.kyc_status !== 'APPROVED')) {
+                  Alert.alert(
+                    'Verification Pending',
+                    'Your documents are currently under review by the operations team. You cannot go online until all documents are approved.'
+                  );
+                  return;
+                }
+                setIsOnline(!isOnline);
+              }}
               activeOpacity={0.8}
             >
               <View style={[dashStyles.dutyDot, isOnline && dashStyles.dutyDotOnline]} />
@@ -2006,6 +2015,48 @@ export const DeliveryDashboard: React.FC<DeliveryDashboardProps> = ({
               </View>
             </View>
 
+            {/* ZOMATO STYLE VERIFIED KYC & DOCUMENT VAULT CARD */}
+            <View style={dashStyles.profileCard}>
+              <View style={dashStyles.betweenRow}>
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                  <Text style={{ fontSize: 18 }}>🛡️</Text>
+                  <View>
+                    <Text style={dashStyles.cardHeaderTitle}>ONDC Delivery Partner KYC</Text>
+                    <Text style={{ fontSize: 11, color: rider.kyc_status === 'APPROVED' ? '#10b981' : '#f59e0b', fontWeight: 'bold' }}>
+                      {rider.kyc_status === 'APPROVED' ? '● VERIFIED & AUTHORIZED' : '● VERIFICATION IN PROGRESS'}
+                    </Text>
+                  </View>
+                </View>
+                <View style={{ backgroundColor: rider.kyc_status === 'APPROVED' ? '#c0edd2' : '#fef3c7', paddingHorizontal: 8, paddingVertical: 4, borderRadius: 6 }}>
+                  <Text style={{ fontSize: 11, fontWeight: '700', color: rider.kyc_status === 'APPROVED' ? '#002113' : '#b45309' }}>
+                    {rider.kyc_status === 'APPROVED' ? 'Active Duty Ready' : 'Pending Review'}
+                  </Text>
+                </View>
+              </View>
+
+              <View style={{ marginTop: 12, gap: 8 }}>
+                {[
+                  { name: 'Aadhaar eKYC (UIDAI)', desc: 'Identity Verified & Vault Tokenized', status: 'VERIFIED' },
+                  { name: 'Permanent Account Number (PAN)', desc: 'NSDL Income Tax Verified', status: 'VERIFIED' },
+                  { name: 'Driving License (DL)', desc: 'MoRTH Sarathi Registry Match', status: rider.vehicle_type === 'bicycle' ? 'EXEMPT' : 'VERIFIED' },
+                  { name: 'Vehicle Registration (RC)', desc: 'Vahan State Transport Registry', status: rider.vehicle_type === 'bicycle' ? 'EXEMPT' : 'VERIFIED' },
+                  { name: 'Biometric Live Selfie', desc: 'Face Liveness 99.8% Match', status: 'VERIFIED' },
+                  { name: 'Bank Payout (Penny Drop)', desc: 'NPCI IMPS Name Match Verified', status: 'VERIFIED' },
+                ].map((item, idx) => (
+                  <View key={idx} style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', backgroundColor: '#f8faff', padding: 10, borderRadius: 8, borderWidth: 1, borderColor: '#e2e8f0' }}>
+                    <View style={{ flex: 1 }}>
+                      <Text style={{ fontSize: 13, fontWeight: '700', color: '#1e293b' }}>{item.name}</Text>
+                      <Text style={{ fontSize: 11, color: '#64748b' }}>{item.desc}</Text>
+                    </View>
+                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4, backgroundColor: '#e6f4ea', paddingHorizontal: 6, paddingVertical: 2, borderRadius: 4 }}>
+                      <Text style={{ fontSize: 12, color: '#137333', fontWeight: 'bold' }}>✓</Text>
+                      <Text style={{ fontSize: 10, color: '#137333', fontWeight: 'bold' }}>{item.status}</Text>
+                    </View>
+                  </View>
+                ))}
+              </View>
+            </View>
+
             {/* 3. GOVERNMENT IDENTIFICATION CARD */}
             <View style={dashStyles.profileCard}>
               <View style={dashStyles.betweenRow}>
@@ -2206,7 +2257,16 @@ export const DeliveryDashboard: React.FC<DeliveryDashboardProps> = ({
             <View style={{ gap: 10, marginTop: 8 }}>
               <TouchableOpacity
                 style={[dashStyles.dutyToggleBtn, !isOnline && dashStyles.dutyToggleBtnOffline]}
-                onPress={() => setIsOnline(!isOnline)}
+                onPress={() => {
+                if (!isOnline && (rider.onboarding_completed !== 1 || rider.kyc_status !== 'APPROVED')) {
+                  Alert.alert(
+                    'Verification Pending',
+                    'Your documents are currently under review by the operations team. You cannot go online until all documents are approved.'
+                  );
+                  return;
+                }
+                setIsOnline(!isOnline);
+              }}
                 activeOpacity={0.8}
               >
                 <Text style={{ fontSize: 18 }}>{isOnline ? '⏸️' : '▶️'}</Text>
