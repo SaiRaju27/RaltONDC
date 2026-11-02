@@ -127,3 +127,4 @@ export function getAppConfig(): AppEnvironmentConfig {
     environmentName: isProd ? 'production' : (process.env?.NODE_ENV === 'test' ? 'test' : 'development'),
   };
 }
+
