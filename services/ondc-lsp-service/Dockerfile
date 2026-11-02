@@ -13,15 +13,35 @@ RUN apt-get update -qq && \
 
 WORKDIR /app
 
+# ==============================================================================
+# Builder stage: compile TypeScript
+# ==============================================================================
+FROM base AS builder
+WORKDIR /app
+
+COPY package*.json tsconfig.json ./
+RUN npm install --no-audit --no-fund
+
+COPY src ./src
+RUN npm run build
+
+# ==============================================================================
 # Production runtime container
+# ==============================================================================
 FROM base AS runner
 WORKDIR /app
 
 COPY package*.json ./
 RUN npm install --omit=dev --no-audit --no-fund
-COPY dist ./dist
-COPY data ./data
-COPY .env ./
+
+# Copy compiled artifacts from builder
+COPY --from=builder /app/dist ./dist
+
+# Create runtime data directory for SQLite fallback
+RUN mkdir -p data
+
+# Copy environment file if present
+COPY .env* ./
 
 ENV NODE_ENV=production
 ENV PORT=5000
