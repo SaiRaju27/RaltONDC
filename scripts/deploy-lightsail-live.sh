@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # ==============================================================================
 # RALT ONDC AWS Lightsail Direct Deployment & Verification Script
-# Production Target: /var/www/ralt-ondc (PM2 + Nginx with Let's Encrypt SSL)
+# Production Target: /var/www/ralt-ondc (Docker Containers + Host Nginx with SSL)
 # ==============================================================================
 set -euo pipefail
 
@@ -39,7 +39,7 @@ rsync -avz \
 echo "➡️  [3/5] Running CodeDeploy hooks on Lightsail (AfterInstall)..."
 ssh -i "$KEY_PATH" -o StrictHostKeyChecking=no "ubuntu@${LIGHTSAIL_IP}" "bash ${TARGET_DIR}/deploy/codedeploy/AfterInstall.sh"
 
-echo "➡️  [4/5] Reloading service via PM2..."
+echo "➡️  [4/5] Launching containerized services via Docker..."
 ssh -i "$KEY_PATH" -o StrictHostKeyChecking=no "ubuntu@${LIGHTSAIL_IP}" "bash ${TARGET_DIR}/deploy/codedeploy/ApplicationStart.sh"
 
 echo "➡️  [5/5] Validating service health..."

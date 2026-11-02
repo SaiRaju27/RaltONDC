@@ -13,5 +13,5 @@ for i in {1..20}; do
 done
 
 echo "[CodeDeploy] ❌ Health check timed out after 40s!"
-pm2 logs ralt-ondc --lines 20 || true
+docker logs ralt-ondc-app --tail 30 || pm2 logs ralt-ondc --lines 20 || true
 exit 1
