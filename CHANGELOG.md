@@ -6,6 +6,17 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 
+## [1.4.0](https://github.com/SaiRaju27/RaltONDC/compare/v1.3.0...v1.4.0) (2026-11-02)
+
+### Features
+
+* **security:** enforce requireRiderAuth on protected routes and document multi-cloud push targets ([2189529](https://github.com/SaiRaju27/RaltONDC/commit/2189529821f79a9c561e0b94d9c36daf3dfd4fe5))
+
+### Documentation
+
+* **api:** add Bruno and Postman test collection with production endpoints ([4cb7488](https://github.com/SaiRaju27/RaltONDC/commit/4cb7488c009dbcd304b355756135197ac20e6fbb))
+* **api:** structure Bruno collection into 7 categorized folders with pre-filled live URLs ([b525007](https://github.com/SaiRaju27/RaltONDC/commit/b52500716890ab0d4e17ad19e7d3b45dac6cb0ba))
+
 ## [1.3.0](https://github.com/SaiRaju27/RaltONDC/compare/v1.2.0...v1.3.0) (2026-11-02)
 
 ### Features
