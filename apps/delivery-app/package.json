@@ -1,6 +1,6 @@
 {
   "name": "@ralt-ondc/delivery-app",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "main": "index.js",
   "scripts": {
     "start": "NODE_OPTIONS='-r ./polyfill.js' expo start",

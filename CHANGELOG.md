@@ -6,6 +6,12 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 
+## [1.1.0](https://github.com/SaiRaju27/RaltONDC/compare/v1.0.0...v1.1.0) (2026-11-02)
+
+### Features
+
+* **cicd:** add AWS CodeDeploy appspec and lifecycle hooks for Lightsail zero-downtime deployment ([bdd2a01](https://github.com/SaiRaju27/RaltONDC/commit/bdd2a015942f72cde438b104d329d7388b0af3e4))
+
 ## 1.0.0 (2026-11-02)
 
 ### Features
