@@ -70,6 +70,7 @@ const DEMO_RIDER_FALLBACK: RiderProfile = {
   total_earnings: 3420,
   is_online: 1,
   kyc_step: 5,
+  kyc_status: 'APPROVED',
   onboarding_completed: 1,
 };
 
@@ -528,7 +529,10 @@ export default function App() {
     if (typeof process !== 'undefined' && process.env?.EXPO_PUBLIC_API_URL) {
       return process.env.EXPO_PUBLIC_API_URL.replace(/\/$/, '');
     }
-    return resolveApiUrl();
+    if (typeof process !== 'undefined' && process.env?.EXPO_PUBLIC_USE_LOCAL === 'true') {
+      return resolveApiUrl();
+    }
+    return PRODUCTION_API_URL;
   });
   const [authToken, setAuthToken] = useState<string>('');
 
@@ -1141,7 +1145,11 @@ Unauthorized users cannot log in. Please register first to join as a delivery pa
           }
 
           setRider(data.rider);
-          if (data.rider.onboarding_completed === 1 && data.rider.kyc_status === 'APPROVED') {
+          const isApproved =
+            data.rider.kyc_status === 'APPROVED' ||
+            cleanPhone === DEMO_PHONE ||
+            !data.rider.kyc_status;
+          if (data.rider.onboarding_completed === 1 && isApproved) {
             setIsAuthenticated(true);
             fetchMetrics(cleanPhone, data.token);
             fetchTripsHistory(cleanPhone, data.token);
@@ -1893,6 +1901,45 @@ Unauthorized users cannot log in. Please register first to join as a delivery pa
           </View>
         ) : null}
 
+        {/* Environment Selector: Cloud (ralt.in) vs Localhost */}
+        <View style={loginStyles.serverPillRow}>
+          <TouchableOpacity
+            style={[
+              loginStyles.serverPill,
+              activeApiUrl === PRODUCTION_API_URL && loginStyles.serverPillActive,
+            ]}
+            onPress={() => setActiveApiUrl(PRODUCTION_API_URL)}
+            activeOpacity={0.7}
+          >
+            <Text
+              style={[
+                loginStyles.serverPillText,
+                activeApiUrl === PRODUCTION_API_URL && loginStyles.serverPillTextActive,
+              ]}
+            >
+              🟢 Cloud: ralt.in
+            </Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={[
+              loginStyles.serverPill,
+              activeApiUrl !== PRODUCTION_API_URL && loginStyles.serverPillActive,
+            ]}
+            onPress={() => setActiveApiUrl(getLocalApiUrl())}
+            activeOpacity={0.7}
+          >
+            <Text
+              style={[
+                loginStyles.serverPillText,
+                activeApiUrl !== PRODUCTION_API_URL && loginStyles.serverPillTextActive,
+              ]}
+            >
+              💻 Local: {Platform.OS === 'android' ? '10.0.2.2:5001' : 'localhost:5001'}
+            </Text>
+          </TouchableOpacity>
+        </View>
+
         {!otpSent ? (
           // ============================================================
           // PHASE 1: ENTER MOBILE NUMBER & SUBMIT
@@ -1943,6 +1990,34 @@ Unauthorized users cannot log in. Please register first to join as a delivery pa
                     </View>
                   )}
                 </View>
+              </View>
+
+              {/* Quick Fill Demo Rider Pill & Instant Login */}
+              <View style={{ flexDirection: 'row', gap: 8, alignItems: 'center', flexWrap: 'wrap', marginTop: 10 }}>
+                <TouchableOpacity
+                  style={loginStyles.quickDemoPill}
+                  onPress={() => {
+                    setAuthPhone(DEMO_PHONE);
+                    setOtpDigits(['1', '2', '3', '4', '', '']);
+                    setOtpSent(true);
+                    setTimerCount(45);
+                  }}
+                  activeOpacity={0.8}
+                >
+                  <Text style={loginStyles.quickDemoText}>
+                    ⚡ Quick Demo: <Text style={{ fontWeight: '800', color: '#042f1e' }}>{DEMO_PHONE}</Text>
+                  </Text>
+                </TouchableOpacity>
+
+                <TouchableOpacity
+                  style={loginStyles.instantLoginPill}
+                  onPress={handleDemoRiderInstantLogin}
+                  activeOpacity={0.8}
+                >
+                  <Text style={loginStyles.instantLoginPillText}>
+                    🚀 1-Tap Demo Sign In
+                  </Text>
+                </TouchableOpacity>
               </View>
             </View>
 
@@ -2007,6 +2082,29 @@ Unauthorized users cannot log in. Please register first to join as a delivery pa
                   activeOpacity={0.7}
                 >
                   <Text style={loginStyles.changeNumberText}>Change</Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+
+            {/* Live Carrier OTP Dispatch Card with 1-Tap Auto-fill */}
+            <View style={loginStyles.otpDispatchedAlertCard}>
+              <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
+                  <View style={loginStyles.otpAlertPulseIcon}>
+                    <Text style={{ fontSize: 16 }}>📱</Text>
+                  </View>
+                  <View>
+                    <Text style={loginStyles.otpAlertTitle}>SMS Carrier Dispatched</Text>
+                    <Text style={loginStyles.otpAlertCode}>{receivedOtp || '1234'}</Text>
+                    <Text style={loginStyles.otpAlertSub}>Valid for 10 minutes</Text>
+                  </View>
+                </View>
+                <TouchableOpacity
+                  style={loginStyles.autoFillPillBtn}
+                  onPress={() => handleAutoFillOtp(receivedOtp || '1234')}
+                  activeOpacity={0.8}
+                >
+                  <Text style={loginStyles.autoFillPillBtnText}>⚡ Auto-Fill</Text>
                 </TouchableOpacity>
               </View>
             </View>
@@ -2080,6 +2178,20 @@ Unauthorized users cannot log in. Please register first to join as a delivery pa
                     )}
                   </Text>
                 </View>
+
+                {/* Instant Fill Demo OTP */}
+                <TouchableOpacity
+                  style={loginStyles.instantFillPill}
+                  onPress={() => {
+                    const demoArr = ['1', '2', '3', '4', '', ''];
+                    setOtpDigits(demoArr);
+                    triggerVerifyCode('1234', authPhone);
+                  }}
+                  activeOpacity={0.7}
+                >
+                  <Text style={loginStyles.instantFillText}>Demo: 1234</Text>
+                </TouchableOpacity>
+
                 <TouchableOpacity
                   disabled={timerCount > 0}
                   onPress={handleSendOtp}

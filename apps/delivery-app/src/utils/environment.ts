@@ -45,10 +45,10 @@ export function isProductionEnvironment(): boolean {
  * Resolves the Backend REST API Base URL dynamically:
  * - Production: 'https://ralt.in'
  * - Local Development:
- *    • Expo Web: window.location.hostname:5000 or localhost:5000
- *    • Android Emulator: 10.0.2.2:5000 (host machine loopback)
- *    • iOS Simulator: localhost:5000
- *    • Expo Go / Physical Device: Metro Host URI IP (e.g. 192.168.x.x:5000)
+ *    • Expo Web: window.location.hostname:5001 or localhost:5001
+ *    • Android Emulator: 10.0.2.2:5001 (host machine loopback)
+ *    • iOS Simulator: localhost:5001
+ *    • Expo Go / Physical Device: Metro Host URI IP (e.g. 192.168.x.x:5001)
  */
 export function resolveApiUrl(): string {
   // 1. Explicit env variable override (highest priority)
@@ -68,7 +68,7 @@ export function resolveApiUrl(): string {
       window.location.hostname === '127.0.0.1' ||
       window.location.hostname.endsWith('.local');
     if (isLocalhost) {
-      return `${window.location.protocol}//${window.location.hostname}:5000`;
+      return `${window.location.protocol}//${window.location.hostname}:5001`;
     }
     return window.location.origin.replace(/\/$/, '');
   }
@@ -81,23 +81,23 @@ export function resolveApiUrl(): string {
 
   if (hostUri) {
     const ip = hostUri.split(':')[0];
-    return `http://${ip}:5000`;
+    return `http://${ip}:5001`;
   }
 
   // 5. Android Emulator loopback fallback
   if (Platform.OS === 'android') {
-    return 'http://10.0.2.2:5000';
+    return 'http://10.0.2.2:5001';
   }
 
   // 6. iOS Simulator / Default local fallback
-  return 'http://localhost:5000';
+  return 'http://localhost:5001';
 }
 
 /**
  * Resolves the WebSocket URL dynamically based on the resolved API URL:
  * - https://ralt.in -> wss://ralt.in/ws?riderId=...
- * - http://10.0.2.2:5000 -> ws://10.0.2.2:5000/ws?riderId=...
- * - http://localhost:5000 -> ws://localhost:5000/ws?riderId=...
+ * - http://10.0.2.2:5001 -> ws://10.0.2.2:5001/ws?riderId=...
+ * - http://localhost:5001 -> ws://localhost:5001/ws?riderId=...
  */
 export function resolveWsUrl(riderId: string = 'RALT-RIDER-001', customApiUrl?: string): string {
   const apiUrl = (customApiUrl || resolveApiUrl()).replace(/\/$/, '');
@@ -136,9 +136,9 @@ export function getProductionWsUrl(): string {
  */
 export function getLocalApiUrl(): string {
   if (Platform.OS === 'android') {
-    return 'http://10.0.2.2:5000';
+    return 'http://10.0.2.2:5001';
   }
-  return 'http://localhost:5000';
+  return 'http://localhost:5001';
 }
 
 /**
