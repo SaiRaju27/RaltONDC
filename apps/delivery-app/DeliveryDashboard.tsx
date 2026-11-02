@@ -21,6 +21,7 @@ import {
 } from 'react-native';
 import Svg, { Line, Rect, Text as SvgText, Circle, Path } from 'react-native-svg';
 import { resolveWsUrl } from './src/utils/environment';
+import { LiveTrackingMap } from './LiveTrackingMap';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 
@@ -184,12 +185,27 @@ const SlideToAction: React.FC<{
 const LiveRouteMapLayer: React.FC<{
   lat?: number;
   lng?: number;
+  riderLat?: number;
+  riderLng?: number;
   label?: string;
   zoom?: number;
   address?: string;
+  destinationType?: 'store' | 'customer';
+  isOnline?: boolean;
+  orderId?: string;
   onPressLocation?: (lat: number, lng: number, address?: string) => void;
-}> = ({ lat, lng, label = 'Live Delivery Map', zoom = 15, address, onPressLocation }) => {
-  const isWeb = Platform.OS === 'web';
+}> = ({
+  lat,
+  lng,
+  riderLat = 17.4375,
+  riderLng = 78.3687,
+  label = 'Live Delivery Map',
+  address,
+  destinationType = 'customer',
+  isOnline = true,
+  orderId,
+  onPressLocation,
+}) => {
   const parseNum = (val: any, fallback: number) => {
     if (typeof val === 'number' && !isNaN(val) && val !== 0) return val;
     if (typeof val === 'string') {
@@ -198,104 +214,23 @@ const LiveRouteMapLayer: React.FC<{
     }
     return fallback;
   };
-  const safeLat = parseNum(lat, 17.4375);
-  const safeLng = parseNum(lng, 78.3687);
-
-  const handleOpenNav = () => {
-    if (typeof onPressLocation === 'function') {
-      try {
-        onPressLocation(safeLat, safeLng, address);
-        return;
-      } catch (err) {
-        console.warn('onPressLocation error:', err);
-      }
-    }
-    const q = address ? encodeURIComponent(address) : `${safeLat},${safeLng}`;
-    const url = `https://www.google.com/maps/dir/?api=1&destination=${q}`;
-    try {
-      if (typeof window !== 'undefined' && typeof window.open === 'function') {
-        window.open(url, '_blank');
-      } else if (Linking && typeof Linking.openURL === 'function') {
-        Linking.openURL(url).catch(() => {});
-      }
-    } catch (e) {
-      console.warn('Map nav open error:', e);
-    }
-  };
-
-  const osmUrl = `https://www.openstreetmap.org/export/embed.html?bbox=${safeLng - 0.008}%2C${safeLat - 0.006}%2C${safeLng + 0.008}%2C${safeLat + 0.006}&layer=mapnik&marker=${safeLat}%2C${safeLng}`;
+  const safeDestLat = parseNum(lat, 17.4485);
+  const safeDestLng = parseNum(lng, 78.3908);
+  const safeRiderLat = parseNum(riderLat, 17.4375);
+  const safeRiderLng = parseNum(riderLng, 78.3687);
 
   return (
     <View style={{ width: '100%', height: '100%', position: 'relative', overflow: 'hidden', borderRadius: 16 }}>
-      {isWeb ? (
-        React.createElement('iframe', {
-          title: label,
-          src: osmUrl,
-          style: {
-            width: '100%',
-            height: '100%',
-            border: 0,
-            borderRadius: 16,
-            filter: 'contrast(1.05) saturate(1.1)',
-          },
-        })
-      ) : (
-        <View style={{ width: '100%', height: '100%', backgroundColor: '#042f1e', justifyContent: 'center', alignItems: 'center' }}>
-          <Text style={{ fontSize: 32 }}>🗺️</Text>
-          <Text style={{ color: '#c0edd2', fontWeight: 'bold', marginTop: 6, fontSize: 13 }}>Live Map & Navigation Active</Text>
-        </View>
-      )}
-
-      {/* Location Badge */}
-      <View
-        style={{
-          position: 'absolute',
-          top: 10,
-          left: 10,
-          backgroundColor: 'rgba(4, 47, 30, 0.92)',
-          paddingHorizontal: 10,
-          paddingVertical: 5,
-          borderRadius: 8,
-          flexDirection: 'row',
-          alignItems: 'center',
-          gap: 6,
-          zIndex: 10,
-        }}
-      >
-        <View style={{ width: 7, height: 7, borderRadius: 3.5, backgroundColor: '#c0edd2' }} />
-        <Text style={{ color: '#c0edd2', fontSize: 11, fontWeight: '700' }}>
-          {address ? address.split(',')[0].trim() : 'Live Location Active'}
-        </Text>
-      </View>
-
-      {/* Floating 1-Click Open in Google Maps Button */}
-      <TouchableOpacity
-        style={{
-          position: 'absolute',
-          bottom: 10,
-          right: 10,
-          backgroundColor: '#042f1e',
-          paddingHorizontal: 12,
-          paddingVertical: 6,
-          borderRadius: 10,
-          flexDirection: 'row',
-          alignItems: 'center',
-          gap: 6,
-          zIndex: 10,
-          shadowColor: '#000',
-          shadowOffset: { width: 0, height: 2 },
-          shadowOpacity: 0.3,
-          shadowRadius: 3,
-          elevation: 4,
-          borderWidth: 1,
-          borderColor: '#1e4633',
-        }}
-        onPress={handleOpenNav}
-        activeOpacity={0.8}
-      >
-        <Text style={{ fontSize: 13, color: '#ffffff' }}>🧭</Text>
-        <Text style={{ color: '#ffffff', fontSize: 12, fontWeight: '700' }}>Google Maps ➔</Text>
-      </TouchableOpacity>
+      <LiveTrackingMap
+        riderLocation={{ lat: safeRiderLat, lng: safeRiderLng }}
+        destinationLocation={{ lat: safeDestLat, lng: safeDestLng }}
+        destinationLabel={label}
+        destinationAddress={address}
+        destinationType={destinationType}
+        isOnline={isOnline}
+        orderId={orderId}
+        onOpenNavigation={onPressLocation}
+      />
     </View>
   );
 };
@@ -1239,9 +1174,14 @@ export const DeliveryDashboard: React.FC<DeliveryDashboardProps> = ({
                         <LiveRouteMapLayer
                           lat={curLat}
                           lng={curLng}
+                          riderLat={riderCoords.lat}
+                          riderLng={riderCoords.lng}
                           label={activeMapTarget === 'store' ? "Store Pickup Map" : "Customer Drop Map"}
+                          destinationType={activeMapTarget === 'store' ? 'store' : 'customer'}
                           zoom={15}
                           address={curAddr}
+                          orderId={currentOrder?.orderId}
+                          isOnline={isOnline}
                           onPressLocation={openExternalNavigation}
                         />
                         {/* Gradient overlay */}
@@ -1492,9 +1432,14 @@ export const DeliveryDashboard: React.FC<DeliveryDashboardProps> = ({
                         <LiveRouteMapLayer
                           lat={dLat}
                           lng={dLng}
+                          riderLat={riderCoords.lat}
+                          riderLng={riderCoords.lng}
                           label="Customer Drop Map"
+                          destinationType="customer"
                           zoom={15}
                           address={currentOrder.customerAddress}
+                          orderId={currentOrder?.orderId}
+                          isOnline={isOnline}
                           onPressLocation={openExternalNavigation}
                         />
                         <View style={dashStyles.manifestMapGradient} />
@@ -2296,8 +2241,12 @@ export const DeliveryDashboard: React.FC<DeliveryDashboardProps> = ({
             {/* Map Preview Layer */}
             <View style={dashStyles.detailMapContainer}>
               <LiveRouteMapLayer
-                lat={selectedOrderDetail?.pickupGps?.lat || 12.9716}
-                lng={selectedOrderDetail?.pickupGps?.lng || 77.5946}
+                lat={selectedOrderDetail?.pickupGps?.lat || 17.4485}
+                lng={selectedOrderDetail?.pickupGps?.lng || 78.3908}
+                riderLat={riderCoords.lat}
+                riderLng={riderCoords.lng}
+                destinationType="store"
+                isOnline={isOnline}
                 label="Delivery Request Map"
                 zoom={14}
               />

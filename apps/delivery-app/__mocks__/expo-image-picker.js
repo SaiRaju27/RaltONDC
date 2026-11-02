@@ -4,3 +4,4 @@ module.exports = {
   launchCameraAsync: jest.fn().mockResolvedValue({ canceled: true, assets: [] }),
   launchImageLibraryAsync: jest.fn().mockResolvedValue({ canceled: true, assets: [] }),
 };
+

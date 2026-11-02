@@ -108,6 +108,45 @@ app.get(['/admin', '/admin/*'], (req: any, res: any) => {
   });
 });
 
+app.get(['/track/:orderId', '/track'], (req: any, res: any) => {
+  res.sendFile(path.join(publicDir, 'track.html'), (err: any) => {
+    if (err) res.status(200).send('RALT Live Delivery Tracking Active');
+  });
+});
+
+app.get('/api/track/:orderId', async (req: any, res: any) => {
+  try {
+    const { orderId } = req.params;
+    const order: any = await orderManager.getOrder(orderId);
+    let rider: any = null;
+    if (order && order.riderId) {
+      rider = await riderManager.getRider(order.riderId);
+    } else {
+      rider = await riderManager.getRider('RALT-RIDER-001');
+    }
+    res.json({
+      success: true,
+      order: {
+        orderId,
+        status: order?.status || 'In-transit',
+        customerAddress: order?.drop?.address?.full || 'Cyber Towers Main Block, Hitec City',
+        pickupGps: order?.pickup?.gps || { lat: 17.4350, lng: 78.3650 },
+        dropGps: order?.drop?.gps || { lat: 17.4485, lng: 78.3908 },
+        rider: rider ? {
+          name: rider.name,
+          phone: rider.phone,
+          vehicle_number: rider.vehicle_number,
+          rating: rider.rating || 5.0,
+          lat: rider.lat || 17.4375,
+          lng: rider.lng || 78.3687
+        } : null
+      }
+    });
+  } catch (err: any) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
 app.get(['/rider', '/rider/*'], (req: any, res: any) => {
   res.sendFile(path.join(publicDir, 'rider', 'index.html'), (err: any) => {
     if (err) res.status(200).send('RALT Delivery Partner Portal');

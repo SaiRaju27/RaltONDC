@@ -275,6 +275,17 @@ class RiderManager {
 
     // 3. Persist GPS breadcrumb to PostGIS telemetry table
     await recordRiderBreadcrumb(riderId, lat, lng, heading, speed).catch(() => {});
+
+    // 4. Broadcast live telemetry over WebSocket & Redis PubSub
+    this.broadcastToAll({
+      type: 'RIDER_LOCATION_UPDATE',
+      riderId,
+      lat,
+      lng,
+      heading,
+      speed,
+      timestamp: new Date().toISOString()
+    });
   }
 
   public async assignOrderToRider(riderId: string, orderId: string): Promise<void> {

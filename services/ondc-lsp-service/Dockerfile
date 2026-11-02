@@ -37,6 +37,9 @@ RUN npm install --omit=dev --no-audit --no-fund
 # Copy compiled artifacts from builder
 COPY --from=builder /app/dist ./dist
 
+# Copy public static web assets (Admin portal, Customer tracking, etc.)
+COPY public ./public
+
 # Create runtime data directory for SQLite fallback
 RUN mkdir -p data
 

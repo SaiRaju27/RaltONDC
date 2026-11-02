@@ -1,0 +1,665 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>RALT ONDC Live Delivery Tracking</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
+  <!-- Leaflet Map CSS -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin=""/>
+  <style>
+    :root {
+      --brand-primary: #042f1e;
+      --brand-dark: #02140d;
+      --brand-emerald: #00e676;
+      --brand-emerald-dark: #00855d;
+      --text-main: #0f172a;
+      --text-muted: #64748b;
+      --bg-card: #ffffff;
+      --border-color: #e2e8f0;
+    }
+
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+      font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, sans-serif;
+    }
+
+    body {
+      background-color: #0b1511;
+      color: #f8fafc;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      overflow-x: hidden;
+    }
+
+    /* Top Navigation Bar */
+    header {
+      background: rgba(4, 47, 30, 0.95);
+      backdrop-filter: blur(12px);
+      padding: 12px 18px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      border-bottom: 1px solid rgba(0, 230, 118, 0.2);
+      z-index: 1000;
+    }
+
+    .brand-wrap {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .brand-logo {
+      width: 38px;
+      height: 38px;
+      border-radius: 10px;
+      background: #00e676;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 20px;
+    }
+
+    .brand-title {
+      font-size: 17px;
+      font-weight: 800;
+      letter-spacing: -0.3px;
+      color: #ffffff;
+    }
+
+    .brand-subtitle {
+      font-size: 11px;
+      color: #a7f3d0;
+      font-weight: 600;
+    }
+
+    .live-badge {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      background: rgba(0, 230, 118, 0.15);
+      border: 1px solid #00e676;
+      padding: 5px 12px;
+      border-radius: 20px;
+      font-size: 11px;
+      font-weight: 800;
+      color: #00e676;
+      letter-spacing: 0.5px;
+    }
+
+    .live-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: #00e676;
+      box-shadow: 0 0 8px #00e676;
+      animation: pulse-dot 1.5s infinite;
+    }
+
+    @keyframes pulse-dot {
+      0% { transform: scale(0.9); opacity: 0.8; }
+      50% { transform: scale(1.3); opacity: 1; }
+      100% { transform: scale(0.9); opacity: 0.8; }
+    }
+
+    /* Main Grid Layout */
+    .tracking-container {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      position: relative;
+    }
+
+    @media (min-width: 900px) {
+      .tracking-container {
+        flex-direction: row;
+      }
+    }
+
+    /* Interactive Map Viewport */
+    #map-viewport {
+      width: 100%;
+      height: 52vh;
+      background: #02140d;
+      z-index: 10;
+    }
+
+    @media (min-width: 900px) {
+      #map-viewport {
+        flex: 1;
+        height: calc(100vh - 63px);
+      }
+    }
+
+    /* Delivery Details Bottom Sheet / Sidebar */
+    .details-sidebar {
+      background: #ffffff;
+      color: #0f172a;
+      padding: 20px;
+      border-top-left-radius: 24px;
+      border-top-right-radius: 24px;
+      margin-top: -20px;
+      z-index: 50;
+      box-shadow: 0 -8px 24px rgba(0, 0, 0, 0.4);
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+
+    @media (min-width: 900px) {
+      .details-sidebar {
+        width: 420px;
+        border-radius: 0;
+        margin-top: 0;
+        border-left: 1px solid #e2e8f0;
+        overflow-y: auto;
+        height: calc(100vh - 63px);
+      }
+    }
+
+    /* ETA Hero Banner */
+    .eta-banner {
+      background: linear-gradient(135deg, #042f1e 0%, #064e3b 100%);
+      color: #ffffff;
+      border-radius: 16px;
+      padding: 16px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      box-shadow: 0 4px 14px rgba(4, 47, 30, 0.25);
+    }
+
+    .eta-time {
+      font-size: 26px;
+      font-weight: 900;
+      color: #00e676;
+      line-height: 1.1;
+    }
+
+    .eta-label {
+      font-size: 12px;
+      color: #a7f3d0;
+      font-weight: 600;
+      margin-top: 2px;
+    }
+
+    .distance-pill {
+      background: rgba(255, 255, 255, 0.12);
+      border: 1px solid rgba(255, 255, 255, 0.2);
+      padding: 6px 14px;
+      border-radius: 12px;
+      font-size: 13px;
+      font-weight: 800;
+      color: #ffffff;
+      text-align: right;
+    }
+
+    /* Stepper */
+    .stepper-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      position: relative;
+      padding: 6px 4px;
+    }
+
+    .stepper-progress-bar {
+      position: absolute;
+      top: 18px;
+      left: 12%;
+      right: 12%;
+      height: 3px;
+      background: #e2e8f0;
+      z-index: 1;
+    }
+
+    .stepper-progress-fill {
+      height: 100%;
+      background: #00e676;
+      width: 75%;
+      transition: width 0.5s ease;
+    }
+
+    .step-item {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      z-index: 2;
+      gap: 6px;
+    }
+
+    .step-circle {
+      width: 28px;
+      height: 28px;
+      border-radius: 50%;
+      background: #f1f5f9;
+      border: 2px solid #cbd5e1;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 12px;
+      font-weight: 800;
+      color: #64748b;
+    }
+
+    .step-circle.active {
+      background: #042f1e;
+      border-color: #00e676;
+      color: #00e676;
+      box-shadow: 0 0 10px rgba(0, 230, 118, 0.4);
+    }
+
+    .step-circle.done {
+      background: #00e676;
+      border-color: #00e676;
+      color: #042f1e;
+    }
+
+    .step-text {
+      font-size: 10px;
+      font-weight: 700;
+      color: #64748b;
+    }
+
+    .step-text.active {
+      color: #042f1e;
+      font-weight: 800;
+    }
+
+    /* Rider Card */
+    .rider-card {
+      background: #f8fafc;
+      border: 1.5px solid #e2e8f0;
+      border-radius: 16px;
+      padding: 14px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+    }
+
+    .rider-avatar {
+      width: 48px;
+      height: 48px;
+      border-radius: 50%;
+      background: #042f1e;
+      border: 2px solid #00e676;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 22px;
+      flex-shrink: 0;
+    }
+
+    .rider-info {
+      flex: 1;
+    }
+
+    .rider-name {
+      font-size: 15px;
+      font-weight: 800;
+      color: #0f172a;
+    }
+
+    .rider-meta {
+      font-size: 12px;
+      color: #64748b;
+      margin-top: 2px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .call-btn {
+      background: #042f1e;
+      color: #ffffff;
+      border: none;
+      padding: 9px 14px;
+      border-radius: 10px;
+      font-size: 12px;
+      font-weight: 700;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      text-decoration: none;
+      transition: background 0.2s;
+    }
+
+    .call-btn:hover {
+      background: #064e3b;
+    }
+
+    /* Address Points Card */
+    .locations-card {
+      background: #f8fafc;
+      border-radius: 14px;
+      border: 1px solid #e2e8f0;
+      padding: 12px 14px;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    .loc-row {
+      display: flex;
+      align-items: flex-start;
+      gap: 10px;
+    }
+
+    .loc-icon {
+      font-size: 16px;
+      margin-top: 1px;
+    }
+
+    .loc-title {
+      font-size: 11px;
+      font-weight: 700;
+      color: #64748b;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    .loc-desc {
+      font-size: 13px;
+      color: #0f172a;
+      font-weight: 600;
+      margin-top: 1px;
+    }
+
+    /* Custom Leaflet Pulsing Rider Pin */
+    .rider-pulse-marker {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      position: relative;
+    }
+
+    .pulse-ring {
+      position: absolute;
+      width: 44px;
+      height: 44px;
+      border-radius: 50%;
+      background: rgba(0, 230, 118, 0.25);
+      border: 2px solid #00e676;
+      animation: ripple 2s infinite ease-out;
+    }
+
+    @keyframes ripple {
+      0% { transform: scale(0.6); opacity: 1; }
+      100% { transform: scale(1.6); opacity: 0; }
+    }
+
+    .scooter-icon-box {
+      width: 32px;
+      height: 32px;
+      border-radius: 50%;
+      background: #042f1e;
+      border: 2px solid #00e676;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 16px;
+      z-index: 10;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
+    }
+  </style>
+</head>
+<body>
+  <!-- Header -->
+  <header>
+    <div class="brand-wrap">
+      <div class="brand-logo">🛵</div>
+      <div>
+        <div class="brand-title">RALT Logistics</div>
+        <div class="brand-subtitle">ONDC Verified Delivery Network</div>
+      </div>
+    </div>
+    <div class="live-badge">
+      <div class="live-dot"></div>
+      <span>LIVE TRACKING</span>
+    </div>
+  </header>
+
+  <!-- Main Container -->
+  <div class="tracking-container">
+    <!-- Map Viewport -->
+    <div id="map-viewport"></div>
+
+    <!-- Details Sidebar -->
+    <div class="details-sidebar">
+      <!-- ETA Banner -->
+      <div class="eta-banner">
+        <div>
+          <div class="eta-time" id="eta-display">8 mins</div>
+          <div class="eta-label">Estimated Arrival Time</div>
+        </div>
+        <div class="distance-pill" id="distance-display">1.8 km away</div>
+      </div>
+
+      <!-- Stepper -->
+      <div class="stepper-row">
+        <div class="stepper-progress-bar">
+          <div class="stepper-progress-fill" id="progress-fill"></div>
+        </div>
+        <div class="step-item">
+          <div class="step-circle done">✓</div>
+          <div class="step-text">Confirmed</div>
+        </div>
+        <div class="step-item">
+          <div class="step-circle done">✓</div>
+          <div class="step-text">Picked Up</div>
+        </div>
+        <div class="step-item">
+          <div class="step-circle active" id="step-3-circle">🚴</div>
+          <div class="step-text active" id="step-3-text">On the Way</div>
+        </div>
+        <div class="step-item">
+          <div class="step-circle" id="step-4-circle">📦</div>
+          <div class="step-text" id="step-4-text">Delivered</div>
+        </div>
+      </div>
+
+      <!-- Delivery Partner Card -->
+      <div class="rider-card">
+        <div class="rider-avatar">🛵</div>
+        <div class="rider-info">
+          <div class="rider-name" id="rider-name">Sai Raju</div>
+          <div class="rider-meta">
+            <span>⭐ <strong id="rider-rating">5.0</strong></span>
+            <span>•</span>
+            <span id="rider-vehicle">TS 09 EA 1234</span>
+          </div>
+        </div>
+        <a href="tel:+919876543210" class="call-btn" id="call-rider-btn">
+          <span>📞</span> Call
+        </a>
+      </div>
+
+      <!-- Delivery Route Waypoints -->
+      <div class="locations-card">
+        <div class="loc-row">
+          <div class="loc-icon">🏬</div>
+          <div>
+            <div class="loc-title">PICKUP STORE</div>
+            <div class="loc-desc" id="pickup-address">Hitec City Metro Cluster, Hyderabad</div>
+          </div>
+        </div>
+        <div style="border-top: 1px dashed #e2e8f0; margin: 4px 0;"></div>
+        <div class="loc-row">
+          <div class="loc-icon">📍</div>
+          <div>
+            <div class="loc-title">DELIVERY DESTINATION</div>
+            <div class="loc-desc" id="drop-address">Cyber Towers Main Block, Madhapur</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Order ID and Network Info -->
+      <div style="display: flex; justify-content: space-between; align-items: center; padding: 4px; font-size: 11px; color: #64748b;">
+        <span id="order-id-label">ONDC Order: Loading...</span>
+        <span>Secured by Ralt BPP</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Leaflet JS -->
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+  <script>
+    // Extract Order ID from URL: /track/:orderId
+    const pathParts = window.location.pathname.split('/');
+    const orderId = pathParts[pathParts.length - 1] || 'ralt-ondc-165204';
+    document.getElementById('order-id-label').textContent = `Order #${orderId}`;
+
+    // Initial Coordinates
+    let riderLat = 17.4375;
+    let riderLng = 78.3687;
+    let storeLat = 17.4350;
+    let storeLng = 78.3650;
+    let dropLat = 17.4485;
+    let dropLng = 78.3908;
+
+    // Initialize Leaflet Map with CartoDB Voyager High-Contrast Tiles
+    const map = L.map('map-viewport', { zoomControl: false }).setView([riderLat, riderLng], 14);
+    L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
+      maxZoom: 19,
+      attribution: '© OpenStreetMap, © CARTO'
+    }).addTo(map);
+
+    L.control.zoom({ position: 'topright' }).addTo(map);
+
+    // Custom Icons
+    const createCustomIcon = (emoji, bg) => L.divIcon({
+      className: '',
+      html: `<div style="background:${bg}; width:30px; height:30px; border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:16px; border:2px solid #ffffff; box-shadow:0 3px 8px rgba(0,0,0,0.3);">${emoji}</div>`,
+      iconSize: [30, 30],
+      iconAnchor: [15, 15]
+    });
+
+    const storeMarker = L.marker([storeLat, storeLng], { icon: createCustomIcon('🏬', '#0284c7') })
+      .addTo(map)
+      .bindPopup('<b>Store Pickup Location</b>');
+
+    const dropMarker = L.marker([dropLat, dropLng], { icon: createCustomIcon('📍', '#e11d48') })
+      .addTo(map)
+      .bindPopup('<b>Delivery Destination</b>');
+
+    // Pulsing Rider Marker
+    const riderPulseIcon = L.divIcon({
+      className: 'rider-pulse-marker',
+      html: `
+        <div class="pulse-ring"></div>
+        <div class="scooter-icon-box">🛵</div>
+      `,
+      iconSize: [44, 44],
+      iconAnchor: [22, 22]
+    });
+
+    const riderMarker = L.marker([riderLat, riderLng], { icon: riderPulseIcon, zIndexOffset: 1000 }).addTo(map);
+
+    // Dynamic Route Line
+    let routePolyline = L.polyline([
+      [riderLat, riderLng],
+      [dropLat, dropLng]
+    ], {
+      color: '#00e676',
+      weight: 4,
+      opacity: 0.85,
+      dashArray: '8, 6'
+    }).addTo(map);
+
+    map.fitBounds(L.latLngBounds([
+      [riderLat, riderLng],
+      [storeLat, storeLng],
+      [dropLat, dropLng]
+    ]), { padding: [50, 50] });
+
+    // Smooth Distance & Bearing Math
+    function getDistanceMeters(lat1, lon1, lat2, lon2) {
+      const R = 6371e3;
+      const dLat = (lat2 - lat1) * Math.PI / 180;
+      const dLon = (lon2 - lon1) * Math.PI / 180;
+      const a = Math.sin(dLat/2) * Math.sin(dLat/2) +
+                Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
+                Math.sin(dLon/2) * Math.sin(dLon/2);
+      return Math.round(R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a)));
+    }
+
+    function updateTelemetry(lat, lng) {
+      riderLat = lat;
+      riderLng = lng;
+      riderMarker.setLatLng([riderLat, riderLng]);
+      routePolyline.setLatLngs([
+        [riderLat, riderLng],
+        [dropLat, dropLng]
+      ]);
+
+      const dist = getDistanceMeters(riderLat, riderLng, dropLat, dropLng);
+      const km = (dist / 1000).toFixed(1);
+      document.getElementById('distance-display').textContent = dist < 1000 ? `${dist} m away` : `${km} km away`;
+
+      const etaMins = Math.max(1, Math.ceil((dist / (25 * 1000 / 60)) + 1));
+      document.getElementById('eta-display').textContent = etaMins <= 1 ? '< 1 min' : `${etaMins} mins`;
+    }
+
+    // Connect to Backend WebSocket for Real-time Rider Coordinates
+    function connectWebSocket() {
+      const wsProtocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+      const wsUrl = `${wsProtocol}//${window.location.host}/ws?riderId=TRACKING_VIEWER`;
+      const ws = new WebSocket(wsUrl);
+
+      ws.onmessage = (event) => {
+        try {
+          const data = JSON.parse(event.data);
+          if (data.type === 'RIDER_LOCATION_UPDATE' && data.lat && data.lng) {
+            updateTelemetry(data.lat, data.lng);
+          }
+        } catch (e) {}
+      };
+
+      ws.onclose = () => {
+        setTimeout(connectWebSocket, 4000);
+      };
+    }
+
+    // Fetch initial order details from API
+    fetch(`/api/track/${orderId}`)
+      .then(res => res.json())
+      .then(data => {
+        if (data && data.success && data.order) {
+          const ord = data.order;
+          if (ord.rider) {
+            document.getElementById('rider-name').textContent = ord.rider.name || 'Sai Raju';
+            document.getElementById('rider-rating').textContent = (ord.rider.rating || 5.0).toFixed(1);
+            document.getElementById('rider-vehicle').textContent = ord.rider.vehicle_number || 'TS 09 EA 1234';
+            if (ord.rider.phone) {
+              document.getElementById('call-rider-btn').href = `tel:${ord.rider.phone}`;
+            }
+          }
+          if (ord.customerAddress) {
+            document.getElementById('drop-address').textContent = ord.customerAddress;
+          }
+          if (ord.pickupGps) {
+            storeLat = ord.pickupGps.lat;
+            storeLng = ord.pickupGps.lng;
+            storeMarker.setLatLng([storeLat, storeLng]);
+          }
+          if (ord.dropGps) {
+            dropLat = ord.dropGps.lat;
+            dropLng = ord.dropGps.lng;
+            dropMarker.setLatLng([dropLat, dropLng]);
+          }
+        }
+      })
+      .catch(() => {});
+
+    connectWebSocket();
+  </script>
+</body>
+</html>
