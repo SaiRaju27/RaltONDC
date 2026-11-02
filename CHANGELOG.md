@@ -6,6 +6,12 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 
+## [1.3.0](https://github.com/SaiRaju27/RaltONDC/compare/v1.2.0...v1.3.0) (2026-11-02)
+
+### Features
+
+* **deploy:** wire full cluster networking with PostgreSQL, Redis, RabbitMQ and self-healing ([c7f54c8](https://github.com/SaiRaju27/RaltONDC/commit/c7f54c8250f9f218cfd56669fae36b9ee11a2a1e))
+
 ## [1.2.0](https://github.com/SaiRaju27/RaltONDC/compare/v1.1.0...v1.2.0) (2026-11-02)
 
 ### Features
