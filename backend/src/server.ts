@@ -24,9 +24,18 @@ app.get('/', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'index.html'));
 });
 
+app.get('/rider', (req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'rider', 'index.html'));
+});
+
+app.get('/rider/*', (req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'rider', 'index.html'));
+});
+
 app.get('/health', (req, res) => {
   res.json({
     status: 'ok',
+    version: '1.2.6-build13',
     service: 'RALT ONDC Logistics Provider (BPP)',
     subscriber_id: config.ondc.subscriberId,
     domain: config.ondc.domain,
@@ -36,15 +45,29 @@ app.get('/health', (req, res) => {
 });
 
 // ONDC Open Delivery Protocol Webhook Endpoints (Called by ONDC Network / Sellers)
-app.post('/ondc/search', ONDCController.handleSearch);
-app.post('/ondc/init', ONDCController.handleInit);
-app.post('/ondc/confirm', ONDCController.handleConfirm);
-app.post('/ondc/status', ONDCController.handleStatus);
-app.post('/ondc/track', ONDCController.handleTrack);
-app.post('/ondc/cancel', ONDCController.handleCancel);
+app.post(['/ondc/search', '/search'], ONDCController.handleSearch);
+app.post(['/ondc/init', '/init'], ONDCController.handleInit);
+app.post(['/ondc/confirm', '/confirm'], ONDCController.handleConfirm);
+app.post(['/ondc/update', '/update'], ONDCController.handleUpdate);
+app.post(['/ondc/status', '/status'], ONDCController.handleStatus);
+app.post(['/ondc/track', '/track'], ONDCController.handleTrack);
+app.post(['/ondc/cancel', '/cancel'], ONDCController.handleCancel);
 
 // Mobile App / Rider APIs (Real database persistence)
+app.all('/api/auth/send-otp', RiderController.sendOtp);
+app.all('/api/auth/verify-otp', RiderController.verifyOtp);
+app.all('/api/auth/login', RiderController.login);
+app.all('/api/rider/send-otp', RiderController.sendOtp);
+app.all('/api/rider/verify-otp', RiderController.verifyOtp);
+app.all('/api/rider/login', RiderController.login);
+app.all('/api/rider/save-step', RiderController.saveStep);
+app.all('/api/rider/metrics', RiderController.getMetrics);
+app.all('/api/kyc/request/:id', RiderController.requestDigioKyc);
+app.all('/api/kyc/response/:id', RiderController.responseDigioKyc);
 app.get('/api/rider/profile', RiderController.getProfile);
+app.post('/api/rider/profile', RiderController.updateProfile);
+app.post('/api/rider/register', RiderController.registerRider);
+app.post('/api/rider/verify-bank', RiderController.verifyBank);
 app.post('/api/rider/status', RiderController.toggleOnline);
 app.post('/api/rider/location', RiderController.updateLocation);
 app.get('/api/rider/orders', RiderController.getActiveOrders);
@@ -52,7 +75,10 @@ app.get('/api/rider/all-orders', RiderController.getAllOrders);
 app.get('/api/rider/earnings', RiderController.getEarnings);
 app.post('/api/rider/orders/:orderId/update-status', RiderController.updateOrderStatus);
 app.post('/api/rider/orders/:orderId/verify-otp', RiderController.verifyDeliveryOtp);
+app.post('/api/rider/complete-current', RiderController.completeCurrentOrder);
+app.get('/api/rider/complete-current', RiderController.completeCurrentOrder);
 app.post('/api/rider/simulate-order', RiderController.simulateIncomingOrder);
+app.all('/api/admin/reset-db', RiderController.resetDatabase);
 
 // Mock BAP endpoint for local test loopbacks
 app.post('/mock/bap/:action', (req, res) => {
