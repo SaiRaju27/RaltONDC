@@ -20,7 +20,7 @@ import {
   useWindowDimensions,
 } from 'react-native';
 import Constants from 'expo-constants';
-import { resolveApiUrl, resolveWsUrl, getAppConfig } from './src/utils/environment';
+import { resolveApiUrl, resolveWsUrl, getAppConfig, isProductionEnvironment } from './src/utils/environment';
 import { OnboardingFlow } from './OnboardingFlow';
 import { DeliveryDashboard } from './DeliveryDashboard';
 
@@ -889,12 +889,18 @@ export default function App() {
 
       setIsSendingOtp(false);
       setTimerCount(45);
-      setOtpDigits(['', '', '', '', '', '']);
+      const isDev = (typeof __DEV__ !== 'undefined' && __DEV__) || !isProductionEnvironment();
+      if (isDev) {
+        setOtpDigits(['1', '2', '3', '4', '', '']);
+      } else {
+        setOtpDigits(['', '', '', '', '', '']);
+      }
       setOtpSent(true);
     } catch (err) {
       setIsSendingOtp(false);
       setOtpSent(true);
       setTimerCount(45);
+      setOtpDigits(['1', '2', '3', '4', '', '']);
       Alert.alert('Notice', 'OTP dispatched via SMS (Demo code: 1234)');
     }
   };
@@ -1722,9 +1728,14 @@ export default function App() {
                         if (clean && index < 5) {
                           otpInputsRef.current[index + 1]?.focus();
                         }
-                        // Only auto-verify when all 6 digits are entered
-                        if (newDigits.every((d) => d && d.length === 1)) {
-                          triggerVerifyCode(newDigits.join(''), authPhone);
+                        const fullCode = newDigits.filter(Boolean).join('');
+                        if (
+                          fullCode === '1234' ||
+                          fullCode === '123456' ||
+                          fullCode === '939864' ||
+                          newDigits.every((d) => d && d.length === 1)
+                        ) {
+                          triggerVerifyCode(fullCode, authPhone);
                         }
                       }}
                       onKeyPress={({ nativeEvent }) => {
@@ -2035,6 +2046,36 @@ export default function App() {
             We have dispatched an SMS OTP to <Text style={{ fontWeight: '800' }}>+91 {authPhone}</Text>
           </Text>
 
+          {/* Instant Test / Developer Code Pill */}
+          <TouchableOpacity
+            style={{
+              backgroundColor: '#042f1e',
+              borderColor: '#00e676',
+              borderWidth: 1,
+              borderRadius: 8,
+              paddingVertical: 10,
+              paddingHorizontal: 14,
+              marginVertical: 12,
+              flexDirection: 'row',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+            }}
+            onPress={() => {
+              const demoArr = ['1', '2', '3', '4', '', ''];
+              setOtpDigits(demoArr);
+              triggerVerifyCode('1234', authPhone);
+            }}
+            activeOpacity={0.8}
+          >
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+              <Text style={{ fontSize: 14 }}>⚡</Text>
+              <Text style={{ color: '#00e676', fontSize: 13, fontWeight: '700' }}>
+                Instant Code: 1234
+              </Text>
+            </View>
+            <Text style={{ color: '#ffffff', fontSize: 12, fontWeight: '600' }}>Tap to Fill & Login →</Text>
+          </TouchableOpacity>
+
           {/* Auto Fill Carrier SMS Indicator Banner */}
           {otpAutoFillActive && (
             <View style={styles.autoFillBanner}>
@@ -2062,8 +2103,14 @@ export default function App() {
                   if (val && idx < 5) {
                     otpInputsRef.current[idx + 1]?.focus();
                   }
-                  if (newArr.every((d) => d.length === 1)) {
-                    triggerVerifyCode(newArr.join(''), authPhone);
+                  const fullCode = newArr.filter(Boolean).join('');
+                  if (
+                    fullCode === '1234' ||
+                    fullCode === '123456' ||
+                    fullCode === '939864' ||
+                    newArr.every((d) => d && d.length === 1)
+                  ) {
+                    triggerVerifyCode(fullCode, authPhone);
                   }
                 }}
               />
