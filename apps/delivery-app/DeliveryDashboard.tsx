@@ -20,6 +20,7 @@ import {
   Linking,
 } from 'react-native';
 import Svg, { Line, Rect, Text as SvgText, Circle, Path } from 'react-native-svg';
+import { resolveWsUrl } from './src/utils/environment';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 
@@ -736,11 +737,9 @@ export const DeliveryDashboard: React.FC<DeliveryDashboardProps> = ({
 
     const connect = () => {
       try {
-        const isSecure = typeof window !== 'undefined' && window.location?.protocol === 'https:';
-        const wsProto = isSecure ? 'wss:' : 'ws:';
-        const wsHost = typeof window !== 'undefined' && window.location?.host ? window.location.host : 'ralt.in';
         const targetId = rider.id || 'rider-ralt-001';
-        ws = new WebSocket(`${wsProto}//${wsHost}/ws?riderId=${encodeURIComponent(targetId)}`);
+        const wsUrl = resolveWsUrl(targetId, apiUrl);
+        ws = new WebSocket(wsUrl);
         wsRef.current = ws;
 
         ws.onopen = () => {

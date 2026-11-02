@@ -20,32 +20,15 @@ import {
   useWindowDimensions,
 } from 'react-native';
 import Constants from 'expo-constants';
+import { resolveApiUrl, resolveWsUrl, getAppConfig } from './src/utils/environment';
 import { OnboardingFlow } from './OnboardingFlow';
 import { DeliveryDashboard } from './DeliveryDashboard';
 
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
 
 // =============================================================================
-// API & SERVICE CONFIGURATION
+// API & SERVICE CONFIGURATION (Dynamic: Local vs Production APK / iOS)
 // =============================================================================
-const resolveApiUrl = () => {
-  if (typeof process !== 'undefined' && process.env?.EXPO_PUBLIC_API_URL) {
-    return process.env.EXPO_PUBLIC_API_URL;
-  }
-  if (typeof window !== 'undefined' && window.location?.origin && window.location.origin.startsWith('http')) {
-    if (window.location.port === '8081') {
-      return `${window.location.protocol}//${window.location.hostname}:5001`;
-    }
-    return window.location.origin;
-  }
-  const hostUri = Constants?.expoConfig?.hostUri || (Constants as any)?.manifest2?.extra?.expoGo?.debuggerHost || (Constants as any)?.manifest?.debuggerHost;
-  if (hostUri) {
-    const ip = hostUri.split(':')[0];
-    return `http://${ip}:5001`;
-  }
-  return 'https://ralt.in';
-};
-
 const API_URL = resolveApiUrl();
 const AIRBRICK_API_PRIMARY = 'https://abapi.airbrick.com';
 const MAPBOX_ACCESS_TOKEN = (typeof globalThis !== 'undefined' && (globalThis as any).process?.env?.EXPO_PUBLIC_MAPBOX_TOKEN) || '';
@@ -646,10 +629,7 @@ export default function App() {
 
     const connectWs = () => {
       try {
-        const isSecure = typeof window !== 'undefined' && window.location?.protocol === 'https:';
-        const wsProtocol = isSecure ? 'wss:' : 'ws:';
-        const wsHost = typeof window !== 'undefined' && window.location?.host ? window.location.host : 'ralt.in';
-        const wsUrl = `${wsProtocol}//${wsHost}/ws?riderId=${encodeURIComponent(rider.id || 'rider-ralt-001')}`;
+        const wsUrl = resolveWsUrl(rider.id || 'rider-ralt-001', API_URL);
         const ws = new WebSocket(wsUrl);
         wsRef.current = ws;
 
