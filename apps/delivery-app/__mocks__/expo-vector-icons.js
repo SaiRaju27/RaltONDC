@@ -6,3 +6,4 @@ module.exports = {
   FontAwesome: 'FontAwesome',
   FontAwesome5: 'FontAwesome5',
 };
+

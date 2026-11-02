@@ -171,3 +171,4 @@ export function validateName(name: string): ValidationResult {
   }
   return { isValid: true, formatted: trimmed };
 }
+

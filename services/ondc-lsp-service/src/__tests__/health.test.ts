@@ -35,3 +35,4 @@ describe('Observability & Health Endpoints', () => {
     expect(res.status).toBe(200);
   });
 });
+

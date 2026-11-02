@@ -11,9 +11,8 @@ phases:
       nodejs: 22
     commands:
       - echo "=== Step 1: Installing monorepo dependencies ==="
-      - npm ci || npm install
-      - (cd services/ondc-lsp-service && npm ci)
-      - (cd apps/delivery-app && npm ci)
+      - export NODE_ENV=development
+      - npm install --include=dev
 
   pre_build:
     commands:

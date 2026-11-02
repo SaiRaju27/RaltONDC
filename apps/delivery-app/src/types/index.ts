@@ -76,3 +76,4 @@ export interface DeliveryPayoutBreakdown {
   totalFee: number;
   partnerShare: number;
 }
+

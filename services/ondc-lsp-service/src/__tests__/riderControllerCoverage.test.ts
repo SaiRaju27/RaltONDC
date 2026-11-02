@@ -111,3 +111,4 @@ describe('RiderController Deep Coverage Suite', () => {
     expect(res.body.success).toBe(true);
   });
 });
+

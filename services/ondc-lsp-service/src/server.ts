@@ -50,7 +50,7 @@ app.use(express.static(publicDir));
 app.get('/metrics', getMetrics);
 
 // Liveness probe (Kubernetes / Lightsail Load Balancer)
-app.get('/health', (req, res) => {
+app.get('/health', (req: any, res: any) => {
   res.status(200).json({
     status: 'ok',
     version: '1.2.6-enterprise',
@@ -65,7 +65,7 @@ app.get('/health', (req, res) => {
 });
 
 // Deep Readiness probe (checks PostgreSQL + PostGIS, Redis, RabbitMQ, ONDC credentials)
-app.get('/ready', async (req, res) => {
+app.get('/ready', async (req: any, res: any) => {
   const dbHealthy = await isDatabaseHealthy();
   const redisHealthy = redisService.isHealthy;
   const rabbitHealthy = queueService.isHealthy;
@@ -88,14 +88,14 @@ app.get('/ready', async (req, res) => {
 });
 
 // Root & Web Dashboard
-app.get('/', (req, res) => {
-  res.sendFile(path.join(publicDir, 'index.html'), (err) => {
+app.get('/', (req: any, res: any) => {
+  res.sendFile(path.join(publicDir, 'index.html'), (err: any) => {
     if (err) res.status(200).send('RALT ONDC Logistics Provider (BPP) Active');
   });
 });
 
-app.get(['/rider', '/rider/*'], (req, res) => {
-  res.sendFile(path.join(publicDir, 'rider', 'index.html'), (err) => {
+app.get(['/rider', '/rider/*'], (req: any, res: any) => {
+  res.sendFile(path.join(publicDir, 'rider', 'index.html'), (err: any) => {
     if (err) res.status(200).send('RALT Delivery Partner Portal');
   });
 });
@@ -146,7 +146,7 @@ app.put('/api/notifications/:id/read', apiRateLimiter, RiderController.markNotif
 app.put('/api/notifications/read-all', apiRateLimiter, RiderController.markAllNotificationsRead);
 
 // Mock BAP endpoint for local integration test loopbacks
-app.post('/mock/bap/:action', (req, res) => {
+app.post('/mock/bap/:action', (req: any, res: any) => {
   logger.info({ action: req.params.action }, '[Mock BAP] Received network callback');
   res.status(200).json({ message: { ack: { status: 'ACK' } } });
 });
@@ -154,7 +154,7 @@ app.post('/mock/bap/:action', (req, res) => {
 // =============================================================================
 // 6. WEBSOCKET REAL-TIME FLEET DISPATCH & TRACKING
 // =============================================================================
-wss.on('connection', async (ws: WebSocket, req) => {
+wss.on('connection', async (ws: any, req: any) => {
   const url = new URL(req.url || '', `http://${req.headers.host}`);
   const riderId = url.searchParams.get('riderId') || 'RALT-RIDER-001';
 
@@ -202,7 +202,7 @@ wss.on('connection', async (ws: WebSocket, req) => {
 
 // Heartbeat ping interval
 const pingInterval = setInterval(() => {
-  wss.clients.forEach((ws) => {
+  wss.clients.forEach((ws: any) => {
     if ((ws as any).isAlive === false) return ws.terminate();
     (ws as any).isAlive = false;
     ws.ping();

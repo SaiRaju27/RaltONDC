@@ -42,7 +42,7 @@ export async function query<T = any>(sql: string, params: any[] = []): Promise<T
     return res.rows as T[];
   } else if (sqliteDb) {
     return new Promise((resolve, reject) => {
-      sqliteDb!.all(sql, params, (err, rows) => {
+      sqliteDb!.all(sql, params, (err: any, rows: any) => {
         if (err) return reject(err);
         resolve((rows || []) as T[]);
       });
@@ -59,7 +59,7 @@ export async function run(sql: string, params: any[] = []): Promise<{ lastID: nu
     return { lastID: 0, changes: res.rowCount || 0 };
   } else if (sqliteDb) {
     return new Promise((resolve, reject) => {
-      sqliteDb!.run(sql, params, function (err) {
+      sqliteDb!.run(sql, params, function (this: any, err: any) {
         if (err) return reject(err);
         resolve({ lastID: this.lastID, changes: this.changes });
       });
@@ -101,7 +101,7 @@ export async function findNearestRidersSpatial(
       LIMIT $4;
     `;
     const res = await pgPool.query(sql, [lng, lat, radiusMeters, limit]);
-    return res.rows.map(r => ({
+    return res.rows.map((r: any) => ({
       ...r,
       distance_meters: parseFloat(r.distance_meters),
       distance_km: parseFloat(r.distance_km)

@@ -15,3 +15,4 @@ describe('UI Component Declarations Suite', () => {
     expect(typeof OnboardingFlow).toBe('function');
   });
 });
+

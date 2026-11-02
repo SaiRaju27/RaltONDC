@@ -46,7 +46,7 @@ export const helmetMiddleware = helmet({
  * Enterprise CORS configuration
  */
 export const corsMiddleware = cors({
-  origin: (origin, callback) => {
+  origin: (origin: any, callback: any) => {
     // Allow non-browser requests (mobile apps, curl, server-to-server ONDC)
     if (!origin) return callback(null, true);
     if (config.security.corsOrigins.includes('*') || config.security.corsOrigins.includes(origin)) {

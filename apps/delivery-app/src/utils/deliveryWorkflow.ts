@@ -164,3 +164,4 @@ export function isOrderActive(status: ONDCDeliveryState | string): boolean {
 export function isDeliveryComplete(status: ONDCDeliveryState | string): boolean {
   return status === 'Order-delivered';
 }
+

@@ -135,3 +135,4 @@ export function formatKycStatus(status?: KycStatus | string): {
       return { label: 'Verification Pending', badgeColor: '#6B7280', isApproved: false };
   }
 }
+

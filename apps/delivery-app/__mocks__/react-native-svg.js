@@ -13,3 +13,4 @@ module.exports.Rect = SvgMock.Rect;
 module.exports.Text = SvgMock.Text;
 module.exports.Circle = SvgMock.Circle;
 module.exports.Path = SvgMock.Path;
+

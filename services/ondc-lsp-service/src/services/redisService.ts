@@ -16,7 +16,7 @@ class RedisService {
       this.client = new Redis(config.redis.url, {
         lazyConnect: true,
         maxRetriesPerRequest: 1,
-        retryStrategy: (times) => {
+        retryStrategy: (times: number) => {
           if (times > 5) return null; // Don't crash or spin indefinitely
           return Math.min(times * 1000, 3000);
         }
@@ -27,12 +27,12 @@ class RedisService {
         logger.info({ url: config.redis.url }, 'Redis connected successfully');
       });
 
-      this.client.on('error', (err) => {
+      this.client.on('error', (err: any) => {
         this.isConnected = false;
         logger.warn({ err: err.message }, 'Redis connection warning (operating in standalone fallback)');
       });
 
-      this.client.connect().catch((err) => {
+      this.client.connect().catch((err: any) => {
         logger.warn({ err: err.message }, 'Redis initial connection deferred');
       });
     } catch (e: any) {
