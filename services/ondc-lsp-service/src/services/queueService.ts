@@ -7,6 +7,7 @@ export class QueueService {
   private connection: any = null;
   private channel: any = null;
   private isConnected: boolean = false;
+  private retryTimeout: NodeJS.Timeout | null = null;
 
   public static QUEUES = {
     NOTIFICATIONS_PUSH: 'ondc.notifications.push',
@@ -44,13 +45,17 @@ export class QueueService {
 
       this.connection.on('close', () => {
         this.isConnected = false;
-        logger.warn('RabbitMQ connection closed. Retrying in 5s...');
-        setTimeout(() => this.init(), 5000);
+        if (config.env !== 'test') {
+          logger.warn('RabbitMQ connection closed. Retrying in 5s...');
+          this.retryTimeout = setTimeout(() => this.init(), 5000);
+        }
       });
     } catch (err: any) {
       this.isConnected = false;
       logger.warn({ err: err.message }, 'RabbitMQ deferred; operating in resilient standalone fallback');
-      setTimeout(() => this.init(), 10000);
+      if (config.env !== 'test') {
+        this.retryTimeout = setTimeout(() => this.init(), 10000);
+      }
     }
   }
 
@@ -115,7 +120,7 @@ export class QueueService {
   /**
    * In-process fallback when RabbitMQ broker is offline
    */
-  private async handleDirectFallback(queue: string, message: any) {
+  public async handleDirectFallback(queue: string, message: any) {
     try {
       if (queue === QueueService.QUEUES.NOTIFICATIONS_PUSH) {
         await notificationService.dispatch({ ...message, channel: 'PUSH' });
@@ -128,8 +133,19 @@ export class QueueService {
   }
 
   public async close(): Promise<void> {
-    if (this.channel) await this.channel.close().catch(() => {});
-    if (this.connection) await this.connection.close().catch(() => {});
+    if (this.retryTimeout) {
+      clearTimeout(this.retryTimeout);
+      this.retryTimeout = null;
+    }
+    if (this.channel) {
+      await this.channel.close().catch(() => {});
+      this.channel = null;
+    }
+    if (this.connection) {
+      await this.connection.close().catch(() => {});
+      this.connection = null;
+    }
+    this.isConnected = false;
   }
 }
 

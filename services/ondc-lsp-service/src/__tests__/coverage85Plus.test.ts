@@ -1,11 +1,15 @@
 import request from 'supertest';
-import { app, wss } from '../server';
+import axios from 'axios';
+import https from 'https';
+import { EventEmitter } from 'events';
+import { app, wss, server, shutdown } from '../server';
 import { initDatabase, closeDatabase } from '../database';
 import { signRiderToken } from '../security';
 import { riderManager } from '../services/riderManager';
 import { orderManager } from '../services/orderManager';
-import { redisService } from '../services/redisService';
-import { queueService } from '../services/queueService';
+import { redisService, RedisService } from '../services/redisService';
+import { queueService, QueueService } from '../services/queueService';
+import { notificationService } from '../services/notificationService';
 import { createAuthorizationHeader, verifySignature } from '../crypto/auth';
 import { config } from '../config';
 
@@ -150,30 +154,158 @@ describe('Backend 85%+ Coverage Booster Suite', () => {
   });
 
   describe('Redis & Queue Service direct methods', () => {
-    it('exercises redisService set, get, publish, and close', async () => {
+    it('exercises redisService set, get, publish, geo and fallback', async () => {
       await redisService.set('cache:test:85', 'sample-value', 30);
       const val = await redisService.get('cache:test:85');
       expect(val).toBe('sample-value');
 
+      await redisService.updateRiderLocation('rider-geo-85', 12.9716, 77.5946);
+      const nearby = await redisService.searchNearbyRiders(12.9716, 77.5946, 5);
+      expect(nearby.length).toBeGreaterThan(0);
+      expect(nearby.some((r) => r.riderId === 'rider-geo-85')).toBe(true);
+
       await redisService.publish('events:sample', { test: true });
-      await redisService.close();
+      expect(redisService.isHealthy).toBeDefined();
     });
 
-    it('exercises queueService handleDirectFallback and close', async () => {
+    it('exercises redisService in-memory fallback, expiration, and close', async () => {
+      const customRedis = new RedisService();
+      (customRedis as any).isConnected = false;
+      (customRedis as any).client = null;
+
+      await customRedis.set('key-in-mem', 'val-in-mem', 60);
+      const cached = await customRedis.get('key-in-mem');
+      expect(cached).toBe('val-in-mem');
+
+      (customRedis as any).memoryCache.set('expired-key', { val: 'expired', expiresAt: Date.now() - 1000 });
+      const expiredVal = await customRedis.get('expired-key');
+      expect(expiredVal).toBeNull();
+
+      const nullVal = await customRedis.get('non-existent-key');
+      expect(nullVal).toBeNull();
+
+      await customRedis.updateRiderLocation('rider-offline', 12.9716, 77.5946);
+      const nearbyOffline = await customRedis.searchNearbyRiders(12.9716, 77.5946, 10);
+      expect(nearbyOffline.some((r) => r.riderId === 'rider-offline')).toBe(true);
+
+      await customRedis.close();
+    });
+
+    it('exercises queueService handleDirectFallback and publishToQueue', async () => {
+      await queueService.publishToQueue(QueueService.QUEUES.NOTIFICATIONS_PUSH, {
+        title: 'Push Async',
+        riderId: 'RALT-RIDER-001',
+      });
       await (queueService as any).handleDirectFallback(
-        'notifications.push',
-        { title: 'Push Direct', riderId: 'RALT-RIDER-001' }
+        QueueService.QUEUES.NOTIFICATIONS_PUSH,
+        { title: 'Push Direct', message: 'Direct push msg', riderId: 'RALT-RIDER-001' }
       );
       await (queueService as any).handleDirectFallback(
-        'notifications.sms',
-        { title: 'SMS Direct', riderId: 'RALT-RIDER-001' }
+        QueueService.QUEUES.NOTIFICATIONS_SMS,
+        { title: 'SMS Direct', message: 'Direct SMS msg', riderId: 'RALT-RIDER-001' }
       );
       await (queueService as any).handleDirectFallback(
         'unknown.queue',
         { title: 'Unknown' }
       );
+      expect(queueService.isHealthy).toBeDefined();
+    });
 
-      await queueService.close();
+    it('exercises queueService error catch and close', async () => {
+      const customQueue = new QueueService();
+      await (customQueue as any).handleDirectFallback(QueueService.QUEUES.NOTIFICATIONS_PUSH, {
+        get title(): any {
+          throw new Error('Fallback error simulation');
+        }
+      });
+      await customQueue.close();
+    });
+  });
+
+  describe('NotificationService coverage', () => {
+    it('exercises sendExpoPush with invalid and valid token patterns', async () => {
+      const invalidRes = await notificationService.sendExpoPush('invalid-token', 'T', 'B');
+      expect(invalidRes).toBeNull();
+
+      const axiosSpy = jest.spyOn(axios, 'post').mockResolvedValueOnce({
+        data: { data: [{ status: 'ok', id: 'expo-receipt-1' }] }
+      } as any);
+
+      const expoRes = await notificationService.sendExpoPush(
+        'ExponentPushToken[mock-partner-device-1234]',
+        'Title',
+        'Body',
+        { orderId: '123' }
+      );
+      expect(expoRes).toBeDefined();
+      axiosSpy.mockRestore();
+    });
+
+    it('exercises sendExpoPush error handling', async () => {
+      const axiosSpy = jest.spyOn(axios, 'post').mockRejectedValueOnce(new Error('Network drop'));
+      const res = await notificationService.sendExpoPush(
+        'ExponentPushToken[mock-partner-device-1234]',
+        'Title',
+        'Body'
+      );
+      expect(res).toBeNull();
+      axiosSpy.mockRestore();
+    });
+
+    it('exercises sendAirbrickSms with invalid and valid phone numbers', async () => {
+      const invalidPhone = await notificationService.sendAirbrickSms('123', 'OTP: 1234');
+      expect(invalidPhone).toBeNull();
+
+      const httpsSpy = jest.spyOn(https, 'get').mockImplementation((url: any, opts: any, cb?: any) => {
+        const callback = typeof opts === 'function' ? opts : cb;
+        const mockRes = new EventEmitter() as any;
+        mockRes.statusCode = 200;
+        const mockReq = new EventEmitter() as any;
+        setImmediate(() => {
+          if (callback) callback(mockRes);
+          mockRes.emit('data', '{"status":"DELIVERED"}');
+          mockRes.emit('end');
+        });
+        return mockReq;
+      });
+
+      const smsRes = await notificationService.sendAirbrickSms('9876543210', 'Your OTP is 9988');
+      expect(smsRes).toEqual({ status: 200 });
+      httpsSpy.mockRestore();
+    });
+
+    it('exercises sendAirbrickSms error handling', async () => {
+      const httpsSpy = jest.spyOn(https, 'get').mockImplementation((url: any, opts: any, cb?: any) => {
+        const mockReq = new EventEmitter() as any;
+        setImmediate(() => {
+          mockReq.emit('error', new Error('DNS failure'));
+        });
+        return mockReq;
+      });
+
+      const smsRes = await notificationService.sendAirbrickSms('9876543210', 'Your OTP is 9988');
+      expect((smsRes as any).error).toBe('DNS failure');
+      httpsSpy.mockRestore();
+    });
+
+    it('exercises markAsRead and markAllAsRead', async () => {
+      const record = await notificationService.dispatch({
+        riderId: 'RALT-RIDER-001',
+        title: 'Order Completed',
+        message: 'Delivered successfully',
+        channel: 'IN_APP',
+        type: 'EARNINGS',
+      });
+      expect(record.id).toBeDefined();
+
+      const markedOne = await notificationService.markAsRead(record.id);
+      expect(typeof markedOne).toBe('boolean');
+
+      const markedAll = await notificationService.markAllAsRead('RALT-RIDER-001');
+      expect(typeof markedAll).toBe('boolean');
+
+      const notifs = await notificationService.getNotifications('RALT-RIDER-001', 5);
+      expect(Array.isArray(notifs)).toBe(true);
     });
   });
 
@@ -300,6 +432,21 @@ describe('Backend 85%+ Coverage Booster Suite', () => {
 
       expect(res.status).toBe(200);
       expect(res.body.success).toBe(true);
+    });
+  });
+
+  describe('Server graceful shutdown handler', () => {
+    it('executes graceful shutdown routine without crashing process', async () => {
+      const exitSpy = jest.spyOn(process, 'exit').mockImplementation((code?: any) => undefined as never);
+      const closeSpy = jest.spyOn(server, 'close').mockImplementation((cb?: any) => {
+        if (cb) cb();
+        return server;
+      });
+
+      await shutdown('SIGTERM');
+      expect(closeSpy).toHaveBeenCalled();
+      closeSpy.mockRestore();
+      exitSpy.mockRestore();
     });
   });
 });

@@ -394,9 +394,13 @@ export async function isDatabaseHealthy(): Promise<boolean> {
 
 export async function closeDatabase(): Promise<void> {
   if (pgPool) {
-    await pgPool.end();
+    const pool = pgPool;
+    pgPool = null;
+    await pool.end().catch(() => {});
   }
   if (sqliteDb) {
-    await new Promise(resolve => sqliteDb!.close(() => resolve(null)));
+    const db = sqliteDb;
+    sqliteDb = null;
+    await new Promise(resolve => db.close(() => resolve(null))).catch(() => {});
   }
 }

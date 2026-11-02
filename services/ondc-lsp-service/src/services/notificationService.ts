@@ -39,14 +39,16 @@ class NotificationService {
     const type = notification.type || 'ORDER_UPDATE';
     const riderId = notification.riderId || 'RALT-RIDER-001';
     const now = new Date().toISOString();
+    const title = notification.title || 'Delivery Update';
+    const message = notification.message || notification.title || 'Delivery Notification';
     const dataJson = JSON.stringify(notification.data || {});
 
     // 1. Channel-specific delivery
     try {
       if (channel === 'PUSH' && notification.pushToken) {
-        await this.sendExpoPush(notification.pushToken, notification.title, notification.message, notification.data);
+        await this.sendExpoPush(notification.pushToken, title, message, notification.data);
       } else if (channel === 'SMS' && notification.phone) {
-        await this.sendAirbrickSms(notification.phone, `${notification.title}: ${notification.message}`);
+        await this.sendAirbrickSms(notification.phone, `${title}: ${message}`);
       }
       notificationsDispatchedTotal.inc({ channel, status: 'success' });
     } catch (err: any) {
@@ -59,19 +61,19 @@ class NotificationService {
       await run(
         `INSERT INTO notifications (id, rider_id, title, message, channel, type, data, is_read, created_at)
          VALUES (?, ?, ?, ?, ?, ?, ?, 0, ?)`,
-        [id, riderId, notification.title, notification.message, channel, type, dataJson, now]
+        [id, riderId, title, message, channel, type, dataJson, now]
       );
     } catch (err: any) {
       logger.error({ err: err.message }, 'Failed to persist notification record');
     }
 
-    logger.info({ id, riderId, channel, type, title: notification.title }, 'Notification dispatched and stored');
+    logger.info({ id, riderId, channel, type, title }, 'Notification dispatched and stored');
 
     return {
       id,
       rider_id: riderId,
-      title: notification.title,
-      message: notification.message,
+      title,
+      message,
       channel,
       type,
       data: notification.data || {},
