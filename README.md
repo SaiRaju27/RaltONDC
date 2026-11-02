@@ -198,15 +198,41 @@ make lint
 
 ## 🚀 Dual-Remote CI/CD Pipeline (AWS CodeCommit & GitHub)
 
-The repository uses a dual-remote strategy. Commits pushed to `origin main` automatically update both:
-1. **GitHub Repository**: [`SaiRaju27/RaltONDC`](https://github.com/SaiRaju27/RaltONDC.git)
-2. **AWS CodeCommit Repository**: `ralt-delivery-partner` (`ap-south-1` under AWS SSO profile `ralt`)
+The repository uses a dual-remote strategy. You can push changes to **GitHub**, **AWS CodeCommit**, or **both simultaneously** depending on your workflow.
+
+### 📌 Git Push Reference Table
+
+| Target | Git Command | Make Command | Remote URL / Destination | What it Triggers |
+| :--- | :--- | :--- | :--- | :--- |
+| **Both (GitHub + AWS)** | `git push origin main` | `make push-all` | • `github.com/SaiRaju27/RaltONDC`<br>• `git-codecommit.ap-south-1.amazonaws.com` | Triggers **both** GitHub Actions CI/CD (lint, scans, tests, semantic release) AND AWS CodePipeline (CodeBuild + CodeDeploy to Lightsail) |
+| **GitHub Only** | `git push github main` | `make push-github` | `https://github.com/SaiRaju27/RaltONDC.git` | Triggers GitHub Actions CI/CD, security audits, test coverage checks, and version tagging |
+| **AWS CodeCommit Only** | `git push codecommit main` | `make push-aws` | `https://git-codecommit.ap-south-1.amazonaws.com/v1/repos/ralt-delivery-partner` | Triggers AWS CodeBuild (`buildspec.yml`) and auto-deploys Docker containers to Lightsail |
+
+### Quick Examples
+
+```bash
+# Option 1: Push to BOTH GitHub and AWS CodeCommit (Recommended)
+make push-all
+# OR
+git push origin main
+
+# Option 2: Push to GitHub only
+make push-github
+# OR
+git push github main
+
+# Option 3: Push to AWS CodeCommit only
+make push-aws
+# OR
+git push codecommit main
+```
 
 ### AWS CodeCommit CI/CD (`buildspec.yml`)
 AWS CodeBuild executes:
 - **Install**: Node.js 22 runtime, monorepo dependency hydration.
 - **Pre-Build Quality Gate**: Executes `npm run check:all` (linting, security/copy scans, and >=85% test coverage verification).
 - **Build**: Compiles backend TypeScript and builds production container image.
+- **Deploy**: CodeDeploy triggers `ApplicationStart.sh` on Lightsail to boot Postgres (PostGIS), Redis, RabbitMQ, and backend containers.
 
 ---
 

@@ -122,28 +122,28 @@ app.all('/api/rider/save-step', apiRateLimiter, RiderController.saveStep);
 app.all('/api/rider/metrics', apiRateLimiter, RiderController.getMetrics);
 app.all('/api/kyc/request/:id', apiRateLimiter, RiderController.requestDigioKyc);
 app.all('/api/kyc/response/:id', apiRateLimiter, RiderController.responseDigioKyc);
-app.get('/api/rider/profile', apiRateLimiter, RiderController.getProfile);
-app.post('/api/rider/profile', apiRateLimiter, RiderController.updateProfile);
+app.get('/api/rider/profile', apiRateLimiter, requireRiderAuth, RiderController.getProfile);
+app.post('/api/rider/profile', apiRateLimiter, requireRiderAuth, RiderController.updateProfile);
 app.post('/api/rider/register', apiRateLimiter, RiderController.registerRider);
 app.post('/api/rider/verify-bank', apiRateLimiter, RiderController.verifyBank);
-app.post('/api/rider/status', apiRateLimiter, RiderController.toggleOnline);
-app.post('/api/rider/location', apiRateLimiter, RiderController.updateLocation);
-app.get('/api/rider/orders', apiRateLimiter, RiderController.getActiveOrders);
-app.get('/api/rider/all-orders', apiRateLimiter, RiderController.getAllOrders);
-app.get('/api/rider/earnings', apiRateLimiter, RiderController.getEarnings);
-app.post('/api/rider/orders/:orderId/update-status', apiRateLimiter, RiderController.updateOrderStatus);
-app.post('/api/rider/orders/:orderId/verify-otp', apiRateLimiter, RiderController.verifyDeliveryOtp);
-app.all(['/api/rider/complete-current'], apiRateLimiter, RiderController.completeCurrentOrder);
+app.post('/api/rider/status', apiRateLimiter, requireRiderAuth, RiderController.toggleOnline);
+app.post('/api/rider/location', apiRateLimiter, requireRiderAuth, RiderController.updateLocation);
+app.get('/api/rider/orders', apiRateLimiter, requireRiderAuth, RiderController.getActiveOrders);
+app.get('/api/rider/all-orders', apiRateLimiter, requireRiderAuth, RiderController.getAllOrders);
+app.get('/api/rider/earnings', apiRateLimiter, requireRiderAuth, RiderController.getEarnings);
+app.post('/api/rider/orders/:orderId/update-status', apiRateLimiter, requireRiderAuth, RiderController.updateOrderStatus);
+app.post('/api/rider/orders/:orderId/verify-otp', apiRateLimiter, requireRiderAuth, RiderController.verifyDeliveryOtp);
+app.all(['/api/rider/complete-current'], apiRateLimiter, requireRiderAuth, RiderController.completeCurrentOrder);
 app.post('/api/rider/simulate-order', apiRateLimiter, RiderController.simulateIncomingOrder);
 app.all('/api/admin/reset-db', RiderController.resetDatabase);
 
 // =============================================================================
 // 5. ENTERPRISE NOTIFICATION SYSTEM REST APIS
 // =============================================================================
-app.get('/api/notifications', apiRateLimiter, RiderController.getNotifications);
-app.post('/api/notifications/send', apiRateLimiter, RiderController.sendNotification);
-app.put('/api/notifications/:id/read', apiRateLimiter, RiderController.markNotificationRead);
-app.put('/api/notifications/read-all', apiRateLimiter, RiderController.markAllNotificationsRead);
+app.get('/api/notifications', apiRateLimiter, requireRiderAuth, RiderController.getNotifications);
+app.post('/api/notifications/send', apiRateLimiter, requireRiderAuth, RiderController.sendNotification);
+app.put('/api/notifications/:id/read', apiRateLimiter, requireRiderAuth, RiderController.markNotificationRead);
+app.put('/api/notifications/read-all', apiRateLimiter, requireRiderAuth, RiderController.markAllNotificationsRead);
 
 // Mock BAP endpoint for local integration test loopbacks
 app.post('/mock/bap/:action', (req: any, res: any) => {

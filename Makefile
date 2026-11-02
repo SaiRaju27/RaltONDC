@@ -262,7 +262,26 @@ lightsail-deploy: ## Run automated Lightsail deployment script with backup & rol
 	@bash deploy/lightsail/deploy-lightsail.sh
 
 # ------------------------------------------------------------------------------
-# 6. Semantic Release & Versioning
+# 6. Git & Multi-Cloud Push Targets (GitHub & AWS CodeCommit)
+# ------------------------------------------------------------------------------
+
+push-all: ## Push main branch to BOTH GitHub and AWS CodeCommit simultaneously
+	@echo -e "${COLOR_INFO}Pushing to both GitHub and AWS CodeCommit...${COLOR_RESET}"
+	@git push origin main
+	@echo -e "${COLOR_SUCCESS}Successfully synced both GitHub and AWS CodeCommit!${COLOR_RESET}"
+
+push-github: ## Push main branch to GitHub ONLY
+	@echo -e "${COLOR_INFO}Pushing to GitHub only...${COLOR_RESET}"
+	@git push github main
+	@echo -e "${COLOR_SUCCESS}Successfully synced GitHub!${COLOR_RESET}"
+
+push-aws: ## Push main branch to AWS CodeCommit ONLY
+	@echo -e "${COLOR_INFO}Pushing to AWS CodeCommit only...${COLOR_RESET}"
+	@git push codecommit main
+	@echo -e "${COLOR_SUCCESS}Successfully synced AWS CodeCommit!${COLOR_RESET}"
+
+# ------------------------------------------------------------------------------
+# 7. Semantic Release & Versioning
 # ------------------------------------------------------------------------------
 
 version-sync: ## Synchronize monorepo versions across apps, services, and packages
