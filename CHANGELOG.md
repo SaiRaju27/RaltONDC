@@ -6,6 +6,12 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 
+## [1.10.0](https://github.com/SaiRaju27/RaltONDC/compare/v1.9.0...v1.10.0) (2026-11-03)
+
+### Features
+
+* **map:** enable continuous mercator panning, trackpad pinch-zoom, and fleet radar hotspots ([338d093](https://github.com/SaiRaju27/RaltONDC/commit/338d093ab8c745f5ff209cdb99a5b60b2929b095))
+
 ## [1.9.0](https://github.com/SaiRaju27/RaltONDC/compare/v1.8.2...v1.9.0) (2026-11-02)
 
 ### Features
