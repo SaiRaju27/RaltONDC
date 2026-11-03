@@ -200,6 +200,25 @@ export function projectMercatorToScreen(
 }
 
 /**
+ * Inverts Web Mercator pixel coordinates back into (lat, lng) at a given zoom level.
+ */
+export function mercatorPixelsToLatLng(
+  px: number,
+  py: number,
+  zoom: number
+): LatLng {
+  const n = Math.pow(2, zoom);
+  const lng = (px / (n * 256)) * 360 - 180;
+  const yVal = 1 - (2 * py) / (n * 256);
+  const clampedY = Math.max(-10, Math.min(10, yVal));
+  const lat = (Math.atan(Math.sinh(Math.PI * clampedY)) * 180) / Math.PI;
+  return {
+    lat: Number(lat.toFixed(6)),
+    lng: Number(lng.toFixed(6)),
+  };
+}
+
+/**
  * Computes all required 256x256 map tiles to cover a viewport of (width x height) around (centerLat, centerLng).
  */
 export function getVisibleTiles(
@@ -219,20 +238,23 @@ export function getVisibleTiles(
   const maxTileX = Math.floor((originX + width) / 256) + 1;
   const minTileY = Math.floor(originY / 256) - 1;
   const maxTileY = Math.floor((originY + height) / 256) + 1;
+  const maxTiles = Math.pow(2, zoom);
 
   const tiles: MapTile[] = [];
   for (let ty = minTileY; ty <= maxTileY; ty++) {
+    if (ty < 0 || ty >= maxTiles) continue;
     for (let tx = minTileX; tx <= maxTileX; tx++) {
       const left = tx * 256 - originX;
       const top = ty * 256 - originY;
+      const normalizedX = ((tx % maxTiles) + maxTiles) % maxTiles;
       const url = tileUrlTemplate
         .replace('{z}', String(zoom))
-        .replace('{x}', String(tx))
+        .replace('{x}', String(normalizedX))
         .replace('{y}', String(ty));
       tiles.push({
         key: `${zoom}-${tx}-${ty}`,
         url,
-        x: tx,
+        x: normalizedX,
         y: ty,
         left: Math.round(left),
         top: Math.round(top),

@@ -8,6 +8,7 @@ import {
   interpolateLatLng,
   latLngToMercatorPixels,
   projectMercatorToScreen,
+  mercatorPixelsToLatLng,
   getVisibleTiles,
   calculateAutoZoom,
 } from '../src/utils/geoUtils';
@@ -147,6 +148,14 @@ describe('Geographic Math & Telemetry Suite', () => {
       const screenPt = projectMercatorToScreen(17.3457, 78.5522, 17.3457, 78.5522, 15, 360, 240);
       expect(screenPt.x).toBe(180);
       expect(screenPt.y).toBe(120);
+    });
+
+    it('mercatorPixelsToLatLng accurately inverts pixel coordinates', () => {
+      const orig = { lat: 17.3457, lng: 78.5522 };
+      const px = latLngToMercatorPixels(orig.lat, orig.lng, 15);
+      const inv = mercatorPixelsToLatLng(px.px, px.py, 15);
+      expect(Math.abs(inv.lat - orig.lat)).toBeLessThan(0.0001);
+      expect(Math.abs(inv.lng - orig.lng)).toBeLessThan(0.0001);
     });
 
     it('getVisibleTiles generates correct grid of Slippy map tiles', () => {

@@ -9,6 +9,7 @@ import {
   LayoutChangeEvent,
   Image,
   PanResponder,
+  Animated,
 } from 'react-native';
 import Svg, {
   Defs,
@@ -30,6 +31,8 @@ import {
   formatEta,
   projectCoordinates,
   projectMercatorToScreen,
+  mercatorPixelsToLatLng,
+  latLngToMercatorPixels,
   getVisibleTiles,
   calculateAutoZoom,
   LatLng,
@@ -37,6 +40,51 @@ import {
 } from './src/utils/geoUtils';
 
 export type MapTheme = 'street' | 'night' | 'satellite';
+
+export interface HotspotInfo {
+  id: string;
+  name: string;
+  sub: string;
+  lat: number;
+  lng: number;
+  badge: string;
+  color: string;
+}
+
+export const LB_NAGAR_HOTSPOTS: HotspotInfo[] = [
+  {
+    id: 'hs-1',
+    name: 'Paradise Biryani Hub',
+    sub: '🔥 14 Live Orders • Sagar Ring Rd',
+    lat: 17.3488,
+    lng: 78.5518,
+    badge: '14 ORDERS',
+    color: '#ef4444',
+  },
+  {
+    id: 'hs-2',
+    name: 'LB Nagar Metro Hub',
+    sub: '⚡ +15% Surge Zone Active',
+    lat: 17.3457,
+    lng: 78.5522,
+    badge: '+15% SURGE',
+    color: '#f59e0b',
+  },
+  {
+    id: 'hs-3',
+    name: 'Kothapet Market Cluster',
+    sub: '📦 High Order Inflow',
+    lat: 17.3625,
+    lng: 78.5412,
+    badge: 'HIGH VOLUME',
+    color: '#10b981',
+  },
+];
+
+export const NEARBY_PARTNERS: Array<{ id: string; label: string; lat: number; lng: number }> = [
+  { id: 'p-1', label: '🛵 Rider #42', lat: 17.3495, lng: 78.5540 },
+  { id: 'p-2', label: '🛵 Rider #87', lat: 17.3430, lng: 78.5490 },
+];
 
 export interface LiveTrackingMapProps {
   mode?: 'radar' | 'order';
@@ -51,15 +99,18 @@ export interface LiveTrackingMapProps {
   isOnline?: boolean;
   orderId?: string;
   defaultTheme?: MapTheme;
+  isExpanded?: boolean;
+  onToggleExpand?: () => void;
+  onInteractionChange?: (isInteracting: boolean) => void;
   onOpenNavigation?: (destLat: number, destLng: number, address?: string) => void;
   onRiderArrived?: (type: 'store' | 'customer') => void;
 }
 
 const TILE_TEMPLATES: Record<MapTheme, string> = {
-  // Esri World Street Map: Commercial-grade rich road cartography with Hyderabad roads, flyovers, LB Nagar Metro, colonies
-  street: 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Street_Map/MapServer/tile/{z}/{y}/{x}',
-  // Esri World Dark Gray Base: Tactical high-contrast night mode
-  night: 'https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Base/MapServer/tile/{z}/{y}/{x}',
+  // CartoDB Voyager @2x: Crisp vector-like Retina slippy map tiles with roads, flyovers, LB Nagar Metro, colonies
+  street: 'https://basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}@2x.png',
+  // CartoDB Dark Matter @2x: High-contrast night tactical mode
+  night: 'https://basemaps.cartocdn.com/rastertiles/dark_all/{z}/{x}/{y}@2x.png',
   // Esri World Imagery: Real-world high-resolution satellite imagery
   satellite: 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',
 };
@@ -78,11 +129,23 @@ export const LiveTrackingMap: React.FC<LiveTrackingMapProps> = ({
   isOnline = true,
   orderId,
   defaultTheme = 'street',
+  isExpanded = false,
+  onToggleExpand,
+  onInteractionChange,
   onOpenNavigation,
   onRiderArrived,
 }) => {
   // Radar mode is active when mode is explicitly 'radar' or when no destination is provided
   const isRadarMode = mode === 'radar' || !destinationLocation;
+
+  const defaultCenterLat =
+    isRadarMode || !destinationLocation
+      ? riderLocation.lat
+      : (riderLocation.lat + destinationLocation.lat) / 2;
+  const defaultCenterLng =
+    isRadarMode || !destinationLocation
+      ? riderLocation.lng
+      : (riderLocation.lng + destinationLocation.lng) / 2;
 
   const [canvasDim, setCanvasDim] = useState<{ width: number; height: number }>({
     width: 360,
@@ -92,11 +155,29 @@ export const LiveTrackingMap: React.FC<LiveTrackingMapProps> = ({
   const [theme, setTheme] = useState<MapTheme>(defaultTheme);
   const [zoomLevel, setZoomLevel] = useState<number>(isRadarMode ? 15 : 14);
   const [manualZoom, setManualZoom] = useState<boolean>(false);
+  const [centerCoord, setCenterCoord] = useState<LatLng>({
+    lat: defaultCenterLat,
+    lng: defaultCenterLng,
+  });
+  const [selectedHotspot, setSelectedHotspot] = useState<HotspotInfo | null>(null);
+
   const [pulsePhase, setPulsePhase] = useState<number>(0);
   const [radarAngle, setRadarAngle] = useState<number>(0);
   const [liveSpeed, setLiveSpeed] = useState<number>(riderSpeedKmh || (isRadarMode ? 0 : 28));
-  const [panOffset, setPanOffset] = useState<{ x: number; y: number }>({ x: 0, y: 0 });
+
+  const pinchScaleAnim = useRef(new Animated.Value(1)).current;
+  const panStartCenterPxRef = useRef<{ px: number; py: number }>({ px: 0, py: 0 });
+  const touchDistStartRef = useRef<number | null>(null);
+  const touchZoomStartRef = useRef<number>(zoomLevel);
   const arrivalReportedRef = useRef<boolean>(false);
+  const containerRef = useRef<any>(null);
+
+  // Sync default center when not manually exploring
+  useEffect(() => {
+    if (!manualZoom) {
+      setCenterCoord({ lat: defaultCenterLat, lng: defaultCenterLng });
+    }
+  }, [defaultCenterLat, defaultCenterLng, manualZoom]);
 
   // Pulse & radar sweep animation loop
   useEffect(() => {
@@ -171,67 +252,41 @@ export const LiveTrackingMap: React.FC<LiveTrackingMapProps> = ({
     }
   }, [distanceMeters, destinationType, onRiderArrived, isRadarMode, destinationLocation]);
 
-  // Center coordinate:
-  // In Radar mode: Centered strictly on rider
-  // In Order mode: Midpoint between rider and destination
-  const rawCenterLat =
-    isRadarMode || !destinationLocation
-      ? riderLocation.lat
-      : (riderLocation.lat + destinationLocation.lat) / 2;
-
-  const rawCenterLng =
-    isRadarMode || !destinationLocation
-      ? riderLocation.lng
-      : (riderLocation.lng + destinationLocation.lng) / 2;
-
-  const centerLat = rawCenterLat;
-  const centerLng = rawCenterLng;
-
-  // Slippy Map Tiles covering this viewport
+  // Infinite, Seamless Slippy Map Tiles calculated directly for active centerCoord
   const currentTileTemplate = TILE_TEMPLATES[theme] || TILE_TEMPLATES.street;
   const visibleTiles: MapTile[] = getVisibleTiles(
-    centerLat,
-    centerLng,
+    centerCoord.lat,
+    centerCoord.lng,
     zoomLevel,
     canvasDim.width,
     canvasDim.height,
     currentTileTemplate
   );
 
-  // Project rider to exact screen coordinates
-  const mercatorRider = projectMercatorToScreen(
+  // Project rider to exact screen coordinates relative to centerCoord
+  const riderPoint = projectMercatorToScreen(
     riderLocation.lat,
     riderLocation.lng,
-    centerLat,
-    centerLng,
+    centerCoord.lat,
+    centerCoord.lng,
     zoomLevel,
     canvasDim.width,
     canvasDim.height
   );
 
-  let riderPoint = {
-    x: mercatorRider.x + panOffset.x,
-    y: mercatorRider.y + panOffset.y,
-  };
-
   let destPoint: { x: number; y: number } | null = null;
   let routePathD = '';
 
   if (!isRadarMode && destinationLocation) {
-    const mercatorDest = projectMercatorToScreen(
+    destPoint = projectMercatorToScreen(
       destinationLocation.lat,
       destinationLocation.lng,
-      centerLat,
-      centerLng,
+      centerCoord.lat,
+      centerCoord.lng,
       zoomLevel,
       canvasDim.width,
       canvasDim.height
     );
-
-    destPoint = {
-      x: mercatorDest.x + panOffset.x,
-      y: mercatorDest.y + panOffset.y,
-    };
 
     // Realistic road curve waypoint following city street grid
     const midX = (riderPoint.x + destPoint.x) / 2 + (riderPoint.y - destPoint.y) * 0.12;
@@ -239,55 +294,133 @@ export const LiveTrackingMap: React.FC<LiveTrackingMapProps> = ({
     routePathD = `M ${riderPoint.x} ${riderPoint.y} Q ${midX} ${midY} ${destPoint.x} ${destPoint.y}`;
   }
 
-  // Pan & Pinch-to-Zoom Gesture Responder
-  const initialTouchDistRef = useRef<number | null>(null);
-  const initialZoomRef = useRef<number>(zoomLevel);
-  const panStartRef = useRef<{ x: number; y: number }>({ x: 0, y: 0 });
-
+  // Smooth Gesture Responder: Continuous Panning + Multi-Touch Pinch
   const panResponder = useRef(
     PanResponder.create({
       onStartShouldSetPanResponder: () => true,
+      onStartShouldSetPanResponderCapture: () => true,
       onMoveShouldSetPanResponder: (_e, gestureState) =>
-        Math.abs(gestureState.dx) > 2 || Math.abs(gestureState.dy) > 2,
+        Math.abs(gestureState.dx) > 1 || Math.abs(gestureState.dy) > 1,
+      onMoveShouldSetPanResponderCapture: (_e, gestureState) =>
+        Math.abs(gestureState.dx) > 1 || Math.abs(gestureState.dy) > 1,
       onPanResponderGrant: (e) => {
-        panStartRef.current = { ...panOffset };
-        const touches = e.nativeEvent.touches;
-        if (touches && touches.length >= 2) {
-          const dx = touches[0].pageX - touches[1].pageX;
-          const dy = touches[0].pageY - touches[1].pageY;
-          initialTouchDistRef.current = Math.hypot(dx, dy);
-          initialZoomRef.current = zoomLevel;
+        onInteractionChange?.(true);
+        setManualZoom(true);
+        const touches = e.nativeEvent.touches || [];
+        panStartCenterPxRef.current = latLngToMercatorPixels(centerCoord.lat, centerCoord.lng, zoomLevel);
+        if (touches.length >= 2) {
+          touchDistStartRef.current = Math.hypot(
+            touches[0].pageX - touches[1].pageX,
+            touches[0].pageY - touches[1].pageY
+          );
+          touchZoomStartRef.current = zoomLevel;
         } else {
-          initialTouchDistRef.current = null;
+          touchDistStartRef.current = null;
         }
       },
       onPanResponderMove: (e, gestureState) => {
-        const touches = e.nativeEvent.touches;
-        if (touches && touches.length >= 2 && initialTouchDistRef.current && initialTouchDistRef.current > 10) {
-          const dx = touches[0].pageX - touches[1].pageX;
-          const dy = touches[0].pageY - touches[1].pageY;
-          const currentDist = Math.hypot(dx, dy);
-          const ratio = currentDist / initialTouchDistRef.current;
-          setManualZoom(true);
-          if (ratio > 1.2) {
-            setZoomLevel(Math.min(18, Math.max(12, Math.round(initialZoomRef.current + Math.log2(ratio) * 1.5))));
-          } else if (ratio < 0.8) {
-            setZoomLevel(Math.min(18, Math.max(12, Math.round(initialZoomRef.current + Math.log2(ratio) * 1.5))));
+        const touches = e.nativeEvent.touches || [];
+        if (touches.length >= 2 && touchDistStartRef.current && touchDistStartRef.current > 10) {
+          // Multi-touch Pinch Gesture
+          const currentDist = Math.hypot(
+            touches[0].pageX - touches[1].pageX,
+            touches[0].pageY - touches[1].pageY
+          );
+          const ratio = currentDist / touchDistStartRef.current;
+          pinchScaleAnim.setValue(Math.min(1.5, Math.max(0.6, ratio)));
+
+          if (ratio > 1.4) {
+            touchDistStartRef.current = currentDist;
+            touchZoomStartRef.current = Math.min(18, zoomLevel + 1);
+            setZoomLevel((prev) => Math.min(18, prev + 1));
+            pinchScaleAnim.setValue(1);
+          } else if (ratio < 0.7) {
+            touchDistStartRef.current = currentDist;
+            touchZoomStartRef.current = Math.max(11, zoomLevel - 1);
+            setZoomLevel((prev) => Math.max(11, prev - 1));
+            pinchScaleAnim.setValue(1);
           }
         } else {
-          setPanOffset({
-            x: panStartRef.current.x + gestureState.dx,
-            y: panStartRef.current.y + gestureState.dy,
-          });
+          // 1-touch or Mouse Drag Panning (Continuous Mercator Translation)
+          const newPx = panStartCenterPxRef.current.px - gestureState.dx;
+          const newPy = panStartCenterPxRef.current.py - gestureState.dy;
+          const newLatLng = mercatorPixelsToLatLng(newPx, newPy, zoomLevel);
+          setCenterCoord(newLatLng);
         }
       },
       onPanResponderRelease: () => {
-        initialTouchDistRef.current = null;
+        onInteractionChange?.(false);
+        touchDistStartRef.current = null;
+        Animated.spring(pinchScaleAnim, {
+          toValue: 1,
+          useNativeDriver: Platform.OS !== 'web',
+        }).start();
+      },
+      onPanResponderTerminate: () => {
+        onInteractionChange?.(false);
+        touchDistStartRef.current = null;
+        pinchScaleAnim.setValue(1);
       },
     })
   ).current;
 
-  // External Turn-by-Turn Navigation launcher (Order mode only)
+  // Web Event Listeners: Active Non-Passive Wheel & Double Click Zoom
+  useEffect(() => {
+    if (Platform.OS === 'web' && typeof document !== 'undefined') {
+      const el = document.getElementById('tracking-map-viewport');
+      if (!el) return;
+
+      let lastWheelTime = 0;
+      const onWheel = (e: WheelEvent) => {
+        e.preventDefault();
+        e.stopPropagation();
+        setManualZoom(true);
+
+        const now = Date.now();
+        if (e.ctrlKey) {
+          // Trackpad pinch gesture on macOS
+          if (now - lastWheelTime > 60) {
+            lastWheelTime = now;
+            const dir = e.deltaY < 0 ? 1 : -1;
+            setZoomLevel((prev) => Math.min(18, Math.max(11, prev + dir)));
+          }
+        } else {
+          // Mouse scroll wheel
+          if (now - lastWheelTime > 110 && Math.abs(e.deltaY) > 8) {
+            lastWheelTime = now;
+            const dir = e.deltaY < 0 ? 1 : -1;
+            setZoomLevel((prev) => Math.min(18, Math.max(11, prev + dir)));
+          }
+        }
+      };
+
+      const onDblClick = (e: MouseEvent) => {
+        e.preventDefault();
+        setManualZoom(true);
+        const rect = el.getBoundingClientRect();
+        const clickX = e.clientX - rect.left;
+        const clickY = e.clientY - rect.top;
+        const centerPx = latLngToMercatorPixels(centerCoord.lat, centerCoord.lng, zoomLevel);
+        const clickedPx = {
+          px: centerPx.px + (clickX - canvasDim.width / 2),
+          py: centerPx.py + (clickY - canvasDim.height / 2),
+        };
+        const nextZoom = Math.min(18, zoomLevel + 1);
+        const clickedLatLng = mercatorPixelsToLatLng(clickedPx.px, clickedPx.py, zoomLevel);
+        setCenterCoord(clickedLatLng);
+        setZoomLevel(nextZoom);
+      };
+
+      el.addEventListener('wheel', onWheel, { passive: false });
+      el.addEventListener('dblclick', onDblClick);
+      return () => {
+        el.removeEventListener('wheel', onWheel);
+        el.removeEventListener('dblclick', onDblClick);
+      };
+    }
+  }, [centerCoord, zoomLevel, canvasDim]);
+
+  // External Navigation launcher
   const handleLaunchExternalNav = () => {
     if (!destinationLocation) return;
     if (typeof onOpenNavigation === 'function') {
@@ -319,15 +452,20 @@ export const LiveTrackingMap: React.FC<LiveTrackingMapProps> = ({
 
   const handleZoomOut = () => {
     setManualZoom(true);
-    setZoomLevel((prev) => Math.max(12, prev - 1));
+    setZoomLevel((prev) => Math.max(11, prev - 1));
   };
 
   const handleRecenter = () => {
     setManualZoom(false);
-    setPanOffset({ x: 0, y: 0 });
+    setSelectedHotspot(null);
     if (isRadarMode || !destinationLocation) {
+      setCenterCoord({ lat: riderLocation.lat, lng: riderLocation.lng });
       setZoomLevel(15);
     } else {
+      setCenterCoord({
+        lat: (riderLocation.lat + destinationLocation.lat) / 2,
+        lng: (riderLocation.lng + destinationLocation.lng) / 2,
+      });
       const computedZ = calculateAutoZoom(
         [riderLocation, destinationLocation],
         canvasDim.width,
@@ -349,7 +487,6 @@ export const LiveTrackingMap: React.FC<LiveTrackingMapProps> = ({
   // Radar ripple sizing
   const pulseRadius1 = 18 + (pulsePhase % 50) * 1.5;
   const pulseOpacity1 = Math.max(0, 1 - (pulsePhase % 50) / 45);
-
   const pulseRadius2 = 18 + ((pulsePhase + 25) % 50) * 1.5;
   const pulseOpacity2 = Math.max(0, 1 - ((pulsePhase + 25) % 50) / 45);
 
@@ -358,51 +495,60 @@ export const LiveTrackingMap: React.FC<LiveTrackingMapProps> = ({
 
   return (
     <View
+      ref={containerRef}
+      nativeID="tracking-map-viewport"
       style={[
         styles.container,
-        { backgroundColor: isNight ? '#0b1318' : isSatellite ? '#0f172a' : '#f0f4f8' },
+        {
+          backgroundColor: isNight ? '#0b1318' : isSatellite ? '#0f172a' : '#f4f6f8',
+        },
+        Platform.OS === 'web'
+          ? ({
+              cursor: 'grab',
+              touchAction: 'none',
+            } as any)
+          : undefined,
       ]}
       onLayout={onLayout}
-      {...({
-        onWheel: (e: any) => {
-          if (e && typeof e.deltaY === 'number') {
-            setManualZoom(true);
-            if (e.deltaY < -15) {
-              setZoomLevel((prev) => Math.min(18, prev + 1));
-            } else if (e.deltaY > 15) {
-              setZoomLevel((prev) => Math.max(12, prev - 1));
-            }
-          }
-        },
-      } as any)}
       {...panResponder.panHandlers}
     >
       {/* =====================================================================
-          1. REAL CITY STREET MAP TILES (Esri World Street Map / Dark / Satellite)
+          1. REAL CITY STREET MAP TILES (CartoDB Voyager / Dark / Satellite)
           ===================================================================== */}
-      <View style={StyleSheet.absoluteFill} pointerEvents="none">
+      <Animated.View
+        style={[
+          StyleSheet.absoluteFill,
+          {
+            transform: [{ scale: pinchScaleAnim }],
+          },
+        ]}
+        pointerEvents="none"
+      >
         {visibleTiles.map((tile) => (
           <Image
             key={tile.key}
             source={{ uri: tile.url }}
-            style={{
-              position: 'absolute',
-              left: tile.left + panOffset.x,
-              top: tile.top + panOffset.y,
-              width: tile.width,
-              height: tile.height,
-              opacity: isNight ? 0.95 : 1.0,
-            }}
+            style={[
+              {
+                position: 'absolute',
+                left: tile.left,
+                top: tile.top,
+                width: tile.width,
+                height: tile.height,
+                opacity: isNight ? 0.95 : 1.0,
+              },
+              Platform.OS === 'web' ? ({ userSelect: 'none' } as any) : undefined,
+            ]}
             resizeMode="cover"
           />
         ))}
-      </View>
+      </Animated.View>
 
       {/* Subtle vignette border gradient overlay */}
       <View style={styles.vignetteOverlay} pointerEvents="none" />
 
       {/* =====================================================================
-          2. SVG VECTOR OVERLAY: RADAR SWEEP, ROUTE, PINS, VEHICLE
+          2. SVG VECTOR OVERLAY: HOTSPOTS, ROUTE, PINS, VEHICLE RADAR
           ===================================================================== */}
       <Svg
         width={canvasDim.width}
@@ -438,10 +584,90 @@ export const LiveTrackingMap: React.FC<LiveTrackingMapProps> = ({
             <Stop offset="70%" stopColor="#ef4444" stopOpacity="0.15" />
             <Stop offset="100%" stopColor="#ef4444" stopOpacity="0" />
           </RadialGradient>
+
+          {/* Hotspot Amber Glow */}
+          <RadialGradient id="amberGlow" cx="50%" cy="50%" rx="50%" ry="50%">
+            <Stop offset="0%" stopColor="#f59e0b" stopOpacity="0.6" />
+            <Stop offset="70%" stopColor="#f59e0b" stopOpacity="0.15" />
+            <Stop offset="100%" stopColor="#f59e0b" stopOpacity="0" />
+          </RadialGradient>
         </Defs>
 
         {/* =====================================================================
-            A. ORDER MODE: ROUTE & DESTINATION PIN (ONLY WHEN ORDER ACTIVE)
+            A. RADAR MODE: CLUSTER DEMAND HOTSPOTS (Paradise, Metro, Kothapet)
+            ===================================================================== */}
+        {isRadarMode &&
+          LB_NAGAR_HOTSPOTS.map((hs) => {
+            const pt = projectMercatorToScreen(
+              hs.lat,
+              hs.lng,
+              centerCoord.lat,
+              centerCoord.lng,
+              zoomLevel,
+              canvasDim.width,
+              canvasDim.height
+            );
+            return (
+              <G key={hs.id} x={pt.x} y={pt.y}>
+                <Circle r="26" fill="url(#amberGlow)" />
+                <Circle r="14" fill={hs.color} opacity="0.2" />
+                <Circle r="6" fill={hs.color} stroke="#ffffff" strokeWidth="1.8" />
+                <G y="-18">
+                  <Rect
+                    x="-42"
+                    y="-9"
+                    width="84"
+                    height="18"
+                    rx="9"
+                    fill="rgba(15, 23, 42, 0.94)"
+                    stroke={hs.color}
+                    strokeWidth="1"
+                  />
+                  <SvgText
+                    x="0"
+                    y="3"
+                    textAnchor="middle"
+                    fill="#ffffff"
+                    fontSize="8"
+                    fontWeight="bold"
+                  >
+                    {hs.badge}
+                  </SvgText>
+                </G>
+              </G>
+            );
+          })}
+
+        {/* =====================================================================
+            B. RADAR MODE: NEARBY DELIVERY PARTNER BLIPS (Fleet Radar)
+            ===================================================================== */}
+        {isRadarMode &&
+          NEARBY_PARTNERS.map((partner) => {
+            const pt = projectMercatorToScreen(
+              partner.lat,
+              partner.lng,
+              centerCoord.lat,
+              centerCoord.lng,
+              zoomLevel,
+              canvasDim.width,
+              canvasDim.height
+            );
+            return (
+              <G key={partner.id} x={pt.x} y={pt.y}>
+                <Circle r="12" fill="none" stroke="#10b981" strokeWidth="1" strokeDasharray="2,2" opacity="0.6" />
+                <Circle r="4" fill="#10b981" stroke="#ffffff" strokeWidth="1" />
+                <G y="14">
+                  <Rect x="-28" y="-6" width="56" height="12" rx="6" fill="rgba(6, 78, 59, 0.88)" />
+                  <SvgText x="0" y="2.5" textAnchor="middle" fill="#a7f3d0" fontSize="7" fontWeight="bold">
+                    {partner.label}
+                  </SvgText>
+                </G>
+              </G>
+            );
+          })}
+
+        {/* =====================================================================
+            C. ORDER MODE: ROUTE & DESTINATION PIN (ONLY WHEN ORDER ACTIVE)
             ===================================================================== */}
         {!isRadarMode && destPoint && (
           <>
@@ -515,15 +741,13 @@ export const LiveTrackingMap: React.FC<LiveTrackingMapProps> = ({
         )}
 
         {/* =====================================================================
-            B. RADAR MODE: CONCENTRIC DISCOVERY RINGS & 360° SWEEP SCANNER
+            D. RADAR MODE: CONCENTRIC SCANNER RINGS & 360° SWEEP CONE
             ===================================================================== */}
         {isRadarMode && (
           <G x={riderPoint.x} y={riderPoint.y}>
-            {/* Outer Cluster Radius Guideline (5 km coverage zone) */}
             <Circle r="110" fill="none" stroke="#10b981" strokeWidth="1" strokeDasharray="4,6" opacity="0.3" />
             <Circle r="75" fill="none" stroke="#10b981" strokeWidth="1" strokeDasharray="3,5" opacity="0.25" />
 
-            {/* Rotating Radar Sweep Cone */}
             <G transform={`rotate(${radarAngle}, 0, 0)`}>
               <Path
                 d="M 0 0 L 78 -78 A 110 110 0 0 1 110 0 Z"
@@ -535,7 +759,7 @@ export const LiveTrackingMap: React.FC<LiveTrackingMapProps> = ({
         )}
 
         {/* =====================================================================
-            C. ORIGIN PIN (STORE OR LIVE RIDER VEHICLE)
+            E. ORIGIN PIN (STORE OR LIVE RIDER VEHICLE)
             ===================================================================== */}
         {originLabel === 'store' ? (
           <G x={riderPoint.x} y={riderPoint.y}>
@@ -587,10 +811,7 @@ export const LiveTrackingMap: React.FC<LiveTrackingMapProps> = ({
 
             {/* Vehicle Body aligned with dynamic bearing */}
             <G transform={`rotate(${calculatedBearing}, 0, 0)`}>
-              {/* Front Headlight Beam */}
               <Path d="M -7 -10 L 0 -26 L 7 -10 Z" fill="#00e676" opacity="0.45" />
-
-              {/* Scooter / Bike Body (Swiggy / Zomato delivery style) */}
               <Circle r="13" fill="#042f1e" stroke="#00e676" strokeWidth="2.5" />
               <Rect x="-3" y="-10" width="6" height="20" rx="3" fill="#00e676" />
               <Circle cx="0" cy="0" r="4.5" fill="#ffffff" />
@@ -628,7 +849,7 @@ export const LiveTrackingMap: React.FC<LiveTrackingMapProps> = ({
       {/* =====================================================================
           3. TOP CONTROLS & STATUS BADGES
           ===================================================================== */}
-      <View style={styles.topBadgeRow}>
+      <View style={styles.topBadgeRow} pointerEvents="box-none">
         <View style={styles.gpsActivePill}>
           <View style={[styles.gpsDot, isOnline ? styles.gpsDotOnline : styles.gpsDotOffline]} />
           <Text style={styles.gpsText}>
@@ -647,10 +868,30 @@ export const LiveTrackingMap: React.FC<LiveTrackingMapProps> = ({
             <Text style={styles.arrivingText}>⚡ ARRIVING SOON</Text>
           </View>
         )}
+
+        {selectedHotspot && (
+          <TouchableOpacity
+            style={styles.hotspotBannerPill}
+            onPress={() => setSelectedHotspot(null)}
+            activeOpacity={0.8}
+          >
+            <Text style={styles.hotspotBannerText}>{selectedHotspot.sub}</Text>
+          </TouchableOpacity>
+        )}
       </View>
 
-      {/* Top-Right: External Navigation & Theme Selector */}
-      <View style={styles.topRightControls}>
+      {/* Top-Right: Fullscreen Toggle, Navigation & Theme Selector */}
+      <View style={styles.topRightControls} pointerEvents="box-none">
+        {typeof onToggleExpand === 'function' && (
+          <TouchableOpacity
+            style={styles.expandToggleBtn}
+            onPress={onToggleExpand}
+            activeOpacity={0.8}
+          >
+            <Text style={styles.expandToggleText}>{isExpanded ? '↙ Collapse' : '⛶ Expand'}</Text>
+          </TouchableOpacity>
+        )}
+
         {!isRadarMode && destinationLocation && (
           <TouchableOpacity
             style={styles.navFloatingBtn}
@@ -675,7 +916,7 @@ export const LiveTrackingMap: React.FC<LiveTrackingMapProps> = ({
       </View>
 
       {/* Vertical Map Control Column (Zoom In, Out, Recenter) */}
-      <View style={styles.mapControlCol}>
+      <View style={styles.mapControlCol} pointerEvents="box-none">
         <TouchableOpacity style={styles.zoomBtn} onPress={handleZoomIn} activeOpacity={0.8}>
           <Text style={styles.zoomBtnText}>+</Text>
         </TouchableOpacity>
@@ -690,7 +931,7 @@ export const LiveTrackingMap: React.FC<LiveTrackingMapProps> = ({
       {/* =====================================================================
           4. FLOATING TELEMETRY HUD (Context-aware: Radar mode vs Order mode)
           ===================================================================== */}
-      <View style={styles.hudContainer}>
+      <View style={styles.hudContainer} pointerEvents="box-none">
         {isRadarMode ? (
           <>
             {/* Metric 1: Radar Mode Status */}
@@ -767,7 +1008,7 @@ const styles = StyleSheet.create({
     right: 0,
     bottom: 0,
     borderWidth: 1,
-    borderColor: 'rgba(0, 0, 0, 0.1)',
+    borderColor: 'rgba(0, 0, 0, 0.08)',
     borderRadius: 16,
   },
   topBadgeRow: {
@@ -829,6 +1070,19 @@ const styles = StyleSheet.create({
     fontWeight: '800',
     letterSpacing: 0.5,
   },
+  hotspotBannerPill: {
+    backgroundColor: 'rgba(15, 23, 42, 0.94)',
+    paddingHorizontal: 8,
+    paddingVertical: 5,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#f59e0b',
+  },
+  hotspotBannerText: {
+    color: '#fbbf24',
+    fontSize: 9.5,
+    fontWeight: '700',
+  },
   topRightControls: {
     position: 'absolute',
     top: 10,
@@ -837,6 +1091,24 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: 6,
     zIndex: 10,
+  },
+  expandToggleBtn: {
+    backgroundColor: 'rgba(15, 23, 42, 0.92)',
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.25)',
+    paddingHorizontal: 8,
+    paddingVertical: 5,
+    borderRadius: 8,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.25,
+    shadowRadius: 3,
+    elevation: 2,
+  },
+  expandToggleText: {
+    color: '#ffffff',
+    fontSize: 10,
+    fontWeight: '700',
   },
   navFloatingBtn: {
     backgroundColor: 'rgba(15, 23, 42, 0.92)',
@@ -885,7 +1157,7 @@ const styles = StyleSheet.create({
     width: 32,
     height: 32,
     borderRadius: 8,
-    backgroundColor: 'rgba(255, 255, 255, 0.92)',
+    backgroundColor: 'rgba(255, 255, 255, 0.94)',
     alignItems: 'center',
     justifyContent: 'center',
     borderWidth: 1,

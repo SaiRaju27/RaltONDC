@@ -195,6 +195,9 @@ const LiveRouteMapLayer: React.FC<{
   destinationType?: 'store' | 'customer';
   isOnline?: boolean;
   orderId?: string;
+  isExpanded?: boolean;
+  onToggleExpand?: () => void;
+  onInteractionChange?: (isInteracting: boolean) => void;
   onPressLocation?: (lat: number, lng: number, address?: string) => void;
 }> = ({
   mode,
@@ -208,6 +211,9 @@ const LiveRouteMapLayer: React.FC<{
   destinationType = 'customer',
   isOnline = true,
   orderId,
+  isExpanded,
+  onToggleExpand,
+  onInteractionChange,
   onPressLocation,
 }) => {
   const isRadarMode = mode === 'radar' || (!lat && !lng);
@@ -241,6 +247,9 @@ const LiveRouteMapLayer: React.FC<{
         destinationType={destinationType}
         isOnline={isOnline}
         orderId={orderId}
+        isExpanded={isExpanded}
+        onToggleExpand={onToggleExpand}
+        onInteractionChange={onInteractionChange}
         onOpenNavigation={onPressLocation}
       />
     </View>
@@ -263,6 +272,10 @@ export const DeliveryDashboard: React.FC<DeliveryDashboardProps> = ({
   const [availableOrders, setAvailableOrders] = useState<any[]>([]);
   const knownOrderIdsRef = useRef<Set<string>>(new Set());
   const wsRef = useRef<WebSocket | null>(null);
+
+  // Map interaction and expand state
+  const [isMapExpanded, setIsMapExpanded] = useState<boolean>(false);
+  const [isMapInteracting, setIsMapInteracting] = useState<boolean>(false);
 
   // Profile View & Edit Form State
   const [isEditingProfile, setIsEditingProfile] = useState<boolean>(false);
@@ -975,6 +988,7 @@ export const DeliveryDashboard: React.FC<DeliveryDashboardProps> = ({
       <ScrollView
         contentContainerStyle={dashStyles.scrollContent}
         showsVerticalScrollIndicator={false}
+        scrollEnabled={!isMapInteracting}
       >
         {/* =================================================================== */}
         {/* TAB 1: RADAR (Available Orders for Delivery)                         */}
@@ -982,7 +996,7 @@ export const DeliveryDashboard: React.FC<DeliveryDashboardProps> = ({
         {activeTab === 'radar' && (
           <View style={{ gap: 14 }}>
             {/* Hero Interactive Map Window (Zomato / Swiggy / Uber style) */}
-            <View style={dashStyles.radarMapHeader}>
+            <View style={[dashStyles.radarMapHeader, isMapExpanded && dashStyles.radarMapHeaderExpanded]}>
               <LiveRouteMapLayer
                 mode="radar"
                 riderLat={riderCoords.lat}
@@ -990,6 +1004,9 @@ export const DeliveryDashboard: React.FC<DeliveryDashboardProps> = ({
                 label="LB Nagar Radar Map"
                 zoom={15}
                 isOnline={isOnline}
+                isExpanded={isMapExpanded}
+                onToggleExpand={() => setIsMapExpanded((prev) => !prev)}
+                onInteractionChange={setIsMapInteracting}
               />
             </View>
 
@@ -2768,6 +2785,9 @@ const dashStyles = StyleSheet.create({
     shadowOpacity: 0.12,
     shadowRadius: 8,
     elevation: 3,
+  },
+  radarMapHeaderExpanded: {
+    height: 520,
   },
   quickShiftRibbon: {
     flexDirection: 'row',
