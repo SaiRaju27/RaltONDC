@@ -533,13 +533,14 @@ export default function App() {
   });
   const [authToken, setAuthToken] = useState<string>('');
 
-  // Enterprise Safe API Fetch with timeout, JWT token attachment, and fallback
+  // Enterprise Safe API Fetch with timeout and JWT token attachment
   const apiFetch = async (
     endpoint: string,
     options: RequestInit = {},
-    timeoutMs: number = 4000
+    timeoutMs: number = 5000
   ): Promise<{ ok: boolean; status: number; data: any; error?: string }> => {
-    const url = `${activeApiUrl}${endpoint.startsWith('/') ? endpoint : `/${endpoint}`}`;
+    const effectiveBase = activeApiUrl || resolveApiUrl();
+    const url = `${effectiveBase}${endpoint.startsWith('/') ? endpoint : `/${endpoint}`}`;
     const headers: Record<string, string> = {
       'Content-Type': 'application/json',
       Accept: 'application/json',
@@ -557,22 +558,6 @@ export default function App() {
       const data = await res.json().catch(() => null);
       return { ok: res.ok, status: res.status, data };
     } catch (err: any) {
-      if (activeApiUrl !== PRODUCTION_API_URL) {
-        try {
-          const fallbackUrl = `${PRODUCTION_API_URL}${endpoint.startsWith('/') ? endpoint : `/${endpoint}`}`;
-          const controller = new AbortController();
-          const timer = setTimeout(() => controller.abort(), timeoutMs);
-          const res = await fetch(fallbackUrl, { ...options, headers, signal: controller.signal });
-          clearTimeout(timer);
-          const data = await res.json().catch(() => null);
-          if (res.ok) {
-            setActiveApiUrl(PRODUCTION_API_URL);
-          }
-          return { ok: res.ok, status: res.status, data };
-        } catch (fbErr: any) {
-          return { ok: false, status: 0, data: null, error: fbErr.message || 'Network request failed' };
-        }
-      }
       return { ok: false, status: 0, data: null, error: err.message || 'Network request failed' };
     }
   };
@@ -1020,6 +1005,14 @@ export default function App() {
           }
         } else if (!res.ok || res.data?.success === false) {
           setIsSendingOtp(false);
+          const currentEndpoint = activeApiUrl || resolveApiUrl();
+          if (res.status === 0 || !res.data) {
+            const netErrorMsg = `Could not connect to backend server at ${currentEndpoint}. Please verify the backend server is running and your device is connected to the same Wi-Fi network.`;
+            setAuthError(netErrorMsg);
+            Alert.alert('Connection Error', netErrorMsg);
+            return;
+          }
+
           const errorMsg = res.data?.error || (authMode === 'login'
             ? `No registered partner account found for +91 ${cleanPhone}. Please register first.`
             : 'Could not send verification code.');
@@ -1168,6 +1161,12 @@ Unauthorized users cannot log in. Please register first to join as a delivery pa
         setRider(DEMO_RIDER_FALLBACK);
         setIsAuthenticated(true);
         setCurrentScreen('main');
+        return;
+      }
+
+      if (res.status === 0 || !res.data) {
+        const currentEndpoint = activeApiUrl || resolveApiUrl();
+        Alert.alert('Connection Error', `Could not reach server at ${currentEndpoint}. Please ensure your device is connected to the same Wi-Fi network.`);
         return;
       }
 
@@ -2350,6 +2349,8 @@ Unauthorized users cannot log in. Please register first to join as a delivery pa
                   <Text style={{ fontSize: 18, color: '#141b2b', fontWeight: 'bold' }}>←</Text>
                 </TouchableOpacity>
 
+
+
                 <TouchableOpacity
                   style={loginStyles.iconCircleBtn}
                   onPress={() =>
@@ -2520,15 +2521,17 @@ Unauthorized users cannot log in. Please register first to join as a delivery pa
             city: profileData.hub === 'hiteccity' ? 'Hyderabad' : 'Bangalore',
             workArea: profileData.hub === 'hiteccity' ? 'Hitec City Metro Cluster' : 'Indiranagar Hub',
             dob: profileData.dob || '',
+            gender: 'Male',
             vehicle_type: profileData.vehicleType === 'ev' ? 'electric' : profileData.vehicleType === 'bicycle' ? 'bicycle' : 'motorcycle',
             vehicle_number: profileData.vehiclePlate || '',
             dl_number: profileData.dlNumber || '',
-            aadhaar_number: profileData.aadhaarNumber || '',
-            bank_account_number: profileData.bankAccount || '',
-            bank_ifsc: profileData.bankIfsc || '',
-            bank_name: profileData.bankIfsc?.toUpperCase().startsWith('HDFC') ? 'HDFC Bank' : 'Primary Bank',
+            pan_number: profileData.panNumber || profileData.pan_number || '',
+            aadhaar_number: profileData.aadhaarNumber || profileData.aadhaar_number || '',
+            bank_account_number: profileData.bankAccount || profileData.bank_account_number || '',
+            bank_ifsc: profileData.bankIfsc || profileData.bank_ifsc || '',
+            bank_name: profileData.bank_name || (profileData.bankIfsc?.toUpperCase().startsWith('HDFC') ? 'HDFC Bank' : 'Primary Bank'),
             account_holder_name: profileData.name || 'Delivery Partner',
-            upi_id: profileData.upiId || '',
+            upi_id: profileData.upiId || profileData.upi_id || '',
             rating: 5.0,
             total_orders: 0,
             total_earnings: 0,
@@ -2539,14 +2542,15 @@ Unauthorized users cannot log in. Please register first to join as a delivery pa
 
           try {
             const controller = new AbortController();
-            const timeoutId = setTimeout(() => controller.abort(), 5000);
+            const timeoutId = setTimeout(() => controller.abort(), 8000);
             const targetUrl = activeApiUrl || resolveApiUrl();
             const regRes = await fetch(targetUrl + '/api/rider/register', {
               signal: controller.signal,
               method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
+              headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
               body: JSON.stringify(newProfile),
             });
+            clearTimeout(timeoutId);
             const regData = await regRes.json().catch(() => null);
             if (regData && regData.rider) {
               setRider(regData.rider);
@@ -2560,7 +2564,7 @@ Unauthorized users cannot log in. Please register first to join as a delivery pa
           setIsRegisteringUser(false);
           setRiderName(newProfile.name);
           setWorkArea(newProfile.workArea || 'Hitec City Metro Cluster');
-          }}
+        }}
         apiUrl={activeApiUrl || resolveApiUrl()}
         existingRider={rider}
         onFinishAndGoDashboard={() => {

@@ -118,6 +118,27 @@ describe('Admin, Document Controller & Document Worker Coverage Suite', () => {
       expect(res.body.success).toBe(true);
       expect(res.body.rider.is_online).toBe(0);
     });
+
+    it('POST /api/admin/login authenticates valid admin credentials', async () => {
+      const res = await request(app)
+        .post('/api/admin/login')
+        .send({ username: 'admin', password: 'admin123' });
+
+      expect(res.status).toBe(200);
+      expect(res.body.success).toBe(true);
+      expect(res.body.token).toBeDefined();
+      expect(res.body.admin.role).toBe('ADMIN');
+    });
+
+    it('POST /api/admin/login rejects invalid admin credentials', async () => {
+      const res = await request(app)
+        .post('/api/admin/login')
+        .send({ username: 'admin', password: 'wrongpassword' });
+
+      expect(res.status).toBe(401);
+      expect(res.body.success).toBe(false);
+      expect(res.body.error).toContain('Invalid admin username or password');
+    });
   });
 
   describe('DocumentController & Chunked Upload Pipeline', () => {
@@ -385,6 +406,46 @@ describe('Admin, Document Controller & Document Worker Coverage Suite', () => {
       const resValid2: any = { status: jest.fn().mockReturnThis(), json: jest.fn() };
       await RiderController.responseDigioKyc(reqValid, resValid2);
       expect(resValid2.json).toHaveBeenCalled();
+    });
+
+    it('AdminController.updateRiderProfile updates DOB and profile fields or 404s', async () => {
+      // 404 for non-existent rider
+      const res404 = await request(app)
+        .post('/api/admin/riders/NON_EXISTENT_RIDER_999/update')
+        .send({ dob: '01-01-2000' });
+      expect(res404.status).toBe(404);
+
+      // Success update for test rider
+      const resSuccess = await request(app)
+        .post(`/api/admin/riders/${testRiderId}/update`)
+        .send({
+          dob: '20-10-1999',
+          name: 'Updated Name',
+          father_name: 'Father Name',
+          dl_number: 'DL-999',
+          pan_number: 'PAN999',
+          aadhaar_number: '123412341234',
+          bank_account_number: '9988776655',
+          bank_ifsc: 'HDFC0001'
+        });
+      expect(resSuccess.status).toBe(200);
+      expect(resSuccess.body.success).toBe(true);
+      expect(resSuccess.body.rider.dob).toBe('20-10-1999');
+    });
+
+    it('DocumentController.previewDocument serves SVG fallback when file_data is empty', async () => {
+      await run(`DELETE FROM rider_documents WHERE id = 'DOC-EMPTY-DATA-01'`);
+      await run(`
+        INSERT INTO rider_documents (
+          id, rider_id, doc_type, file_name, mime_type, file_size, file_data, status
+        ) VALUES (
+          'DOC-EMPTY-DATA-01', '${testRiderId}', 'pan_card', 'empty.jpg', 'image/jpeg', 0,
+          '', 'APPROVED'
+        )
+      `);
+      const res = await request(app).get('/api/documents/DOC-EMPTY-DATA-01/preview');
+      expect(res.status).toBe(200);
+      expect(res.headers['content-type']).toContain('image/svg+xml');
     });
   });
 });

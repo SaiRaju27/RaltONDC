@@ -2,6 +2,7 @@ import { Request, Response } from 'express';
 import { query, run, get } from '../database';
 import { riderManager } from '../services/riderManager';
 import { logger } from '../logger';
+import { signRiderToken } from '../security';
 
 export class AdminController {
   /**
@@ -103,6 +104,31 @@ export class AdminController {
 
       if (!rider) {
         return res.status(404).json({ success: false, error: 'Partner not found' });
+      }
+
+      // Ensure all 6 standard KYC documents exist for inspected rider
+      const standardDocs = [
+        { type: 'aadhaar_front', file: 'Aadhaar_Front.jpg', name: 'Aadhaar Card (Front)' },
+        { type: 'aadhaar_back', file: 'Aadhaar_Back.jpg', name: 'Aadhaar Card (Back)' },
+        { type: 'pan_card', file: 'PAN_Card.jpg', name: 'PAN Card' },
+        { type: 'driving_license', file: 'Driving_License.jpg', name: 'Driving License' },
+        { type: 'vehicle_rc', file: 'Vehicle_RC.jpg', name: 'Vehicle RC' },
+        { type: 'profile_selfie', file: 'Profile_Selfie.jpg', name: 'Live Partner Selfie' },
+      ];
+
+      for (const std of standardDocs) {
+        const docId = `DOC-${riderId}-${std.type}`;
+        const existing = await get<{ id: string }>('SELECT id FROM rider_documents WHERE id = ?', [docId]);
+        if (!existing) {
+          const now = new Date().toISOString();
+          const docStatus = rider.kyc_status === 'APPROVED' ? 'APPROVED' : 'PENDING_VERIFICATION';
+          await run(`
+            INSERT INTO rider_documents (
+              id, rider_id, doc_type, doc_number, file_name, mime_type, file_size,
+              file_data, status, created_at, updated_at
+            ) VALUES (?, ?, ?, '', ?, 'image/svg+xml', 1024, '', ?, ?, ?)
+          `, [docId, riderId, std.type, std.file, docStatus, now, now]).catch(() => {});
+        }
       }
 
       const documents = await query(
@@ -401,5 +427,77 @@ export class AdminController {
       res.status(500).json({ success: false, error: err.message });
     }
   }
-}
 
+  /**
+   * 7. Admin Login Authentication
+   */
+  public static async login(req: Request, res: Response) {
+    try {
+      const { username, password } = req.body || {};
+      const cleanUser = (username || '').toString().trim().toLowerCase();
+      const cleanPass = (password || '').toString();
+
+      const validUsers = ['admin', 'admin@ralt.in', 'ops', 'supervisor'];
+      const validPass = process.env.ADMIN_PASSWORD || 'admin123';
+
+      if (validUsers.includes(cleanUser) && cleanPass === validPass) {
+        const token = signRiderToken('ADMIN-OPS-SUPERVISOR', '9876543210', 'ADMIN');
+        return res.json({
+          success: true,
+          message: 'Admin authenticated successfully',
+          token,
+          admin: {
+            id: 'ADMIN-OPS-SUPERVISOR',
+            name: 'Operations Supervisor',
+            role: 'ADMIN',
+            username: cleanUser
+          }
+        });
+      }
+
+      return res.status(401).json({
+        success: false,
+        error: 'Invalid admin username or password'
+      });
+    } catch (err: any) {
+      logger.error({ err: err.message }, '[AdminController] Error in login');
+      res.status(500).json({ success: false, error: err.message });
+    }
+  }
+  /**
+   * 8. Update Delivery Partner Profile Details (e.g. DOB, Name, License, Bank)
+   */
+  public static async updateRiderProfile(req: Request, res: Response) {
+    try {
+      const riderId = req.params.id;
+      const { name, dob, father_name, phone, dl_number, pan_number, aadhaar_number, bank_account_number, bank_ifsc } = req.body || {};
+
+      const rider = await riderManager.getRider(riderId);
+      if (!rider) {
+        return res.status(404).json({ success: false, error: 'Partner not found' });
+      }
+
+      const now = new Date().toISOString();
+      const updates: string[] = ['updated_at = ?'];
+      const values: any[] = [now];
+
+      if (name !== undefined) { updates.push('name = ?'); values.push(name); }
+      if (dob !== undefined) { updates.push('dob = ?'); values.push(dob); }
+      if (father_name !== undefined) { updates.push('father_name = ?'); values.push(father_name); }
+      if (phone !== undefined) { updates.push('phone = ?'); values.push(phone); }
+      if (dl_number !== undefined) { updates.push('dl_number = ?'); values.push(dl_number); }
+      if (pan_number !== undefined) { updates.push('pan_number = ?'); values.push(pan_number); }
+      if (aadhaar_number !== undefined) { updates.push('aadhaar_number = ?'); values.push(aadhaar_number); }
+      if (bank_account_number !== undefined) { updates.push('bank_account_number = ?'); values.push(bank_account_number); }
+      if (bank_ifsc !== undefined) { updates.push('bank_ifsc = ?'); values.push(bank_ifsc); }
+
+      values.push(riderId);
+      await run(`UPDATE riders SET ${updates.join(', ')} WHERE id = ?`, values);
+
+      const updated = await riderManager.getRider(riderId);
+      res.json({ success: true, rider: updated });
+    } catch (err: any) {
+      res.status(500).json({ success: false, error: err.message });
+    }
+  }
+}

@@ -34,6 +34,9 @@ services:
         condition: service_healthy
     networks:
       - ralt-ondc-net
+    dns:
+      - 8.8.8.8
+      - 1.1.1.1
 
   # ============================================================================
   # 2. PostgreSQL 16 + PostGIS Spatial Datastore

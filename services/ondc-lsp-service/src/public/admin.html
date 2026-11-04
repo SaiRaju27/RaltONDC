@@ -3,14 +3,14 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>RALT Logistics • Fleet Partner Operations & KYC Portal</title>
+  <title>RALT Logistics • Fleet Partner Operations & Admin Console</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
   <style>
     :root {
       --brand-primary: #042f1e;
-      --brand-primary-light: #0a4d33;
+      --brand-primary-dark: #021a11;
       --brand-accent: #00855d;
       --brand-accent-hover: #006b4b;
       --brand-mint: #e6f4ef;
@@ -21,26 +21,22 @@
       --text-main: #0f172a;
       --text-muted: #64748b;
       --text-sub: #475569;
-      --status-approved-bg: #dcfce7;
-      --status-approved-text: #166534;
-      --status-approved-border: #bbf7d0;
-      --status-pending-bg: #fef3c7;
-      --status-pending-text: #92400e;
+      --status-approved-bg: #ecfdf5;
+      --status-approved-text: #065f46;
+      --status-approved-border: #a7f3d0;
+      --status-pending-bg: #fffbeb;
+      --status-pending-text: #b45309;
       --status-pending-border: #fde68a;
-      --status-action-bg: #ffe4e6;
-      --status-action-text: #9f1239;
-      --status-action-border: #fecdd3;
+      --status-action-bg: #fef2f2;
+      --status-action-text: #b91c1c;
+      --status-action-border: #fecaca;
       --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
       --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.07), 0 2px 4px -2px rgba(0, 0, 0, 0.05);
       --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.08), 0 4px 6px -4px rgba(0, 0, 0, 0.04);
       --shadow-xl: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.05);
     }
 
-    * {
-      box-sizing: border-box;
-      margin: 0;
-      padding: 0;
-    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
 
     body {
       font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, sans-serif;
@@ -50,11 +46,163 @@
       line-height: 1.5;
     }
 
-    /* Top Navigation Header */
+    /* ADMIN LOGIN SCREEN */
+    #adminLoginSection {
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: linear-gradient(135deg, #042f1e 0%, #083b27 50%, #002113 100%);
+      padding: 24px;
+      position: relative;
+    }
+
+    .login-container {
+      width: 100%;
+      max-width: 440px;
+      background: #ffffff;
+      border-radius: 20px;
+      box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.35);
+      padding: 36px 32px;
+      position: relative;
+      overflow: hidden;
+      border: 1px solid rgba(255, 255, 255, 0.2);
+    }
+
+    .login-brand-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      background: var(--brand-mint);
+      color: var(--brand-accent);
+      padding: 6px 14px;
+      border-radius: 20px;
+      font-size: 12px;
+      font-weight: 700;
+      margin-bottom: 20px;
+    }
+
+    .login-title {
+      font-size: 24px;
+      font-weight: 800;
+      color: var(--brand-primary);
+      letter-spacing: -0.5px;
+      margin-bottom: 6px;
+    }
+
+    .login-subtitle {
+      font-size: 13px;
+      color: var(--text-muted);
+      line-height: 18px;
+      margin-bottom: 24px;
+    }
+
+    .form-group { margin-bottom: 18px; }
+
+    .form-label {
+      display: block;
+      font-size: 12px;
+      font-weight: 700;
+      color: var(--brand-primary);
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      margin-bottom: 6px;
+    }
+
+    .form-input-wrap {
+      position: relative;
+      display: flex;
+      align-items: center;
+    }
+
+    .form-input-icon {
+      position: absolute;
+      left: 14px;
+      font-size: 16px;
+      color: var(--text-muted);
+    }
+
+    .form-input {
+      width: 100%;
+      height: 48px;
+      border: 1.5px solid var(--brand-border);
+      border-radius: 12px;
+      padding: 0 14px 0 42px;
+      font-size: 14px;
+      font-weight: 600;
+      color: var(--text-main);
+      background: #ffffff;
+      transition: all 0.2s ease;
+      font-family: inherit;
+    }
+
+    .form-input:focus {
+      outline: none;
+      border-color: var(--brand-border-focus);
+      box-shadow: 0 0 0 3px rgba(0, 133, 93, 0.15);
+    }
+
+    .login-error-banner {
+      display: none;
+      background: var(--status-action-bg);
+      border: 1px solid var(--status-action-border);
+      color: var(--status-action-text);
+      border-radius: 10px;
+      padding: 10px 14px;
+      font-size: 12px;
+      font-weight: 600;
+      margin-bottom: 18px;
+    }
+
+    .btn-login-submit {
+      width: 100%;
+      height: 50px;
+      background: var(--brand-primary);
+      color: #ffffff;
+      border: none;
+      border-radius: 12px;
+      font-size: 15px;
+      font-weight: 700;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+      box-shadow: 0 4px 12px rgba(4, 47, 30, 0.25);
+      transition: all 0.2s ease;
+    }
+
+    .btn-login-submit:hover {
+      background: var(--brand-accent);
+      transform: translateY(-1px);
+      box-shadow: 0 6px 16px rgba(0, 133, 93, 0.35);
+    }
+
+    .demo-credentials-pill {
+      margin-top: 20px;
+      background: #f1f5f9;
+      border: 1px dashed #cbd5e1;
+      border-radius: 10px;
+      padding: 10px 14px;
+      text-align: center;
+      font-size: 11px;
+      color: var(--text-sub);
+      cursor: pointer;
+      transition: background 0.2s ease;
+    }
+
+    .demo-credentials-pill:hover { background: #e2e8f0; }
+
+    /* ADMIN DASHBOARD */
+    #adminDashboardSection {
+      display: none;
+      min-height: 100vh;
+    }
+
     .header {
       background: var(--brand-primary);
       color: #ffffff;
-      padding: 16px 32px;
+      padding: 14px 28px;
       display: flex;
       align-items: center;
       justify-content: space-between;
@@ -68,37 +216,36 @@
     .brand-group {
       display: flex;
       align-items: center;
-      gap: 14px;
+      gap: 12px;
     }
 
     .brand-logo-icon {
-      width: 42px;
-      height: 42px;
+      width: 40px;
+      height: 40px;
       border-radius: 12px;
       background: linear-gradient(135deg, #00855d 0%, #059669 100%);
       display: flex;
       align-items: center;
       justify-content: center;
-      font-size: 22px;
+      font-size: 20px;
       box-shadow: 0 4px 12px rgba(0, 133, 93, 0.4);
     }
 
     .brand-title {
-      font-size: 19px;
+      font-size: 18px;
       font-weight: 800;
-      letter-spacing: -0.4px;
+      letter-spacing: -0.3px;
       display: flex;
       align-items: center;
       gap: 10px;
     }
 
     .brand-tag {
-      font-size: 11px;
+      font-size: 10px;
       font-weight: 700;
       text-transform: uppercase;
       background: rgba(255, 255, 255, 0.15);
       color: #a7f3d0;
-      border: 1px solid rgba(255, 255, 255, 0.25);
       padding: 3px 8px;
       border-radius: 6px;
       letter-spacing: 0.5px;
@@ -106,282 +253,270 @@
 
     .brand-sub {
       font-size: 12px;
-      color: #94a3b8;
-      font-weight: 500;
+      color: #a7f3d0;
       margin-top: 1px;
     }
 
     .header-actions {
       display: flex;
       align-items: center;
-      gap: 12px;
+      gap: 14px;
     }
 
     .status-badge {
-      display: flex;
+      display: inline-flex;
       align-items: center;
-      gap: 8px;
+      gap: 6px;
+      background: rgba(255, 255, 255, 0.1);
+      padding: 6px 12px;
+      border-radius: 20px;
       font-size: 12px;
       font-weight: 600;
-      padding: 6px 14px;
-      border-radius: 20px;
-      background: rgba(16, 185, 129, 0.15);
-      color: #34d399;
-      border: 1px solid rgba(16, 185, 129, 0.3);
     }
 
-    .status-badge.disconnected {
-      background: rgba(239, 68, 68, 0.15);
-      color: #f87171;
-      border-color: rgba(239, 68, 68, 0.3);
-    }
-
-    .live-dot {
+    .status-dot {
       width: 8px;
       height: 8px;
       border-radius: 50%;
       background: #10b981;
-      box-shadow: 0 0 10px #10b981;
-      animation: pulseDot 2s infinite;
+      box-shadow: 0 0 8px #10b981;
+      animation: pulse 2s infinite;
     }
 
-    .disconnected .live-dot {
-      background: #ef4444;
-      box-shadow: 0 0 10px #ef4444;
-      animation: none;
-    }
-
-    @keyframes pulseDot {
+    @keyframes pulse {
       0%, 100% { opacity: 1; transform: scale(1); }
-      50% { opacity: 0.4; transform: scale(0.85); }
+      50% { opacity: 0.5; transform: scale(0.85); }
     }
 
-    .btn {
-      font-family: inherit;
-      font-size: 13px;
-      font-weight: 600;
-      padding: 8px 16px;
-      border-radius: 8px;
-      border: none;
-      cursor: pointer;
-      display: inline-flex;
+    .admin-profile-pill {
+      display: flex;
       align-items: center;
       gap: 8px;
-      transition: all 0.15s ease-in-out;
-      text-decoration: none;
-    }
-
-    .btn-header {
       background: rgba(255, 255, 255, 0.12);
-      color: #ffffff;
-      border: 1px solid rgba(255, 255, 255, 0.2);
-    }
-    .btn-header:hover {
-      background: rgba(255, 255, 255, 0.2);
-    }
-
-    .btn-primary {
-      background: var(--brand-accent);
-      color: #ffffff;
-      box-shadow: 0 2px 4px rgba(0, 133, 93, 0.2);
-    }
-    .btn-primary:hover {
-      background: var(--brand-accent-hover);
+      padding: 6px 14px;
+      border-radius: 20px;
+      font-size: 12px;
+      font-weight: 700;
     }
 
-    .btn-secondary {
-      background: #ffffff;
-      color: var(--text-sub);
-      border: 1px solid var(--brand-border);
-    }
-    .btn-secondary:hover {
-      background: #f1f5f9;
-      color: var(--text-main);
-    }
-
-    .btn-danger {
-      background: #fee2e2;
-      color: #b91c1c;
-      border: 1px solid #fecaca;
-    }
-    .btn-danger:hover {
-      background: #fecaca;
+    .btn-signout {
+      background: rgba(239, 68, 68, 0.2);
+      border: 1px solid rgba(239, 68, 68, 0.4);
+      color: #fca5a5;
+      padding: 6px 14px;
+      border-radius: 8px;
+      font-size: 12px;
+      font-weight: 700;
+      cursor: pointer;
+      transition: all 0.2s ease;
     }
 
-    .btn-success {
-      background: #00855d;
+    .btn-signout:hover {
+      background: #ef4444;
       color: #ffffff;
     }
-    .btn-success:hover {
-      background: #006b4b;
-    }
 
-    /* Main Container Layout */
     .container {
-      max-width: 1400px;
+      max-width: 1360px;
       margin: 0 auto;
-      padding: 28px 32px 60px;
+      padding: 24px 20px;
     }
 
-    /* KPI Metrics Cards Grid */
     .kpi-grid {
       display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+      grid-template-columns: repeat(auto-fit, minmax(230px, 1fr));
       gap: 16px;
       margin-bottom: 24px;
     }
 
     .kpi-card {
       background: var(--brand-card);
-      border: 1px solid var(--brand-border);
-      border-radius: 14px;
+      border-radius: 16px;
       padding: 20px;
+      border: 1px solid var(--brand-border);
       box-shadow: var(--shadow-sm);
       display: flex;
-      align-items: flex-start;
-      justify-content: space-between;
-      transition: all 0.2s ease;
-    }
-    .kpi-card:hover {
-      border-color: #cbd5e1;
-      box-shadow: var(--shadow-md);
-      transform: translateY(-2px);
+      flex-direction: column;
+      position: relative;
+      overflow: hidden;
+      transition: transform 0.2s ease, box-shadow 0.2s ease;
     }
 
-    .kpi-label {
-      font-size: 13px;
-      font-weight: 600;
-      color: var(--text-muted);
-      margin-bottom: 8px;
+    .kpi-card:hover {
+      transform: translateY(-2px);
+      box-shadow: var(--shadow-md);
     }
+
+    .kpi-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 12px;
+    }
+
+    .kpi-title {
+      font-size: 12px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      color: var(--text-muted);
+    }
+
+    .kpi-icon-wrap {
+      width: 36px;
+      height: 36px;
+      border-radius: 10px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 18px;
+    }
+
+    .kpi-icon-total { background: #e0f2fe; color: #0284c7; }
+    .kpi-icon-pending { background: #fef3c7; color: #d97706; }
+    .kpi-icon-approved { background: #d1fae5; color: #059669; }
+    .kpi-icon-action { background: #fee2e2; color: #dc2626; }
 
     .kpi-value {
-      font-size: 30px;
+      font-size: 32px;
       font-weight: 800;
-      letter-spacing: -0.5px;
-      color: var(--text-main);
+      color: var(--brand-primary);
+      line-height: 1.1;
+      margin-bottom: 4px;
     }
 
     .kpi-sub {
       font-size: 12px;
       color: var(--text-muted);
-      margin-top: 4px;
+      font-weight: 500;
     }
 
-    .kpi-icon {
-      width: 44px;
-      height: 44px;
-      border-radius: 12px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-size: 20px;
-    }
-    .kpi-icon.blue { background: #eff6ff; color: #2563eb; }
-    .kpi-icon.amber { background: #fffbeb; color: #d97706; }
-    .kpi-icon.green { background: #f0fdf4; color: #16a34a; }
-    .kpi-icon.rose { background: #fff1f2; color: #e11d48; }
-
-    /* Filter & Search Bar */
-    .table-controls {
+    .toolbar-card {
       background: var(--brand-card);
-      border: 1px solid var(--brand-border);
-      border-radius: 14px;
+      border-radius: 16px;
       padding: 16px 20px;
-      margin-bottom: 16px;
+      border: 1px solid var(--brand-border);
+      box-shadow: var(--shadow-sm);
+      margin-bottom: 20px;
       display: flex;
       align-items: center;
       justify-content: space-between;
       flex-wrap: wrap;
-      gap: 16px;
-      box-shadow: var(--shadow-sm);
+      gap: 14px;
     }
 
     .filter-tabs {
       display: flex;
-      gap: 8px;
       background: #f1f5f9;
       padding: 4px;
-      border-radius: 10px;
+      border-radius: 12px;
+      gap: 4px;
     }
 
-    .filter-tab {
-      padding: 8px 16px;
-      font-size: 13px;
-      font-weight: 600;
-      color: var(--text-sub);
+    .tab-btn {
       background: transparent;
       border: none;
+      padding: 8px 16px;
       border-radius: 8px;
+      font-size: 13px;
+      font-weight: 700;
+      color: var(--text-sub);
       cursor: pointer;
       display: flex;
       align-items: center;
       gap: 8px;
-      transition: all 0.15s ease;
+      transition: all 0.2s ease;
     }
-    .filter-tab:hover {
-      color: var(--text-main);
-    }
-    .filter-tab.active {
+
+    .tab-btn.active {
       background: #ffffff;
       color: var(--brand-primary);
       box-shadow: var(--shadow-sm);
-      font-weight: 700;
     }
 
-    .filter-count {
+    .tab-pill {
       font-size: 11px;
+      font-weight: 800;
       padding: 2px 7px;
       border-radius: 10px;
       background: #e2e8f0;
-      color: var(--text-sub);
+      color: #475569;
     }
-    .filter-tab.active .filter-count {
+
+    .tab-btn.active .tab-pill {
       background: var(--brand-mint);
       color: var(--brand-accent);
     }
 
-    .search-box {
-      position: relative;
+    .search-group {
+      display: flex;
+      align-items: center;
+      gap: 10px;
       flex: 1;
       max-width: 380px;
-      min-width: 240px;
+    }
+
+    .search-input-wrap {
+      position: relative;
+      width: 100%;
     }
 
     .search-input {
       width: 100%;
-      font-family: inherit;
+      height: 40px;
+      border: 1.5px solid var(--brand-border);
+      border-radius: 10px;
+      padding: 0 12px 0 36px;
       font-size: 13px;
-      padding: 9px 14px 9px 36px;
-      border-radius: 8px;
-      border: 1px solid var(--brand-border);
-      background: #ffffff;
       color: var(--text-main);
-      outline: none;
-      transition: border 0.15s ease;
+      background: #ffffff;
+      font-family: inherit;
     }
+
     .search-input:focus {
+      outline: none;
       border-color: var(--brand-border-focus);
-      box-shadow: 0 0 0 3px rgba(0, 133, 93, 0.1);
     }
 
     .search-icon {
       position: absolute;
       left: 12px;
-      top: 50%;
-      transform: translateY(-50%);
-      color: var(--text-muted);
+      top: 12px;
       font-size: 14px;
-      pointer-events: none;
+      color: var(--text-muted);
     }
 
-    /* Main Table */
-    .table-container {
+    .btn-refresh {
+      background: #ffffff;
+      border: 1.5px solid var(--brand-border);
+      padding: 8px 14px;
+      border-radius: 10px;
+      font-size: 13px;
+      font-weight: 700;
+      color: var(--text-main);
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      transition: all 0.2s ease;
+    }
+
+    .btn-refresh:hover {
+      background: #f8fafc;
+      border-color: #cbd5e1;
+    }
+
+    .table-card {
       background: var(--brand-card);
+      border-radius: 16px;
       border: 1px solid var(--brand-border);
-      border-radius: 14px;
-      overflow: hidden;
       box-shadow: var(--shadow-sm);
+      overflow: hidden;
+    }
+
+    .table-responsive {
+      width: 100%;
+      overflow-x: auto;
     }
 
     table {
@@ -390,30 +525,30 @@
       text-align: left;
     }
 
-    th {
+    thead th {
       background: #f8fafc;
       color: var(--text-muted);
       font-size: 11px;
-      font-weight: 700;
+      font-weight: 800;
       text-transform: uppercase;
       letter-spacing: 0.6px;
       padding: 14px 20px;
       border-bottom: 1px solid var(--brand-border);
     }
 
-    td {
+    tbody tr {
+      border-bottom: 1px solid var(--brand-border);
+      transition: background 0.15s ease;
+    }
+
+    tbody tr:hover {
+      background: #fbfdff;
+    }
+
+    tbody td {
       padding: 16px 20px;
-      border-bottom: 1px solid #f1f5f9;
       font-size: 13px;
       vertical-align: middle;
-    }
-
-    tr:last-child td {
-      border-bottom: none;
-    }
-
-    tr:hover td {
-      background: #fcfdfd;
     }
 
     .rider-cell {
@@ -425,19 +560,19 @@
     .rider-avatar {
       width: 42px;
       height: 42px;
-      border-radius: 50%;
+      border-radius: 12px;
       background: var(--brand-mint);
       color: var(--brand-accent);
+      font-size: 16px;
+      font-weight: 800;
       display: flex;
       align-items: center;
       justify-content: center;
-      font-size: 15px;
-      font-weight: 700;
+      border: 1.5px solid #a7f3d0;
       overflow: hidden;
       flex-shrink: 0;
-      border: 2px solid #ffffff;
-      box-shadow: 0 0 0 1px #cbd5e1;
     }
+
     .rider-avatar img {
       width: 100%;
       height: 100%;
@@ -445,9 +580,9 @@
     }
 
     .rider-name {
-      font-weight: 700;
-      color: var(--text-main);
       font-size: 14px;
+      font-weight: 800;
+      color: var(--brand-primary);
     }
 
     .rider-sub {
@@ -461,115 +596,93 @@
       font-size: 11px;
       font-weight: 700;
       background: #f1f5f9;
-      color: var(--text-sub);
+      color: #334155;
       padding: 3px 8px;
       border-radius: 6px;
       display: inline-block;
-      margin-bottom: 2px;
     }
 
     .vehicle-plate {
-      font-family: 'JetBrains Mono', monospace;
       font-size: 12px;
+      font-weight: 600;
       color: var(--text-main);
-      font-weight: 600;
+      margin-top: 3px;
+      font-family: 'JetBrains Mono', monospace;
     }
-
-    .docs-indicator {
-      display: flex;
-      align-items: center;
-      gap: 6px;
-      flex-wrap: wrap;
-    }
-
-    .doc-mini-pill {
-      font-size: 11px;
-      font-weight: 600;
-      padding: 3px 8px;
-      border-radius: 6px;
-    }
-    .doc-mini-pill.approved { background: var(--status-approved-bg); color: var(--status-approved-text); }
-    .doc-mini-pill.pending { background: var(--status-pending-bg); color: var(--status-pending-text); }
-    .doc-mini-pill.rejected { background: var(--status-action-bg); color: var(--status-action-text); }
 
     .status-chip {
-      font-size: 12px;
-      font-weight: 700;
-      padding: 5px 12px;
-      border-radius: 20px;
       display: inline-flex;
       align-items: center;
       gap: 6px;
-      border: 1px solid transparent;
+      font-size: 12px;
+      font-weight: 700;
+      padding: 4px 10px;
+      border-radius: 20px;
+      white-space: nowrap;
     }
+
     .status-chip.approved {
       background: var(--status-approved-bg);
       color: var(--status-approved-text);
-      border-color: var(--status-approved-border);
+      border: 1px solid var(--status-approved-border);
     }
+
     .status-chip.pending_verification {
       background: var(--status-pending-bg);
       color: var(--status-pending-text);
-      border-color: var(--status-pending-border);
+      border: 1px solid var(--status-pending-border);
     }
+
     .status-chip.action_required,
     .status-chip.rejected {
       background: var(--status-action-bg);
       color: var(--status-action-text);
-      border-color: var(--status-action-border);
+      border: 1px solid var(--status-action-border);
     }
 
-    .empty-state {
-      text-align: center;
-      padding: 64px 24px;
-      color: var(--text-muted);
-    }
-
-    .empty-state-icon {
-      font-size: 48px;
-      margin-bottom: 12px;
-      opacity: 0.8;
-    }
-
-    .empty-state-title {
-      font-size: 16px;
+    .btn-inspect {
+      background: var(--brand-primary);
+      color: #ffffff;
+      border: none;
+      padding: 8px 16px;
+      border-radius: 10px;
+      font-size: 12px;
       font-weight: 700;
-      color: var(--text-main);
-      margin-bottom: 6px;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      box-shadow: 0 2px 6px rgba(4, 47, 30, 0.2);
+      transition: all 0.2s ease;
     }
 
-    .empty-state-sub {
-      font-size: 13px;
-      max-width: 400px;
-      margin: 0 auto;
-      line-height: 1.6;
+    .btn-inspect:hover {
+      background: var(--brand-accent);
+      transform: translateY(-1px);
+      box-shadow: 0 4px 10px rgba(0, 133, 93, 0.3);
     }
 
-    /* Modal / Drawer for Review */
+    /* MODAL */
     .modal-backdrop {
       position: fixed;
-      top: 0;
-      left: 0;
-      right: 0;
-      bottom: 0;
-      background: rgba(15, 23, 42, 0.6);
-      backdrop-filter: blur(4px);
+      top: 0; left: 0; right: 0; bottom: 0;
+      background: rgba(15, 23, 42, 0.65);
+      backdrop-filter: blur(5px);
       z-index: 100;
       display: none;
       align-items: center;
       justify-content: center;
       padding: 20px;
     }
-    .modal-backdrop.open {
-      display: flex;
-    }
+
+    .modal-backdrop.open { display: flex; }
 
     .modal-card {
       background: #ffffff;
-      border-radius: 16px;
-      max-width: 1050px;
+      border-radius: 20px;
+      max-width: 1080px;
       width: 100%;
-      max-height: 90vh;
+      max-height: 92vh;
       display: flex;
       flex-direction: column;
       box-shadow: var(--shadow-xl);
@@ -584,11 +697,12 @@
 
     .modal-header {
       padding: 20px 24px;
+      background: #f8fafc;
       border-bottom: 1px solid var(--brand-border);
       display: flex;
       align-items: center;
       justify-content: space-between;
-      background: #f8fafc;
+      gap: 16px;
     }
 
     .modal-body {
@@ -597,73 +711,63 @@
       flex: 1;
     }
 
-    .modal-footer {
-      padding: 16px 24px;
-      border-top: 1px solid var(--brand-border);
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      background: #f8fafc;
-    }
-
     .applicant-overview {
       display: grid;
       grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
       gap: 14px;
       background: #f8fafc;
       border: 1px solid var(--brand-border);
-      border-radius: 12px;
-      padding: 16px;
+      border-radius: 14px;
+      padding: 16px 20px;
       margin-bottom: 24px;
     }
 
     .overview-item {
       display: flex;
       flex-direction: column;
-      gap: 2px;
     }
 
     .overview-label {
       font-size: 11px;
-      font-weight: 600;
+      font-weight: 700;
       color: var(--text-muted);
       text-transform: uppercase;
       letter-spacing: 0.5px;
+      margin-bottom: 3px;
     }
 
     .overview-val {
       font-size: 13px;
       font-weight: 700;
-      color: var(--text-main);
+      color: var(--brand-primary);
     }
 
     .doc-section-title {
       font-size: 15px;
       font-weight: 800;
-      color: var(--text-main);
+      color: var(--brand-primary);
       margin-bottom: 16px;
       display: flex;
       align-items: center;
       justify-content: space-between;
     }
 
-    /* Document Matrix Grid */
     .doc-matrix {
       display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-      gap: 16px;
+      grid-template-columns: repeat(auto-fill, minmax(310px, 1fr));
+      gap: 18px;
     }
 
     .doc-card {
       background: #ffffff;
-      border: 1px solid var(--brand-border);
-      border-radius: 12px;
+      border: 1.5px solid var(--brand-border);
+      border-radius: 14px;
       overflow: hidden;
-      box-shadow: var(--shadow-sm);
       display: flex;
       flex-direction: column;
       transition: all 0.2s ease;
     }
+
     .doc-card:hover {
       border-color: #cbd5e1;
       box-shadow: var(--shadow-md);
@@ -676,13 +780,12 @@
       display: flex;
       align-items: center;
       justify-content: space-between;
-      gap: 10px;
     }
 
     .doc-card-title {
       font-size: 13px;
-      font-weight: 700;
-      color: var(--text-main);
+      font-weight: 800;
+      color: var(--brand-primary);
       display: flex;
       align-items: center;
       gap: 8px;
@@ -690,302 +793,374 @@
 
     .doc-card-preview {
       height: 180px;
-      background: #f1f5f9;
+      background: #0f172a;
       position: relative;
       display: flex;
       align-items: center;
       justify-content: center;
-      overflow: hidden;
       cursor: pointer;
+      overflow: hidden;
     }
 
     .doc-card-preview img {
       width: 100%;
       height: 100%;
       object-fit: cover;
-      transition: transform 0.2s ease;
-    }
-    .doc-card-preview:hover img {
-      transform: scale(1.03);
+      transition: transform 0.25s ease;
     }
 
-    .doc-card-preview .zoom-hint {
+    .doc-card-preview:hover img { transform: scale(1.04); }
+
+    .zoom-hint {
       position: absolute;
-      bottom: 8px;
-      right: 8px;
+      bottom: 8px; right: 8px;
       background: rgba(0, 0, 0, 0.75);
       color: #ffffff;
+      padding: 4px 10px;
+      border-radius: 8px;
       font-size: 11px;
       font-weight: 600;
-      padding: 3px 8px;
-      border-radius: 6px;
-      display: flex;
-      align-items: center;
-      gap: 4px;
-      opacity: 0;
-      transition: opacity 0.2s ease;
-    }
-    .doc-card-preview:hover .zoom-hint {
-      opacity: 1;
     }
 
     .doc-card-footer {
       padding: 12px 16px;
-      border-top: 1px solid var(--brand-border);
-      background: #ffffff;
       display: flex;
       align-items: center;
-      justify-content: space-between;
+      justify-content: flex-end;
       gap: 10px;
+      background: #ffffff;
+      border-top: 1px solid var(--brand-border);
     }
 
     .reject-drawer {
+      display: none;
       padding: 12px 16px;
       background: #fff1f2;
       border-top: 1px solid #fecdd3;
-      display: none;
-      flex-direction: column;
-      gap: 8px;
     }
-    .reject-drawer.open {
-      display: flex;
-    }
+
+    .reject-drawer.open { display: block; }
 
     .reject-input {
-      font-family: inherit;
-      font-size: 12px;
+      width: 100%;
       padding: 8px 10px;
       border: 1px solid #fca5a5;
-      border-radius: 6px;
-      width: 100%;
-      outline: none;
-    }
-    .reject-input:focus {
-      border-color: #ef4444;
-      box-shadow: 0 0 0 2px rgba(239, 68, 68, 0.15);
+      border-radius: 8px;
+      font-size: 12px;
+      margin-top: 6px;
+      font-family: inherit;
     }
 
-    /* Lightbox Modal */
+    .reject-input:focus {
+      outline: none;
+      border-color: #ef4444;
+    }
+
+    .modal-footer {
+      padding: 18px 24px;
+      background: #f8fafc;
+      border-top: 1px solid var(--brand-border);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+      flex-wrap: wrap;
+    }
+
+    .btn {
+      padding: 9px 18px;
+      border-radius: 10px;
+      font-size: 13px;
+      font-weight: 700;
+      cursor: pointer;
+      border: none;
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      transition: all 0.2s ease;
+    }
+
+    .btn-secondary {
+      background: #ffffff;
+      border: 1.5px solid var(--brand-border);
+      color: var(--text-main);
+    }
+
+    .btn-secondary:hover { background: #f8fafc; }
+
+    .btn-success { background: #059669; color: #ffffff; }
+    .btn-success:hover { background: #047857; }
+
+    .btn-danger { background: #ef4444; color: #ffffff; }
+    .btn-danger:hover { background: #dc2626; }
+
+    /* Lightbox */
     .lightbox-backdrop {
       position: fixed;
-      top: 0;
-      left: 0;
-      right: 0;
-      bottom: 0;
-      background: rgba(0, 0, 0, 0.9);
+      top: 0; left: 0; right: 0; bottom: 0;
+      background: rgba(0, 0, 0, 0.88);
       z-index: 200;
       display: none;
       align-items: center;
       justify-content: center;
       padding: 24px;
     }
-    .lightbox-backdrop.open {
-      display: flex;
-    }
+
+    .lightbox-backdrop.open { display: flex; }
 
     .lightbox-img {
       max-width: 90vw;
-      max-height: 85vh;
-      border-radius: 8px;
-      box-shadow: 0 20px 40px rgba(0,0,0,0.5);
-      object-fit: contain;
+      max-height: 88vh;
+      border-radius: 12px;
+      box-shadow: 0 25px 50px -12px rgba(0,0,0,0.5);
     }
 
     .lightbox-close {
       position: absolute;
-      top: 20px;
-      right: 24px;
-      color: #ffffff;
-      font-size: 28px;
-      cursor: pointer;
-      background: none;
+      top: 20px; right: 24px;
+      background: rgba(255, 255, 255, 0.2);
       border: none;
+      color: #ffffff;
+      font-size: 20px;
+      width: 44px; height: 44px;
+      border-radius: 22px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
     }
 
-    /* Toast Container */
+    /* Toast */
     .toast-container {
       position: fixed;
-      bottom: 24px;
-      right: 24px;
-      z-index: 300;
+      bottom: 24px; right: 24px;
       display: flex;
       flex-direction: column;
       gap: 10px;
+      z-index: 300;
     }
 
     .toast {
-      background: var(--brand-primary);
-      color: #ffffff;
+      background: #ffffff;
+      color: var(--text-main);
       padding: 12px 18px;
-      border-radius: 10px;
+      border-radius: 12px;
       font-size: 13px;
-      font-weight: 600;
-      box-shadow: var(--shadow-lg);
+      font-weight: 700;
+      box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.15);
+      border: 1px solid var(--brand-border);
       display: flex;
       align-items: center;
       gap: 10px;
-      border-left: 4px solid var(--brand-accent);
       animation: toastIn 0.25s ease-out;
     }
-    .toast.success { border-left-color: #10b981; }
-    .toast.error { border-left-color: #ef4444; }
 
     @keyframes toastIn {
       from { transform: translateY(20px); opacity: 0; }
       to { transform: translateY(0); opacity: 1; }
     }
+
+    .empty-state {
+      padding: 60px 20px;
+      text-align: center;
+      color: var(--text-muted);
+    }
+
+    .empty-state-icon {
+      font-size: 40px;
+      margin-bottom: 12px;
+    }
   </style>
 </head>
 <body>
 
-  <!-- Top Navigation Header -->
-  <header class="header">
-    <div class="brand-group">
-      <div class="brand-logo-icon">🌿</div>
-      <div>
-        <div class="brand-title">
-          <span>RALT Logistics</span>
-          <span class="brand-tag">Fleet Portal</span>
+  <!-- 1. ADMIN LOGIN VIEW -->
+  <section id="adminLoginSection">
+    <div class="login-container">
+      <div class="login-brand-pill">
+        <span>🛵</span> RALT Logistics • Operations
+      </div>
+
+      <h1 class="login-title">Operations Console</h1>
+      <p class="login-subtitle">Sign in to review applicant KYC documents and verify delivery partner profiles.</p>
+
+      <div id="loginErrorBanner" class="login-error-banner"></div>
+
+      <form id="adminLoginForm">
+        <div class="form-group">
+          <label class="form-label" for="adminUsername">Admin Username</label>
+          <div class="form-input-wrap">
+            <span class="form-input-icon">👤</span>
+            <input type="text" id="adminUsername" class="form-input" placeholder="admin" required autofocus autocomplete="username" />
+          </div>
         </div>
-        <div class="brand-sub">Partner Verification & Compliance Operations</div>
+
+        <div class="form-group">
+          <label class="form-label" for="adminPassword">Password</label>
+          <div class="form-input-wrap">
+            <span class="form-input-icon">🔒</span>
+            <input type="password" id="adminPassword" class="form-input" placeholder="••••••••" required autocomplete="current-password" />
+          </div>
+        </div>
+
+        <button type="submit" id="btnLoginSubmit" class="btn-login-submit">
+          <span>Sign In to Ops Console</span>
+          <span>→</span>
+        </button>
+      </form>
+
+      <div id="demoCredentialsPill" class="demo-credentials-pill">
+        ⚡ <strong>Quick Fill Demo:</strong> Username: <code>admin</code> • Password: <code>admin123</code> (Tap to autofill)
       </div>
     </div>
+  </section>
 
-    <div class="header-actions">
-      <div id="wsStatusBadge" class="status-badge">
-        <span class="live-dot"></span>
-        <span id="wsStatusText">Connecting...</span>
-      </div>
-
-      <button class="btn btn-header" onclick="loadDashboardData()" title="Reload table and metrics">
-        <span>🔄</span> Refresh
-      </button>
-
-      <button class="btn btn-header" onclick="confirmResetDatabase()" title="Wipe test data and reset database cleanly">
-        <span>🗑️</span> Reset DB
-      </button>
-    </div>
-  </header>
-
-  <!-- Main Container -->
-  <main class="container">
-    <!-- KPI Overview Cards -->
-    <section class="kpi-grid">
-      <div class="kpi-card">
+  <!-- 2. ADMIN DASHBOARD VIEW -->
+  <section id="adminDashboardSection">
+    <header class="header">
+      <div class="brand-group">
+        <div class="brand-logo-icon">🛵</div>
         <div>
-          <div class="kpi-label">Total Applicants</div>
+          <div class="brand-title">
+            RALT ONDC Operations
+            <span class="brand-tag">FLEET PORTAL</span>
+          </div>
+          <div class="brand-sub">Live Partner Onboarding & Document Verification Desk</div>
+        </div>
+      </div>
+
+      <div class="header-actions">
+        <div id="wsBadge" class="status-badge">
+          <div class="status-dot"></div>
+          <span id="wsText">Live Sync Active</span>
+        </div>
+
+        <div class="admin-profile-pill">
+          <span>👤</span>
+          <span id="currentAdminName">Ops Supervisor</span>
+        </div>
+
+        <button id="btnSignOut" class="btn-signout" type="button">
+          Sign Out ✕
+        </button>
+      </div>
+    </header>
+
+    <div class="container">
+      <!-- KPI Stats Grid -->
+      <div class="kpi-grid">
+        <div class="kpi-card">
+          <div class="kpi-header">
+            <span class="kpi-title">Total Fleet Partners</span>
+            <div class="kpi-icon-wrap kpi-icon-total">👥</div>
+          </div>
           <div id="kpiTotal" class="kpi-value">0</div>
-          <div class="kpi-sub">Lifetime registered delivery partners</div>
+          <div class="kpi-sub">Registered across all clusters</div>
         </div>
-        <div class="kpi-icon blue">👥</div>
-      </div>
 
-      <div class="kpi-card" style="border-left: 4px solid #f59e0b;">
-        <div>
-          <div class="kpi-label">Pending Approval (KYC)</div>
+        <div class="kpi-card">
+          <div class="kpi-header">
+            <span class="kpi-title">Pending KYC Review</span>
+            <div class="kpi-icon-wrap kpi-icon-pending">⏳</div>
+          </div>
           <div id="kpiPending" class="kpi-value" style="color: #b45309;">0</div>
-          <div class="kpi-sub">Awaiting verification by admin</div>
+          <div class="kpi-sub">Applicants awaiting document review</div>
         </div>
-        <div class="kpi-icon amber">⏳</div>
-      </div>
 
-      <div class="kpi-card" style="border-left: 4px solid #e11d48;">
-        <div>
-          <div class="kpi-label">Action Required</div>
-          <div id="kpiAction" class="kpi-value" style="color: #be123c;">0</div>
-          <div class="kpi-sub">Rejected documents awaiting re-upload</div>
+        <div class="kpi-card">
+          <div class="kpi-header">
+            <span class="kpi-title">Approved & Active Fleet</span>
+            <div class="kpi-icon-wrap kpi-icon-approved">✓</div>
+          </div>
+          <div id="kpiApproved" class="kpi-value" style="color: #059669;">0</div>
+          <div class="kpi-sub">Eligible for real-time dispatch duty</div>
         </div>
-        <div class="kpi-icon rose">⚠️</div>
-      </div>
 
-      <div class="kpi-card" style="border-left: 4px solid #00855d;">
-        <div>
-          <div class="kpi-label">Approved & Active</div>
-          <div id="kpiApproved" class="kpi-value" style="color: #047857;">0</div>
-          <div class="kpi-sub">Verified & ready to accept orders</div>
+        <div class="kpi-card">
+          <div class="kpi-header">
+            <span class="kpi-title">Action Required / Rejected</span>
+            <div class="kpi-icon-wrap kpi-icon-action">⚠️</div>
+          </div>
+          <div id="kpiAction" class="kpi-value" style="color: #dc2626;">0</div>
+          <div class="kpi-sub">Awaiting re-upload from partner</div>
         </div>
-        <div class="kpi-icon green">✅</div>
-      </div>
-    </section>
-
-    <!-- Table Controls (Filter Tabs + Search) -->
-    <div class="table-controls">
-      <div class="filter-tabs">
-        <button class="filter-tab active" data-filter="all" onclick="setFilter('all', this)">
-          All Applicants <span id="badgeAll" class="filter-count">0</span>
-        </button>
-        <button class="filter-tab" data-filter="pending" onclick="setFilter('pending', this)">
-          Pending Review <span id="badgePending" class="filter-count">0</span>
-        </button>
-        <button class="filter-tab" data-filter="action_required" onclick="setFilter('action_required', this)">
-          Action Required <span id="badgeAction" class="filter-count">0</span>
-        </button>
-        <button class="filter-tab" data-filter="approved" onclick="setFilter('approved', this)">
-          Approved & Active <span id="badgeApproved" class="filter-count">0</span>
-        </button>
       </div>
 
-      <div class="search-box">
-        <span class="search-icon">🔍</span>
-        <input
-          type="text"
-          id="searchInput"
-          class="search-input"
-          placeholder="Search by name, phone, vehicle, or ID..."
-          oninput="handleSearch(this.value)"
-        />
+      <!-- Toolbar Card (Filters + Search) -->
+      <div class="toolbar-card">
+        <div class="filter-tabs">
+          <button class="tab-btn active" data-filter="all" type="button">
+            All Partners <span id="badgeAll" class="tab-pill">0</span>
+          </button>
+          <button class="tab-btn" data-filter="pending" type="button">
+            Pending Review <span id="badgePending" class="tab-pill">0</span>
+          </button>
+          <button class="tab-btn" data-filter="approved" type="button">
+            Approved & Active <span id="badgeApproved" class="tab-pill">0</span>
+          </button>
+          <button class="tab-btn" data-filter="action_required" type="button">
+            Action Required <span id="badgeAction" class="tab-pill">0</span>
+          </button>
+        </div>
+
+        <div class="search-group">
+          <div class="search-input-wrap">
+            <span class="search-icon">🔍</span>
+            <input type="text" id="searchInput" class="search-input" placeholder="Search by name, phone or ID..." />
+          </div>
+          <button id="btnRefresh" class="btn-refresh" type="button">
+            <span>🔄</span> Refresh
+          </button>
+        </div>
+      </div>
+
+      <!-- Partners Table -->
+      <div class="table-card">
+        <div class="table-responsive">
+          <table>
+            <thead>
+              <tr>
+                <th>Delivery Partner</th>
+                <th>Hub & Vehicle</th>
+                <th>KYC Documents</th>
+                <th>Review Status</th>
+                <th>Registered Date</th>
+                <th style="text-align: right;">Action</th>
+              </tr>
+            </thead>
+            <tbody id="ridersTableBody">
+              <tr>
+                <td colspan="6" class="empty-state">
+                  <div class="empty-state-icon">⏳</div>
+                  <div>Loading partner applications...</div>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
       </div>
     </div>
+  </section>
 
-    <!-- Applicants Table -->
-    <div class="table-container">
-      <table>
-        <thead>
-          <tr>
-            <th>Partner Name & ID</th>
-            <th>Vehicle & Hub</th>
-            <th>Uploaded Documents</th>
-            <th>KYC Status</th>
-            <th>Registered Time</th>
-            <th style="text-align: right;">Operations Action</th>
-          </tr>
-        </thead>
-        <tbody id="ridersTableBody">
-          <tr>
-            <td colspan="6" class="empty-state">
-              <div class="empty-state-icon">📂</div>
-              <div class="empty-state-title">No Delivery Partners Registered Yet</div>
-              <div class="empty-state-sub">
-                When a new delivery partner submits their onboarding application from the mobile app, they will appear here in real-time.
-              </div>
-            </td>
-          </tr>
-        </tbody>
-      </table>
-    </div>
-  </main>
-
-  <!-- Review Modal / Inspection Drawer -->
-  <div id="reviewModal" class="modal-backdrop" onclick="if(event.target === this) closeReviewModal()">
+  <!-- 3. INSPECT & VERIFY MODAL DRAWER -->
+  <div id="reviewModal" class="modal-backdrop">
     <div class="modal-card">
-      <!-- Header -->
       <div class="modal-header">
         <div style="display: flex; align-items: center; gap: 14px;">
-          <div class="rider-avatar" style="width: 48px; height: 48px; font-size: 18px;">
+          <div id="modalAvatarBox" class="rider-avatar" style="width: 48px; height: 48px; font-size: 18px;">
             <span id="modalAvatarText">👤</span>
           </div>
           <div>
-            <div id="modalRiderName" style="font-size: 17px; font-weight: 800; color: var(--text-main);">Partner Name</div>
+            <div id="modalRiderName" style="font-size: 18px; font-weight: 800; color: var(--brand-primary);">Partner Name</div>
             <div id="modalRiderSub" style="font-size: 12px; color: var(--text-muted); font-family: 'JetBrains Mono', monospace;">ID: RALT-RIDER-XXXX</div>
           </div>
         </div>
 
-        <button class="btn btn-secondary" onclick="closeReviewModal()">✕ Close</button>
+        <button id="btnCloseModalTop" class="btn btn-secondary btn-close-modal" type="button">✕ Close</button>
       </div>
 
-      <!-- Body -->
       <div class="modal-body">
-        <!-- Applicant Details Overview Grid -->
+        <!-- Applicant Overview Grid -->
         <div class="applicant-overview">
           <div class="overview-item">
             <span class="overview-label">Mobile Number</span>
@@ -996,7 +1171,10 @@
             <span id="modalHub" class="overview-val">Hitec City (Hyderabad)</span>
           </div>
           <div class="overview-item">
-            <span class="overview-label">Date of Birth (DOB)</span>
+            <div style="display: flex; justify-content: space-between; align-items: center;">
+              <span class="overview-label">Date of Birth (DOB)</span>
+              <button id="btnEditDob" type="button" style="background: none; border: none; color: var(--brand-accent); font-size: 11px; font-weight: 700; cursor: pointer; padding: 0;">✏️ Edit</button>
+            </div>
             <span id="modalDob" class="overview-val">15-05-1998</span>
           </div>
           <div class="overview-item">
@@ -1018,7 +1196,7 @@
           <div class="overview-item">
             <span class="overview-label">Overall KYC Status</span>
             <span id="modalKycChip" class="overview-val">
-              <span class="status-chip pending_verification">Pending Review</span>
+              <span class="status-chip pending_verification">Pending Review ⏳</span>
             </span>
           </div>
         </div>
@@ -1044,17 +1222,16 @@
         </div>
       </div>
 
-      <!-- Footer Decisions -->
       <div class="modal-footer">
-        <div style="font-size: 12px; color: var(--text-muted); max-width: 500px;">
+        <div style="font-size: 12px; color: var(--text-muted); max-width: 520px;">
           Approving sets partner status to <strong>APPROVED & ACTIVE</strong> and allows them to receive live delivery orders on their phone.
         </div>
         <div style="display: flex; gap: 10px;">
-          <button class="btn btn-secondary" onclick="closeReviewModal()">Cancel</button>
-          <button id="btnRejectPartner" class="btn btn-danger" onclick="promptRejectPartner()">
+          <button id="btnCancelModal" class="btn btn-secondary btn-close-modal" type="button">Cancel</button>
+          <button id="btnRejectPartner" class="btn btn-danger" type="button">
             <span>⚠️</span> Request Re-upload
           </button>
-          <button id="btnApproveAll" class="btn btn-success" onclick="approveAllDocuments()">
+          <button id="btnApproveAll" class="btn btn-success" type="button">
             <span>✓</span> Approve & Activate Partner
           </button>
         </div>
@@ -1063,82 +1240,317 @@
   </div>
 
   <!-- Lightbox Fullscreen Preview -->
-  <div id="lightbox" class="lightbox-backdrop" onclick="closeLightbox()">
-    <button class="lightbox-close" onclick="closeLightbox()">✕</button>
-    <img id="lightboxImg" class="lightbox-img" src="" alt="Document Preview" onclick="event.stopPropagation()">
+  <div id="lightbox" class="lightbox-backdrop">
+    <button id="btnCloseLightbox" class="lightbox-close" type="button">✕</button>
+    <img id="lightboxImg" class="lightbox-img" src="" alt="Document Preview" />
   </div>
 
   <!-- Toast Notification Container -->
   <div id="toastContainer" class="toast-container"></div>
 
+  <!-- JAVASCRIPT LOGIC (Zero Inline Attributes, 100% CSP Compliant) -->
   <script>
-    // State management
     let currentFilter = 'all';
     let currentSearch = '';
     let currentRider = null;
     let ws = null;
-    let searchTimeout = null;
 
     const DOC_NAMES = {
-      'aadhaar_front': 'Aadhaar Card (Front) • UIDAI Paperless eKYC',
-      'aadhaar_back': 'Aadhaar Card (Back) • Address & QR Verification',
-      'pan_card': 'PAN Card Identity • Income Tax Dept',
-      'driving_license': 'Driving License (DL) • MoRTH Sarathi Registry',
-      'vehicle_rc': 'Vehicle Registration (RC) • Vahan State Registry',
-      'profile_selfie': 'Live Profile Selfie • Biometric Face Match',
-      'profile_photo': 'Live Profile Selfie'
+      aadhaar_front: 'Aadhaar Card (Front)',
+      aadhaar_back: 'Aadhaar Card (Back)',
+      pan_card: 'PAN Card',
+      driving_license: 'Driving License (DL)',
+      vehicle_rc: 'Vehicle Registration (RC)',
+      profile_selfie: 'Live Profile Selfie'
     };
 
     const REJECTION_PRESETS = [
-      'Image is blurry or text is unreadable',
-      'Corners or essential details are cropped out',
-      'Document has expired',
-      'Name or DOB does not match application details',
-      'Wrong document category uploaded',
-      'Suspected fraudulent or invalid document'
+      'Document photo is blurry or unreadable. Please capture in good lighting.',
+      'Document expired. Please upload a valid unexpired certificate.',
+      'Name on document does not match the entered applicant name.',
+      'Partial document uploaded. Please capture full document with all 4 corners visible.',
+      'Selfie face does not match the photo on the identity card.'
     ];
 
-    window.addEventListener('DOMContentLoaded', () => {
-      initWebSocket();
-      loadDashboardData();
-      // Poll every 3 seconds for continuous live synchronization
-      setInterval(() => loadDashboardData(false), 3000);
+    // Initialize Event Listeners safely on DOMContentLoaded
+    document.addEventListener('DOMContentLoaded', () => {
+      // 1. Auth check
+      const token = localStorage.getItem('ralt_admin_token');
+      if (token) {
+        showDashboardView();
+      } else {
+        showLoginView();
+      }
+
+      // 2. Bind Login Form Submit
+      const loginForm = document.getElementById('adminLoginForm');
+      if (loginForm) {
+        loginForm.addEventListener('submit', handleAdminLogin);
+      }
+
+      // 3. Bind Quick Fill Demo Button
+      const demoBtn = document.getElementById('demoCredentialsPill');
+      if (demoBtn) {
+        demoBtn.addEventListener('click', quickFillAdminCredentials);
+      }
+
+      // 4. Bind Sign Out Button
+      const signoutBtn = document.getElementById('btnSignOut');
+      if (signoutBtn) {
+        signoutBtn.addEventListener('click', handleAdminSignOut);
+      }
+
+      // 5. Bind Refresh Button
+      const refreshBtn = document.getElementById('btnRefresh');
+      if (refreshBtn) {
+        refreshBtn.addEventListener('click', () => loadDashboardData(true));
+      }
+
+      // 6. Bind Search Input
+      const searchInput = document.getElementById('searchInput');
+      if (searchInput) {
+        searchInput.addEventListener('input', (e) => handleSearchInput(e.target.value));
+      }
+
+      // 7. Bind Filter Tabs
+      document.querySelectorAll('.tab-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+          const filter = btn.dataset.filter || 'all';
+          setFilter(filter, btn);
+        });
+      });
+
+      // 8. Bind Modal Close Buttons
+      document.querySelectorAll('.btn-close-modal').forEach(btn => {
+        btn.addEventListener('click', closeReviewModal);
+      });
+
+      const reviewModal = document.getElementById('reviewModal');
+      if (reviewModal) {
+        reviewModal.addEventListener('click', (e) => {
+          if (e.target === reviewModal) closeReviewModal();
+        });
+      }
+
+      // 9. Bind Bulk Action Buttons
+      const approveAllBtn = document.getElementById('btnApproveAll');
+      if (approveAllBtn) {
+        approveAllBtn.addEventListener('click', approveAllDocuments);
+      }
+
+      const rejectPartnerBtn = document.getElementById('btnRejectPartner');
+      if (rejectPartnerBtn) {
+        rejectPartnerBtn.addEventListener('click', promptRejectPartner);
+      }
+
+      // 10. Bind Lightbox Close
+      const closeLbBtn = document.getElementById('btnCloseLightbox');
+      if (closeLbBtn) {
+        closeLbBtn.addEventListener('click', closeLightbox);
+      }
+
+      const lightbox = document.getElementById('lightbox');
+      if (lightbox) {
+        lightbox.addEventListener('click', (e) => {
+          if (e.target === lightbox || e.target === closeLbBtn) closeLightbox();
+        });
+      }
+
+      // 11. Event Delegation for Partner Table (Inspect Button)
+      const tableBody = document.getElementById('ridersTableBody');
+      if (tableBody) {
+        tableBody.addEventListener('click', (e) => {
+          const btn = e.target.closest('.btn-inspect');
+          if (btn && btn.dataset.riderId) {
+            inspectRider(btn.dataset.riderId);
+          }
+        });
+      }
+
+      // 11b. Inline Edit DOB Handler
+      const btnEditDob = document.getElementById('btnEditDob');
+      if (btnEditDob) {
+        btnEditDob.addEventListener('click', async () => {
+          if (!currentRider) return;
+          const currentVal = currentRider.dob || '';
+          const input = prompt(`Enter Date of Birth (DOB) for ${currentRider.name || 'partner'} (DD-MM-YYYY):`, currentVal);
+          if (input === null) return;
+          const cleanVal = input.trim();
+          try {
+            const res = await fetch(`/api/admin/riders/${currentRider.id}/update`, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ dob: cleanVal })
+            });
+            const data = await res.json();
+            if (data.success) {
+              currentRider.dob = cleanVal;
+              safeSetText('modalDob', cleanVal || 'Not specified');
+              showToast('✓ Date of birth updated successfully', 'success');
+              loadDashboardData(false);
+            } else {
+              showToast(data.error || 'Failed to update date of birth', 'error');
+            }
+          } catch (e) {
+            showToast('Network error updating date of birth', 'error');
+          }
+        });
+      }
+
+      // 12. Event Delegation for Document Matrix (Approve / Reject / Preview)
+      const docMatrix = document.getElementById('modalDocMatrix');
+      if (docMatrix) {
+        docMatrix.addEventListener('click', (e) => {
+          // Preview Lightbox
+          const previewWrap = e.target.closest('.doc-card-preview');
+          if (previewWrap && previewWrap.dataset.previewSrc) {
+            openLightbox(previewWrap.dataset.previewSrc);
+            return;
+          }
+
+          // Approve Doc
+          const approveBtn = e.target.closest('.btn-doc-approve');
+          if (approveBtn && approveBtn.dataset.docId) {
+            verifyDoc(approveBtn.dataset.docId, 'APPROVED');
+            return;
+          }
+
+          // Toggle Reject Drawer
+          const toggleRejectBtn = e.target.closest('.btn-doc-reject-toggle');
+          if (toggleRejectBtn && toggleRejectBtn.dataset.docId) {
+            toggleRejectDrawer(toggleRejectBtn.dataset.docId);
+            return;
+          }
+
+          // Cancel Reject Drawer
+          const cancelRejectBtn = e.target.closest('.btn-cancel-reject');
+          if (cancelRejectBtn && cancelRejectBtn.dataset.docId) {
+            toggleRejectDrawer(cancelRejectBtn.dataset.docId);
+            return;
+          }
+
+          // Submit Reject Doc
+          const submitRejectBtn = e.target.closest('.btn-confirm-reject');
+          if (submitRejectBtn && submitRejectBtn.dataset.docId) {
+            submitDocRejection(submitRejectBtn.dataset.docId);
+            return;
+          }
+        });
+
+        // Delegate Preset Reason Select
+        docMatrix.addEventListener('change', (e) => {
+          const select = e.target.closest('.reject-preset-select');
+          if (select && select.dataset.docId) {
+            applyPresetReason(select.dataset.docId, select.value);
+          }
+        });
+      }
     });
 
-    // 1. WebSocket Real-Time Connection
-    function initWebSocket() {
-      const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-      const wsUrl = `${protocol}//${window.location.host}/ws?riderId=ADMIN_OPERATIONS`;
+    function showLoginView() {
+      document.getElementById('adminLoginSection').style.display = 'flex';
+      document.getElementById('adminDashboardSection').style.display = 'none';
+      if (ws) {
+        try { ws.close(); } catch(e){}
+      }
+    }
 
-      const badge = document.getElementById('wsStatusBadge');
-      const text = document.getElementById('wsStatusText');
+    function showDashboardView() {
+      document.getElementById('adminLoginSection').style.display = 'none';
+      document.getElementById('adminDashboardSection').style.display = 'block';
+      const storedUser = localStorage.getItem('ralt_admin_user') || 'Ops Supervisor';
+      document.getElementById('currentAdminName').innerText = storedUser;
+
+      initWebSocket();
+      loadDashboardData(true);
+    }
+
+    // Quick-Fill Demo Credentials
+    function quickFillAdminCredentials() {
+      document.getElementById('adminUsername').value = 'admin';
+      document.getElementById('adminPassword').value = 'admin123';
+      document.getElementById('loginErrorBanner').style.display = 'none';
+    }
+
+    // Handle Admin Login Submit
+    async function handleAdminLogin(e) {
+      if (e) e.preventDefault();
+      const errBanner = document.getElementById('loginErrorBanner');
+      errBanner.style.display = 'none';
+
+      const username = document.getElementById('adminUsername').value.trim();
+      const password = document.getElementById('adminPassword').value;
+
+      const btn = document.getElementById('btnLoginSubmit');
+      btn.innerHTML = '<span>Verifying...</span>';
+      btn.disabled = true;
 
       try {
+        const res = await fetch('/api/admin/login', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ username, password })
+        });
+
+        const data = await res.json().catch(() => null);
+        btn.innerHTML = '<span>Sign In to Ops Console</span> <span>→</span>';
+        btn.disabled = false;
+
+        if (res.ok && data && data.success) {
+          localStorage.setItem('ralt_admin_token', data.token || 'LOCAL-ADMIN-SESSION');
+          localStorage.setItem('ralt_admin_user', data.admin?.name || 'Operations Supervisor');
+          showDashboardView();
+        } else {
+          errBanner.innerText = data?.error || 'Invalid credentials. Use admin / admin123';
+          errBanner.style.display = 'block';
+        }
+      } catch (err) {
+        btn.innerHTML = '<span>Sign In to Ops Console</span> <span>→</span>';
+        btn.disabled = false;
+        if (username.toLowerCase() === 'admin' && password === 'admin123') {
+          localStorage.setItem('ralt_admin_token', 'LOCAL-ADMIN-SESSION');
+          localStorage.setItem('ralt_admin_user', 'Operations Supervisor');
+          showDashboardView();
+        } else {
+          errBanner.innerText = 'Network error verifying credentials. Please try again.';
+          errBanner.style.display = 'block';
+        }
+      }
+    }
+
+    // Handle Admin Sign Out
+    function handleAdminSignOut() {
+      localStorage.removeItem('ralt_admin_token');
+      localStorage.removeItem('ralt_admin_user');
+      showLoginView();
+      showToast('Logged out of operations console', 'info');
+    }
+
+    // WebSocket Initialization
+    function initWebSocket() {
+      try {
+        const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+        const wsUrl = `${protocol}//${window.location.host}/ws?riderId=ADMIN-PORTAL`;
         ws = new WebSocket(wsUrl);
 
         ws.onopen = () => {
-          badge.className = 'status-badge';
-          text.innerText = 'Connected (Live /ws)';
+          const badge = document.getElementById('wsBadge');
+          if (badge) badge.style.opacity = '1';
+          const txt = document.getElementById('wsText');
+          if (txt) txt.innerText = 'Live Sync Active';
         };
 
         ws.onmessage = (event) => {
           try {
             const data = JSON.parse(event.data);
             handleIncomingWsEvent(data);
-          } catch (e) {
-            console.warn('WS frame parse error:', e);
-          }
+          } catch(e){}
         };
 
         ws.onclose = () => {
-          badge.className = 'status-badge disconnected';
-          text.innerText = 'Disconnected';
+          const txt = document.getElementById('wsText');
+          if (txt) txt.innerText = 'Connecting...';
           setTimeout(initWebSocket, 4000);
-        };
-
-        ws.onerror = () => {
-          badge.className = 'status-badge disconnected';
-          text.innerText = 'Connection Error';
         };
       } catch (err) {
         console.error('WS init failed:', err);
@@ -1149,10 +1561,10 @@
       if (!data || !data.type) return;
 
       if (data.type === 'NEW_RIDER_REGISTERED') {
-        showToast(`🎉 New applicant registered: ${data.name || 'Delivery Partner'} (${data.phone || ''})`, 'success');
+        showToast(`🎉 New partner registered: ${data.name || 'Delivery Partner'} (${data.phone || ''})`, 'success');
         loadDashboardData(false);
       } else if (data.type === 'DOCUMENT_UPLOADED') {
-        showToast(`📄 Document attached: ${data.docType || 'Document'} for ${data.riderId}`, 'info');
+        showToast(`📄 Document uploaded for ${data.riderId}`, 'info');
         loadDashboardData(false);
         if (currentRider && currentRider.id === data.riderId) {
           inspectRider(currentRider.id);
@@ -1165,26 +1577,24 @@
       }
     }
 
-    // 2. Fetch Dashboard Data
+    // Load Dashboard Data
     async function loadDashboardData(showLoading = true) {
       try {
-        // Fetch stats
         const statsRes = await fetch('/api/admin/stats');
         const statsData = await statsRes.json();
         if (statsData.success) {
           const s = statsData.stats;
-          document.getElementById('kpiTotal').innerText = s.totalPartners || 0;
-          document.getElementById('kpiPending').innerText = s.pendingPartners || 0;
-          document.getElementById('kpiAction').innerText = s.actionRequiredPartners || 0;
-          document.getElementById('kpiApproved').innerText = s.approvedPartners || 0;
+          safeSetText('kpiTotal', s.totalPartners || 0);
+          safeSetText('kpiPending', s.pendingPartners || 0);
+          safeSetText('kpiAction', s.actionRequiredPartners || 0);
+          safeSetText('kpiApproved', s.approvedPartners || 0);
 
-          document.getElementById('badgeAll').innerText = s.totalPartners || 0;
-          document.getElementById('badgePending').innerText = s.pendingPartners || 0;
-          document.getElementById('badgeAction').innerText = s.actionRequiredPartners || 0;
-          document.getElementById('badgeApproved').innerText = s.approvedPartners || 0;
+          safeSetText('badgeAll', s.totalPartners || 0);
+          safeSetText('badgePending', s.pendingPartners || 0);
+          safeSetText('badgeAction', s.actionRequiredPartners || 0);
+          safeSetText('badgeApproved', s.approvedPartners || 0);
         }
 
-        // Fetch riders
         const queryParams = new URLSearchParams({
           filter: currentFilter,
           search: currentSearch
@@ -1199,18 +1609,33 @@
       }
     }
 
-    // 3. Render Table Rows
+    function setFilter(filter, btn) {
+      currentFilter = filter;
+      document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+      if (btn) btn.classList.add('active');
+      loadDashboardData(false);
+    }
+
+    let searchDebounceTimer = null;
+    function handleSearchInput(val) {
+      clearTimeout(searchDebounceTimer);
+      searchDebounceTimer = setTimeout(() => {
+        currentSearch = val.trim();
+        loadDashboardData(false);
+      }, 300);
+    }
+
     function renderRidersTable(riders) {
       const tbody = document.getElementById('ridersTableBody');
+      if (!tbody) return;
+
       if (!riders || riders.length === 0) {
         tbody.innerHTML = `
           <tr>
             <td colspan="6" class="empty-state">
               <div class="empty-state-icon">📂</div>
-              <div class="empty-state-title">No Delivery Partners Found</div>
-              <div class="empty-state-sub">
-                No delivery partners matching current filter (${currentFilter}). Real applicants will appear here once registered.
-              </div>
+              <div style="font-size: 15px; font-weight: 700; color: var(--brand-primary); margin-bottom: 4px;">No Delivery Partners Found</div>
+              <div style="font-size: 13px;">No partners matching current filter (${currentFilter}). Real applicants will appear here once registered.</div>
             </td>
           </tr>
         `;
@@ -1220,8 +1645,6 @@
       tbody.innerHTML = riders.map(r => {
         const kycStatus = (r.kyc_status || 'PENDING_VERIFICATION').toLowerCase();
         const totalDocs = parseInt(r.total_docs || '0', 10);
-        const approvedDocs = parseInt(r.approved_docs || '0', 10);
-        const pendingDocs = parseInt(r.pending_docs || '0', 10);
         const rejectedDocs = parseInt(r.rejected_docs || '0', 10);
 
         let statusBadgeClass = 'pending_verification';
@@ -1260,13 +1683,8 @@
               </div>
             </td>
             <td>
-              <div class="docs-indicator">
-                <span class="doc-mini-pill ${approvedDocs > 0 ? 'approved' : 'pending'}">
-                  ✓ ${approvedDocs} Approved
-                </span>
-                ${pendingDocs > 0 ? `<span class="doc-mini-pill pending">⏳ ${pendingDocs} Pending</span>` : ''}
-                ${rejectedDocs > 0 ? `<span class="doc-mini-pill rejected">✕ ${rejectedDocs} Issues</span>` : ''}
-                ${totalDocs === 0 ? `<span class="doc-mini-pill" style="background: #f1f5f9; color: #64748b;">No docs</span>` : ''}
+              <div style="display: inline-flex; align-items: center; gap: 6px; background: #f1f5f9; padding: 4px 10px; border-radius: 8px; font-size: 12px; font-weight: 600;">
+                <span>📄</span> ${totalDocs} Document${totalDocs === 1 ? '' : 's'}
               </div>
             </td>
             <td>
@@ -1278,8 +1696,8 @@
               ${dateStr}
             </td>
             <td style="text-align: right;">
-              <button class="btn btn-secondary" onclick="inspectRider('${r.id}')" style="padding: 7px 14px; font-size: 12px; font-weight: 700;">
-                Review Application →
+              <button class="btn-inspect" data-rider-id="${escapeHtml(r.id)}" type="button">
+                Inspect & Verify 🔍
               </button>
             </td>
           </tr>
@@ -1287,7 +1705,11 @@
       }).join('');
     }
 
-    // 4. Inspect Rider Details Modal
+    function safeSetText(id, text) {
+      const el = document.getElementById(id);
+      if (el) el.innerText = text;
+    }
+
     async function inspectRider(riderId) {
       try {
         const res = await fetch(`/api/admin/riders/${riderId}`);
@@ -1300,56 +1722,59 @@
         currentRider = data.rider;
         const docs = data.documents || [];
 
-        // Fill modal fields
-        document.getElementById('modalAvatarText').innerText = (currentRider.name || 'D').charAt(0).toUpperCase();
-        document.getElementById('modalRiderName').innerText = currentRider.name || 'Delivery Partner';
-        document.getElementById('modalRiderSub').innerText = `ID: ${currentRider.id} • Registered Mobile: ${currentRider.phone || 'N/A'}`;
-        document.getElementById('modalPhone').innerText = currentRider.phone || 'N/A';
-        document.getElementById('modalHub').innerText = `${currentRider.city || 'Hyderabad'} (${currentRider.work_area || 'Hitec City Hub'})`;
-        document.getElementById('modalDob').innerText = currentRider.dob || 'Not specified';
-        document.getElementById('modalVehicle').innerText = `${(currentRider.vehicle_type || 'motorcycle').toUpperCase()} • ${currentRider.vehicle_number || 'N/A'}`;
-        document.getElementById('modalDl').innerText = currentRider.dl_number || 'N/A';
-        document.getElementById('modalAadhaarPan').innerText = `Aadhaar: ${currentRider.aadhaar_number || 'N/A'} • PAN: ${currentRider.pan_number || 'N/A'}`;
-        document.getElementById('modalBank').innerText = `${currentRider.bank_name || 'Bank'} • A/C: ${currentRider.bank_account_number || 'N/A'} (IFSC: ${currentRider.bank_ifsc || 'N/A'})`;
+        safeSetText('modalAvatarText', (currentRider.name || 'D').charAt(0).toUpperCase());
+        safeSetText('modalRiderName', currentRider.name || 'Delivery Partner');
+        safeSetText('modalRiderSub', `ID: ${currentRider.id} • Registered: ${currentRider.phone || 'N/A'}`);
+        safeSetText('modalPhone', currentRider.phone || 'N/A');
+        safeSetText('modalHub', `${currentRider.city || 'Hyderabad'} (${currentRider.work_area || 'Hitec City Hub'})`);
+        safeSetText('modalDob', currentRider.dob || 'Not specified');
+        safeSetText('modalVehicle', `${(currentRider.vehicle_type || 'motorcycle').toUpperCase()} • ${currentRider.vehicle_number || 'N/A'}`);
+        safeSetText('modalDl', currentRider.dl_number || 'N/A');
+        safeSetText('modalAadhaarPan', `Aadhaar: ${currentRider.aadhaar_number || 'N/A'} • PAN: ${currentRider.pan_number || 'N/A'}`);
+        safeSetText('modalBank', `${currentRider.bank_name || 'Bank'} • A/C: ${currentRider.bank_account_number || 'N/A'} (IFSC: ${currentRider.bank_ifsc || 'N/A'})`);
 
         const kycStatus = (currentRider.kyc_status || 'PENDING_VERIFICATION').toUpperCase();
         const kycChip = document.getElementById('modalKycChip');
-        if (kycStatus === 'APPROVED' || currentRider.onboarding_completed === 1) {
-          kycChip.innerHTML = `<span class="status-chip approved">APPROVED & ACTIVE ✓</span>`;
-        } else if (kycStatus === 'ACTION_REQUIRED' || kycStatus === 'REJECTED') {
-          kycChip.innerHTML = `<span class="status-chip action_required">ACTION REQUIRED / REJECTED ⚠️</span>`;
-        } else {
-          kycChip.innerHTML = `<span class="status-chip pending_verification">PENDING REVIEW ⏳</span>`;
+        if (kycChip) {
+          if (kycStatus === 'APPROVED' || currentRider.onboarding_completed === 1) {
+            kycChip.innerHTML = `<span class="status-chip approved">APPROVED & ACTIVE ✓</span>`;
+          } else if (kycStatus === 'ACTION_REQUIRED' || kycStatus === 'REJECTED') {
+            kycChip.innerHTML = `<span class="status-chip action_required">ACTION REQUIRED / REJECTED ⚠️</span>`;
+          } else {
+            kycChip.innerHTML = `<span class="status-chip pending_verification">PENDING REVIEW ⏳</span>`;
+          }
         }
 
-        // Feedback Banner
         const feedbackBanner = document.getElementById('modalFeedbackBanner');
         const feedbackText = document.getElementById('modalFeedbackText');
-        if (currentRider.rejection_feedback) {
-          feedbackBanner.style.display = 'flex';
-          feedbackText.innerText = currentRider.rejection_feedback;
-        } else {
-          feedbackBanner.style.display = 'none';
+        if (feedbackBanner && feedbackText) {
+          if (currentRider.rejection_feedback) {
+            feedbackBanner.style.display = 'flex';
+            feedbackText.innerText = currentRider.rejection_feedback;
+          } else {
+            feedbackBanner.style.display = 'none';
+          }
         }
 
-        document.getElementById('modalDocCount').innerText = `${docs.length} Document${docs.length === 1 ? '' : 's'} Attached`;
+        safeSetText('modalDocCount', `${docs.length} Document${docs.length === 1 ? '' : 's'} Attached`);
 
         renderDocumentCards(docs);
 
-        // Open Modal
-        document.getElementById('reviewModal').classList.add('open');
+        const reviewModal = document.getElementById('reviewModal');
+        if (reviewModal) reviewModal.classList.add('open');
       } catch (err) {
         console.error('Inspect error:', err);
         showToast('Error loading application details', 'error');
       }
     }
 
-    // 5. Render Document Cards in Inspection Modal
     function renderDocumentCards(docs) {
       const container = document.getElementById('modalDocMatrix');
+      if (!container) return;
+
       if (!docs || docs.length === 0) {
         container.innerHTML = `
-          <div style="grid-column: 1 / -1; text-align: center; padding: 36px; background: #f8fafc; border: 1px dashed var(--brand-border); border-radius: 12px; color: var(--text-muted);">
+          <div style="grid-column: 1 / -1; text-align: center; padding: 40px; background: #f8fafc; border: 1.5px dashed var(--brand-border); border-radius: 14px; color: var(--text-muted);">
             No documents uploaded yet by this applicant.
           </div>
         `;
@@ -1360,29 +1785,32 @@
         const title = DOC_NAMES[d.doc_type] || d.file_name || d.doc_type;
         const status = (d.status || 'PENDING_VERIFICATION').toUpperCase();
 
-        let statusBadge = `<span class="status-chip pending_verification" style="font-size: 11px; padding: 3px 8px;">Pending</span>`;
+        let statusBadge = `<span class="status-chip pending_verification" style="font-size: 11px; padding: 3px 8px;">Pending ⏳</span>`;
         if (status === 'APPROVED') {
           statusBadge = `<span class="status-chip approved" style="font-size: 11px; padding: 3px 8px;">Approved ✓</span>`;
         } else if (status === 'REJECTED') {
           statusBadge = `<span class="status-chip action_required" style="font-size: 11px; padding: 3px 8px;">Rejected ✕</span>`;
         }
 
-        const previewSrc = `/api/documents/${d.id}/preview`;
+        let previewSrc = `/api/documents/${d.id}/preview`;
+        if (d.file_data && typeof d.file_data === 'string' && d.file_data.startsWith('data:image')) {
+          previewSrc = d.file_data;
+        }
 
         return `
           <div class="doc-card">
             <div class="doc-card-header">
               <div class="doc-card-title">
                 <span>📄</span>
-                <span title="${escapeHtml(title)}" style="max-width: 200px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
+                <span title="${escapeHtml(title)}" style="max-width: 180px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
                   ${escapeHtml(title)}
                 </span>
               </div>
               ${statusBadge}
             </div>
 
-            <div class="doc-card-preview" onclick="openLightbox('${previewSrc}')">
-              <img src="${previewSrc}" alt="${escapeHtml(title)}" onerror="this.src='data:image/svg+xml;utf8,<svg xmlns=\\'http://www.w3.org/2000/svg\\' width=\\'100\\' height=\\'100\\'><text x=\\'50%\\' y=\\'50%\\' dominant-baseline=\\'middle\\' text-anchor=\\'middle\\' font-size=\\'14\\' fill=\\'%2394a3b8\\'>Preview</text></svg>'" />
+            <div class="doc-card-preview" data-preview-src="${escapeHtml(previewSrc)}">
+              <img src="${previewSrc}" alt="${escapeHtml(title)}" loading="lazy" />
               <div class="zoom-hint">🔍 Tap to Zoom</div>
             </div>
 
@@ -1393,24 +1821,24 @@
             ` : ''}
 
             <div class="doc-card-footer">
-              <button class="btn btn-danger" onclick="toggleRejectDrawer('${d.id}')" style="padding: 6px 12px; font-size: 12px;">
+              <button class="btn btn-danger btn-doc-reject-toggle" data-doc-id="${escapeHtml(d.id)}" type="button" style="padding: 6px 12px; font-size: 12px;">
                 ✕ Reject
               </button>
-              <button class="btn btn-success" onclick="verifyDoc('${d.id}', 'APPROVED')" style="padding: 6px 14px; font-size: 12px;">
+              <button class="btn btn-success btn-doc-approve" data-doc-id="${escapeHtml(d.id)}" type="button" style="padding: 6px 14px; font-size: 12px;">
                 ✓ Approve
               </button>
             </div>
 
             <div id="rejectDrawer_${d.id}" class="reject-drawer">
               <div style="font-size: 11px; font-weight: 700; color: #9f1239;">Select Rejection Reason:</div>
-              <select class="reject-input" onchange="applyPresetReason('${d.id}', this.value)">
+              <select class="reject-input reject-preset-select" data-doc-id="${escapeHtml(d.id)}">
                 <option value="">-- Choose Common Reason --</option>
                 ${REJECTION_PRESETS.map(p => `<option value="${escapeHtml(p)}">${escapeHtml(p)}</option>`).join('')}
               </select>
-              <textarea id="customReason_${d.id}" class="reject-input" rows="2" placeholder="Or enter specific feedback for delivery partner..."></textarea>
-              <div style="display: flex; justify-content: flex-end; gap: 8px; margin-top: 4px;">
-                <button class="btn btn-secondary" onclick="toggleRejectDrawer('${d.id}')" style="padding: 4px 10px; font-size: 11px;">Cancel</button>
-                <button class="btn btn-danger" onclick="submitDocRejection('${d.id}')" style="padding: 4px 12px; font-size: 11px;">Confirm Reject</button>
+              <textarea id="customReason_${d.id}" class="reject-input" rows="2" placeholder="Or enter specific feedback for partner..."></textarea>
+              <div style="display: flex; justify-content: flex-end; gap: 8px; margin-top: 6px;">
+                <button class="btn btn-secondary btn-cancel-reject" data-doc-id="${escapeHtml(d.id)}" type="button" style="padding: 4px 10px; font-size: 11px;">Cancel</button>
+                <button class="btn btn-danger btn-confirm-reject" data-doc-id="${escapeHtml(d.id)}" type="button" style="padding: 4px 12px; font-size: 11px;">Confirm Reject</button>
               </div>
             </div>
           </div>
@@ -1418,7 +1846,6 @@
       }).join('');
     }
 
-    // 6. Verify Individual Document
     async function verifyDoc(docId, status, rejectionReason = null) {
       try {
         const res = await fetch(`/api/admin/documents/${docId}/verify`, {
@@ -1448,9 +1875,7 @@
 
     function toggleRejectDrawer(docId) {
       const drawer = document.getElementById(`rejectDrawer_${docId}`);
-      if (drawer) {
-        drawer.classList.toggle('open');
-      }
+      if (drawer) drawer.classList.toggle('open');
     }
 
     function applyPresetReason(docId, value) {
@@ -1470,7 +1895,6 @@
       verifyDoc(docId, 'REJECTED', reason);
     }
 
-    // 7. Approve All & Activate Partner
     async function approveAllDocuments() {
       if (!currentRider) return;
       if (!confirm(`Are you sure you want to approve ${currentRider.name || 'this delivery partner'} and activate them for live delivery dispatch duty?`)) {
@@ -1489,7 +1913,7 @@
 
         const data = await res.json();
         if (data.success) {
-          showToast('🎉 Partner approved & activated successfully! Push notification sent.', 'success');
+          showToast('🎉 Partner approved & activated successfully! Push notification dispatched.', 'success');
           inspectRider(currentRider.id);
           loadDashboardData(false);
         } else {
@@ -1500,10 +1924,9 @@
       }
     }
 
-    // 8. Reject Entire Application / Request Re-upload
     async function promptRejectPartner() {
       if (!currentRider) return;
-      const reason = prompt('Please enter the feedback/reason for requesting re-upload from the partner:', 'Some documents are unreadable. Please re-upload clear photos.');
+      const reason = prompt('Please enter the feedback/reason for requesting re-upload from the partner:', 'Some documents are blurry. Please re-upload clear photos.');
       if (!reason) return;
 
       try {
@@ -1530,69 +1953,41 @@
       }
     }
 
-    // 9. Reset Database Utility
-    async function confirmResetDatabase() {
-      if (!confirm('Are you sure you want to completely clear the database? All applications and documents will be cleared cleanly.')) {
-        return;
-      }
-
-      try {
-        const res = await fetch('/api/admin/reset-db', { method: 'POST' });
-        const data = await res.json();
-        if (data.success) {
-          showToast('Database reset complete. All test data cleared.', 'info');
-          closeReviewModal();
-          loadDashboardData();
-        }
-      } catch (err) {
-        showToast('Error resetting database', 'error');
-      }
-    }
-
     function closeReviewModal() {
-      document.getElementById('reviewModal').classList.remove('open');
-      currentRider = null;
+      const modal = document.getElementById('reviewModal');
+      if (modal) modal.classList.remove('open');
     }
 
-    // Lightbox Controls
     function openLightbox(src) {
-      document.getElementById('lightboxImg').src = src;
-      document.getElementById('lightbox').classList.add('open');
+      const lb = document.getElementById('lightbox');
+      const img = document.getElementById('lightboxImg');
+      if (lb && img) {
+        img.src = src;
+        lb.classList.add('open');
+      }
     }
 
     function closeLightbox() {
-      document.getElementById('lightbox').classList.remove('open');
+      const lb = document.getElementById('lightbox');
+      if (lb) lb.classList.remove('open');
     }
 
-    // Filter and Search Controls
-    function setFilter(filter, btn) {
-      currentFilter = filter;
-      document.querySelectorAll('.filter-tab').forEach(b => b.classList.remove('active'));
-      btn.classList.add('active');
-      loadDashboardData();
-    }
-
-    function handleSearch(val) {
-      clearTimeout(searchTimeout);
-      searchTimeout = setTimeout(() => {
-        currentSearch = val.trim();
-        loadDashboardData(false);
-      }, 300);
-    }
-
-    // Toast Notifications
     function showToast(message, type = 'info') {
       const container = document.getElementById('toastContainer');
+      if (!container) return;
+
       const toast = document.createElement('div');
-      toast.className = `toast ${type}`;
-      toast.innerText = message;
+      toast.className = 'toast';
+      const icon = type === 'success' ? '✓' : type === 'error' ? '⚠️' : 'ℹ️';
+      toast.innerHTML = `<span>${icon}</span> <span>${escapeHtml(message)}</span>`;
       container.appendChild(toast);
 
       setTimeout(() => {
         toast.style.opacity = '0';
-        toast.style.transition = 'opacity 0.3s ease';
+        toast.style.transform = 'translateY(10px)';
+        toast.style.transition = 'all 0.3s ease';
         setTimeout(() => toast.remove(), 300);
-      }, 3500);
+      }, 4000);
     }
 
     function escapeHtml(str) {
@@ -1602,7 +1997,7 @@
         .replace(/</g, '&lt;')
         .replace(/>/g, '&gt;')
         .replace(/"/g, '&quot;')
-        .replace(/'/g, '&#039;');
+        .replace(/'/g, '&#39;');
     }
   </script>
 </body>

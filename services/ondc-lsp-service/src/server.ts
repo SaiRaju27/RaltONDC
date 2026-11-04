@@ -171,7 +171,7 @@ app.all(['/api/auth/send-otp', '/api/rider/send-otp', '/api/rider/auth/send-otp'
 app.all(['/api/auth/verify-otp', '/api/rider/verify-otp', '/api/rider/auth/verify-otp'], otpRateLimiter, RiderController.verifyOtp);
 app.all(['/api/auth/login', '/api/rider/login', '/api/rider/auth/login'], apiRateLimiter, RiderController.login);
 
-app.all('/api/rider/save-step', apiRateLimiter, RiderController.saveStep);
+app.all(['/api/rider/save-step', '/api/rider/step'], apiRateLimiter, RiderController.saveStep);
 app.all('/api/rider/metrics', apiRateLimiter, RiderController.getMetrics);
 app.all('/api/kyc/request/:id', apiRateLimiter, RiderController.requestDigioKyc);
 app.all('/api/kyc/response/:id', apiRateLimiter, RiderController.responseDigioKyc);
@@ -201,11 +201,13 @@ app.get('/api/documents/:docId/preview', DocumentController.previewDocument);
 // =============================================================================
 // ADMIN VERIFICATION & PARTNER ONBOARDING REVIEW APIS
 // =============================================================================
+app.post('/api/admin/login', apiRateLimiter, AdminController.login);
 app.get('/api/admin/stats', apiRateLimiter, AdminController.getStats);
 app.get('/api/admin/riders', apiRateLimiter, AdminController.listRiders);
 app.get('/api/admin/riders/:id', apiRateLimiter, AdminController.getRiderDetails);
 app.post('/api/admin/documents/:docId/verify', apiRateLimiter, AdminController.verifyDocument);
 app.post('/api/admin/riders/:id/review', apiRateLimiter, AdminController.reviewRider);
+app.post('/api/admin/riders/:id/update', apiRateLimiter, AdminController.updateRiderProfile);
 app.post('/api/admin/riders/:id/toggle-status', apiRateLimiter, AdminController.togglePartnerStatus);
 
 // =============================================================================
