@@ -1304,7 +1304,7 @@ export const OnboardingFlow: React.FC<OnboardingFlowProps> = ({
         kyc_step: 5,
       };
 
-      // 1. Immediately persist full application & Step 5 bank details into PostgreSQL
+      // 1. Immediately persist full application & Step 5 bank details into fleet registry
       await saveStepData(5, profile);
 
       // 2. Fast non-blocking background document upload (max 3s race so it NEVER freezes)
