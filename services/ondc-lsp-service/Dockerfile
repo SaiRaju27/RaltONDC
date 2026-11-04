@@ -30,12 +30,12 @@ RUN mkdir -p data
 COPY .env* ./
 
 ENV NODE_ENV=production
-ENV PORT=5000
-EXPOSE 5000
+ENV PORT=5001
+EXPOSE 5001
 
 # Health check instruction
 HEALTHCHECK --interval=15s --timeout=5s --start-period=10s --retries=3 \
-  CMD curl -f http://localhost:5000/health || exit 1
+  CMD curl -f http://localhost:${PORT:-5001}/health || exit 1
 
 ENTRYPOINT ["/usr/bin/dumb-init", "--"]
 CMD ["node", "dist/server.js"]

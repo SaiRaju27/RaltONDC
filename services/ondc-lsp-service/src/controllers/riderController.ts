@@ -144,7 +144,7 @@ export class RiderController {
     try {
       const data = req.body || {};
       const cleanPhone = (data.phone || '').toString().replace(/[^0-9]/g, '').slice(-10);
-      const riderId = data.riderId || req.riderAuth?.riderId || (cleanPhone ? `rider-ralt-${cleanPhone}` : undefined);
+      const riderId = data.riderId || data.id || req.riderAuth?.riderId || (cleanPhone ? `RALT-RIDER-${cleanPhone}` : undefined);
 
       if (!riderId && !cleanPhone) {
         return res.status(400).json({ success: false, error: 'Rider ID or phone is required' });
@@ -163,6 +163,17 @@ export class RiderController {
           ...data,
           id: riderId,
           phone: `+91 ${cleanPhone}`
+        });
+      }
+
+      // Notify admin portal live of profile update
+      if (rider) {
+        riderManager.broadcastToAll({
+          type: 'RIDER_PROFILE_UPDATED',
+          riderId: rider.id,
+          phone: rider.phone,
+          name: rider.name,
+          step: data.kyc_step || data.kycStep
         });
       }
 

@@ -123,65 +123,74 @@ class RiderManager {
 
     // Insert fresh new rider
     const now = new Date().toISOString();
-    await run(`
-      INSERT INTO riders (
-        id, name, phone, city, vehicle_number, vehicle_type,
-        is_online, lat, lng, father_name, dob, gender, address,
-        emergency_name, emergency_phone, emergency_relation,
-        aadhaar_number, pan_number, dl_number, dl_expiry, insurance_number,
-        bank_account_number, bank_ifsc, bank_name, account_holder_name, upi_id,
-        penny_drop_status, selfie_url, training_completed, kyc_status,
-        kyc_step, onboarding_completed, rating, total_orders, total_earnings,
-        created_at, updated_at
-      ) VALUES (
-        ?, ?, ?, ?, ?, ?,
-        ?, ?, ?, ?, ?, ?, ?,
-        ?, ?, ?,
-        ?, ?, ?, ?, ?,
-        ?, ?, ?, ?, ?,
-        ?, ?, ?, ?,
-        ?, ?, ?, ?, ?,
-        ?, ?
-      )
-    `, [
-      riderId,
-      data.name || 'Delivery Partner',
-      data.phone || `+91 ${cleanPhone}`,
-      data.city || 'Hyderabad',
-      data.vehicle_number || '',
-      data.vehicle_type || 'motorcycle',
-      data.is_online ? 1 : 0,
-      data.lat || 17.3457,
-      data.lng || 78.5522,
-      data.father_name || '',
-      data.dob || '',
-      data.gender || 'Male',
-      data.address || '',
-      data.emergency_name || '',
-      data.emergency_phone || '',
-      data.emergency_relation || '',
-      data.aadhaar_number || '',
-      data.pan_number || '',
-      data.dl_number || '',
-      data.dl_expiry || '',
-      data.insurance_number || '',
-      data.bank_account_number || '',
-      data.bank_ifsc || '',
-      data.bank_name || '',
-      data.account_holder_name || '',
-      data.upi_id || '',
-      data.penny_drop_status || 'PENDING',
-      data.selfie_url || '',
-      data.training_completed ? 1 : 0,
-      data.kyc_status || 'PENDING',
-      data.kyc_step || 1,
-      data.onboarding_completed ? 1 : 0,
-      data.rating || 5.0,
-      data.total_orders || 0,
-      data.total_earnings || 0.0,
-      now,
-      now
-    ]);
+    try {
+      await run(`
+        INSERT INTO riders (
+          id, name, phone, city, vehicle_number, vehicle_type,
+          is_online, lat, lng, father_name, dob, gender, address,
+          emergency_name, emergency_phone, emergency_relation,
+          aadhaar_number, pan_number, dl_number, dl_expiry, insurance_number,
+          bank_account_number, bank_ifsc, bank_name, account_holder_name, upi_id,
+          penny_drop_status, selfie_url, training_completed, kyc_status,
+          kyc_step, onboarding_completed, rating, total_orders, total_earnings,
+          created_at, updated_at
+        ) VALUES (
+          ?, ?, ?, ?, ?, ?,
+          ?, ?, ?, ?, ?, ?, ?,
+          ?, ?, ?,
+          ?, ?, ?, ?, ?,
+          ?, ?, ?, ?, ?,
+          ?, ?, ?, ?,
+          ?, ?, ?, ?, ?,
+          ?, ?
+        )
+      `, [
+        riderId,
+        data.name || 'Delivery Partner',
+        data.phone || `+91 ${cleanPhone}`,
+        data.city || 'Hyderabad',
+        data.vehicle_number || (data as any).vehiclePlate || '',
+        data.vehicle_type || (data as any).vehicleType || 'motorcycle',
+        data.is_online ? 1 : 0,
+        data.lat || 17.4375,
+        data.lng || 78.3687,
+        data.father_name || '',
+        data.dob || '',
+        data.gender || 'Male',
+        data.address || '',
+        data.emergency_name || '',
+        data.emergency_phone || '',
+        data.emergency_relation || '',
+        data.aadhaar_number || (data as any).aadhaarNumber || '',
+        data.pan_number || (data as any).panNumber || '',
+        data.dl_number || (data as any).dlNumber || '',
+        data.dl_expiry || '',
+        data.insurance_number || '',
+        data.bank_account_number || (data as any).bankAccount || '',
+        data.bank_ifsc || (data as any).bankIfsc || '',
+        data.bank_name || '',
+        data.account_holder_name || data.name || '',
+        data.upi_id || (data as any).upiId || '',
+        data.penny_drop_status || 'PENDING',
+        data.selfie_url || '',
+        data.training_completed ? 1 : 0,
+        data.kyc_status || 'PENDING',
+        data.kyc_step || 1,
+        data.onboarding_completed ? 1 : 0,
+        data.rating || 5.0,
+        data.total_orders || 0,
+        data.total_earnings || 0.0,
+        now,
+        now
+      ]);
+    } catch (insertErr) {
+      // Handle concurrent insert race condition gracefully
+      const existingRider = await this.getRider(riderId) || (cleanPhone ? await this.getRiderByPhone(cleanPhone) : undefined);
+      if (existingRider) {
+        return (await this.updateProfile(existingRider.id, data))!;
+      }
+      throw insertErr;
+    }
 
     const created = (await this.getRider(riderId))!;
     this.notifyRider(riderId, { type: 'RIDER_REGISTERED', rider: created });
@@ -190,33 +199,77 @@ class RiderManager {
 
   public async updateProfile(
     riderId: string,
-    data: Partial<RiderRecord>
+    data: Partial<RiderRecord> & Record<string, any>
   ): Promise<RiderRecord | undefined> {
     const fields: string[] = [];
     const values: any[] = [];
 
-    if (data.name !== undefined) { fields.push('name = ?'); values.push(data.name); }
-    if (data.phone !== undefined) { fields.push('phone = ?'); values.push(data.phone); }
-    if (data.vehicle_number !== undefined) { fields.push('vehicle_number = ?'); values.push(data.vehicle_number); }
-    if (data.vehicle_type !== undefined) { fields.push('vehicle_type = ?'); values.push(data.vehicle_type); }
-    if (data.upi_id !== undefined) { fields.push('upi_id = ?'); values.push(data.upi_id); }
-    if (data.dl_number !== undefined) { fields.push('dl_number = ?'); values.push(data.dl_number); }
-    if (data.dl_expiry !== undefined) { fields.push('dl_expiry = ?'); values.push(data.dl_expiry); }
-    if (data.aadhaar_number !== undefined) { fields.push('aadhaar_number = ?'); values.push(data.aadhaar_number); }
-    if (data.pan_number !== undefined) { fields.push('pan_number = ?'); values.push(data.pan_number); }
-    if (data.city !== undefined) { fields.push('city = ?'); values.push(data.city); }
-    if (data.address !== undefined) { fields.push('address = ?'); values.push(data.address); }
-    if (data.father_name !== undefined) { fields.push('father_name = ?'); values.push(data.father_name); }
-    if (data.dob !== undefined) { fields.push('dob = ?'); values.push(data.dob); }
-    if (data.gender !== undefined) { fields.push('gender = ?'); values.push(data.gender); }
-    if (data.emergency_name !== undefined) { fields.push('emergency_name = ?'); values.push(data.emergency_name); }
-    if (data.emergency_phone !== undefined) { fields.push('emergency_phone = ?'); values.push(data.emergency_phone); }
-    if (data.emergency_relation !== undefined) { fields.push('emergency_relation = ?'); values.push(data.emergency_relation); }
-    if (data.insurance_number !== undefined) { fields.push('insurance_number = ?'); values.push(data.insurance_number); }
-    if (data.bank_account_number !== undefined) { fields.push('bank_account_number = ?'); values.push(data.bank_account_number); }
-    if (data.bank_ifsc !== undefined) { fields.push('bank_ifsc = ?'); values.push(data.bank_ifsc); }
-    if (data.bank_name !== undefined) { fields.push('bank_name = ?'); values.push(data.bank_name); }
-    if (data.account_holder_name !== undefined) { fields.push('account_holder_name = ?'); values.push(data.account_holder_name); }
+    const name = data.name;
+    if (name !== undefined) { fields.push('name = ?'); values.push(name); }
+
+    const phone = data.phone;
+    if (phone !== undefined) { fields.push('phone = ?'); values.push(phone); }
+
+    const vehicleNumber = data.vehicle_number !== undefined ? data.vehicle_number : (data.vehiclePlate !== undefined ? data.vehiclePlate : data.vehicle_plate);
+    if (vehicleNumber !== undefined) { fields.push('vehicle_number = ?'); values.push(vehicleNumber); }
+
+    const vehicleType = data.vehicle_type !== undefined ? data.vehicle_type : data.vehicleType;
+    if (vehicleType !== undefined) { fields.push('vehicle_type = ?'); values.push(vehicleType); }
+
+    const upiId = data.upi_id !== undefined ? data.upi_id : data.upiId;
+    if (upiId !== undefined) { fields.push('upi_id = ?'); values.push(upiId); }
+
+    const dlNumber = data.dl_number !== undefined ? data.dl_number : data.dlNumber;
+    if (dlNumber !== undefined) { fields.push('dl_number = ?'); values.push(dlNumber); }
+
+    const dlExpiry = data.dl_expiry !== undefined ? data.dl_expiry : data.dlExpiry;
+    if (dlExpiry !== undefined) { fields.push('dl_expiry = ?'); values.push(dlExpiry); }
+
+    const aadhaarNumber = data.aadhaar_number !== undefined ? data.aadhaar_number : data.aadhaarNumber;
+    if (aadhaarNumber !== undefined) { fields.push('aadhaar_number = ?'); values.push(aadhaarNumber); }
+
+    const panNumber = data.pan_number !== undefined ? data.pan_number : data.panNumber;
+    if (panNumber !== undefined) { fields.push('pan_number = ?'); values.push(panNumber); }
+
+    const city = data.city;
+    if (city !== undefined) { fields.push('city = ?'); values.push(city); }
+
+    const address = data.address;
+    if (address !== undefined) { fields.push('address = ?'); values.push(address); }
+
+    const fatherName = data.father_name !== undefined ? data.father_name : data.fatherName;
+    if (fatherName !== undefined) { fields.push('father_name = ?'); values.push(fatherName); }
+
+    const dob = data.dob;
+    if (dob !== undefined) { fields.push('dob = ?'); values.push(dob); }
+
+    const gender = data.gender;
+    if (gender !== undefined) { fields.push('gender = ?'); values.push(gender); }
+
+    const emergencyName = data.emergency_name !== undefined ? data.emergency_name : data.emergencyName;
+    if (emergencyName !== undefined) { fields.push('emergency_name = ?'); values.push(emergencyName); }
+
+    const emergencyPhone = data.emergency_phone !== undefined ? data.emergency_phone : data.emergencyPhone;
+    if (emergencyPhone !== undefined) { fields.push('emergency_phone = ?'); values.push(emergencyPhone); }
+
+    const emergencyRelation = data.emergency_relation !== undefined ? data.emergency_relation : data.emergencyRelation;
+    if (emergencyRelation !== undefined) { fields.push('emergency_relation = ?'); values.push(emergencyRelation); }
+
+    const insuranceNumber = data.insurance_number !== undefined ? data.insurance_number : data.insuranceNumber;
+    if (insuranceNumber !== undefined) { fields.push('insurance_number = ?'); values.push(insuranceNumber); }
+
+    const bankAccountNumber = data.bank_account_number !== undefined ? data.bank_account_number : (data.bankAccount !== undefined ? data.bankAccount : data.bank_account);
+    if (bankAccountNumber !== undefined) { fields.push('bank_account_number = ?'); values.push(bankAccountNumber); }
+
+    const bankIfsc = data.bank_ifsc !== undefined ? data.bank_ifsc : data.bankIfsc;
+    if (bankIfsc !== undefined) { fields.push('bank_ifsc = ?'); values.push(bankIfsc); }
+
+    const bankName = data.bank_name !== undefined ? data.bank_name : data.bankName;
+    if (bankName !== undefined) { fields.push('bank_name = ?'); values.push(bankName); }
+
+    const accountHolderName = data.account_holder_name !== undefined ? data.account_holder_name : data.accountHolderName;
+    if (accountHolderName !== undefined) { fields.push('account_holder_name = ?'); values.push(accountHolderName); }
+
     if (data.penny_drop_status !== undefined) { fields.push('penny_drop_status = ?'); values.push(data.penny_drop_status); }
     if (data.selfie_url !== undefined) { fields.push('selfie_url = ?'); values.push(data.selfie_url); }
     if (data.training_completed !== undefined) { fields.push('training_completed = ?'); values.push(data.training_completed); }

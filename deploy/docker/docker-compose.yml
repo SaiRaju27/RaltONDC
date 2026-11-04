@@ -11,9 +11,9 @@ services:
     container_name: ralt-ondc-backend
     restart: unless-stopped
     ports:
-      - "${HOST_PORT:-5001}:5000"
+      - "${HOST_PORT:-5001}:${PORT:-5001}"
     environment:
-      PORT: 5000
+      PORT: ${PORT:-5001}
       NODE_ENV: development
       POSTGRES_HOST: postgres
       POSTGRES_PORT: 5432

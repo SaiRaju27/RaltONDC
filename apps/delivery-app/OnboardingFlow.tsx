@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import * as ImagePicker from 'expo-image-picker';
-import { resolveApiUrl } from './src/utils/environment';
+import { resolveApiUrl, resolveWsUrl } from './src/utils/environment';
 import {
   View,
   Text,
@@ -336,9 +336,9 @@ export const OnboardingFlow: React.FC<OnboardingFlowProps> = ({
   apiUrl = 'http://localhost:5001',
   existingRider,
 }) => {
-  // Step 1: Personal Profile State (Clean defaults, no hardcoded mock data)
-  const initialCleanPhone = (authPhone || '').replace(/[^0-9]/g, '').slice(-10);
-  const [fullName, setFullName] = useState<string>('');
+  // Step 1: Personal Profile State (Pre-populated from existing rider if available)
+  const initialCleanPhone = (authPhone || existingRider?.phone || '').replace(/[^0-9]/g, '').slice(-10);
+  const [fullName, setFullName] = useState<string>(existingRider?.name || '');
   const [docImages, setDocImages] = useState<Record<string, string>>({
     aadhaar_front: '',
     aadhaar_back: '',
@@ -373,6 +373,14 @@ export const OnboardingFlow: React.FC<OnboardingFlowProps> = ({
           const asset = result.assets[0];
           const imgData = asset.base64 ? `data:image/jpeg;base64,${asset.base64}` : asset.uri;
           setDocImages((prev) => ({ ...prev, [docType]: imgData }));
+          // Auto background upload immediately so Step 5 is instantaneous
+          uploadDocWithChunking(
+            currentRiderId,
+            docType,
+            `${docType}.jpg`,
+            'image/jpeg',
+            asset.base64 ? `data:image/jpeg;base64,${asset.base64}` : imgData
+          ).catch((e) => console.warn(`Background upload failed for ${docType}:`, e));
         }
       } else {
         const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
@@ -396,6 +404,14 @@ export const OnboardingFlow: React.FC<OnboardingFlowProps> = ({
           const asset = result.assets[0];
           const imgData = asset.base64 ? `data:image/jpeg;base64,${asset.base64}` : asset.uri;
           setDocImages((prev) => ({ ...prev, [docType]: imgData }));
+          // Auto background upload immediately so Step 5 is instantaneous
+          uploadDocWithChunking(
+            currentRiderId,
+            docType,
+            `${docType}.jpg`,
+            'image/jpeg',
+            asset.base64 ? `data:image/jpeg;base64,${asset.base64}` : imgData
+          ).catch((e) => console.warn(`Background upload failed for ${docType}:`, e));
         }
       }
     } catch (err: any) {
@@ -404,7 +420,7 @@ export const OnboardingFlow: React.FC<OnboardingFlowProps> = ({
   };
   const [mobileNumber, setMobileNumber] = useState<string>(initialCleanPhone);
   const [isPhoneVerified, setIsPhoneVerified] = useState<boolean>(
-    Boolean(authPhone && authPhone.replace(/[^0-9]/g, '').length === 10)
+    Boolean((authPhone || existingRider?.phone) && (authPhone || existingRider?.phone || '').replace(/[^0-9]/g, '').length === 10)
   );
   const [showPhoneOtpModal, setShowPhoneOtpModal] = useState<boolean>(false);
   const [phoneOtpInput, setPhoneOtpInput] = useState<string>('');
@@ -418,36 +434,47 @@ export const OnboardingFlow: React.FC<OnboardingFlowProps> = ({
   const [referralCode, setReferralCode] = useState<string>('');
   const [isReferralApplied, setIsReferralApplied] = useState<boolean>(false);
   const [isSavingStep1, setIsSavingStep1] = useState<boolean>(false);
+  const [isSavingStep, setIsSavingStep] = useState<boolean>(false);
+  const [savingStepMsg, setSavingStepMsg] = useState<string>('');
 
   // Calendar Modal State
   const [showDobModal, setShowDobModal] = useState<boolean>(false);
-  const [calYear, setCalYear] = useState<number>(2000);
+  const [calYear, setCalYear] = useState<number>(() => {
+    if (existingRider?.dob && existingRider.dob.includes('-')) {
+      const parts = existingRider.dob.split('-');
+      const y = parseInt(parts[0].length === 4 ? parts[0] : parts[2], 10);
+      if (!isNaN(y) && y >= 1950 && y <= 2010) return y;
+    }
+    return 2000;
+  });
   const [calMonth, setCalMonth] = useState<number>(0); // 0-indexed (0 = January)
 
   // Step 2: Vehicle Selection & RC State
-  const [vehicleChoice, setVehicleChoice] = useState<'moto' | 'ev' | 'bicycle'>('moto');
-  const [vehiclePlateInput, setVehiclePlateInput] = useState<string>('');
+  const [vehicleChoice, setVehicleChoice] = useState<'moto' | 'ev' | 'bicycle'>(
+    existingRider?.vehicle_type === 'electric' ? 'ev' : existingRider?.vehicle_type === 'bicycle' ? 'bicycle' : 'moto'
+  );
+  const [vehiclePlateInput, setVehiclePlateInput] = useState<string>(existingRider?.vehicle_number || '');
   const [vehicleModel, setVehicleModel] = useState<string>('hero-splendor');
   const [ownershipType, setOwnershipType] = useState<'own' | 'rented' | 'family'>('own');
 
   // Step 3: Document Upload State
-  const [dlNumber, setDlNumber] = useState<string>('');
-  const [panNumber, setPanNumber] = useState<string>('');
+  const [dlNumber, setDlNumber] = useState<string>(existingRider?.dl_number || '');
+  const [panNumber, setPanNumber] = useState<string>(existingRider?.pan_number || '');
   const [isRcUploading, setIsRcUploading] = useState<boolean>(false);
   const [rcProgress, setRcProgress] = useState<number>(100);
   const [isRcVerified, setIsRcVerified] = useState<boolean>(true);
 
   // Step 4: eKYC & Selfie State
-  const [aadhaarDigits, setAadhaarDigits] = useState<string>('');
+  const [aadhaarDigits, setAadhaarDigits] = useState<string>(existingRider?.aadhaar_number || '');
   const [ekycOtp] = useState<string[]>(['6', '1', '9', '0', '4', '8']);
   const [isRetakingPhoto, setIsRetakingPhoto] = useState<boolean>(false);
 
   // Step 5: Bank Setup & Payout State
-  const bankHolderName = fullName.trim() || 'Verified Fleet Partner';
-  const [bankIfscInput, setBankIfscInput] = useState<string>('');
-  const [bankAccInput, setBankAccInput] = useState<string>('');
-  const [bankAccConfirmInput, setBankAccConfirmInput] = useState<string>('');
-  const [upiIdInput, setUpiIdInput] = useState<string>('');
+  const bankHolderName = fullName.trim() || existingRider?.account_holder_name || existingRider?.name || 'Verified Fleet Partner';
+  const [bankIfscInput, setBankIfscInput] = useState<string>(existingRider?.bank_ifsc || '');
+  const [bankAccInput, setBankAccInput] = useState<string>(existingRider?.bank_account_number || '');
+  const [bankAccConfirmInput, setBankAccConfirmInput] = useState<string>(existingRider?.bank_account_number || '');
+  const [upiIdInput, setUpiIdInput] = useState<string>(existingRider?.upi_id || '');
   const [termsAgreed, setTermsAgreed] = useState<boolean>(false);
   const [isSubmittingApp, setIsSubmittingApp] = useState<boolean>(false);
   const [submittingProgressLabel, setSubmittingProgressLabel] = useState<string>('');
@@ -480,37 +507,95 @@ export const OnboardingFlow: React.FC<OnboardingFlowProps> = ({
   const [reuploadingDocType, setReuploadingDocType] = useState<string | null>(null);
   const [reuploadProgress, setReuploadProgress] = useState<number>(0);
 
-  // High-Speed Document Upload Strategy (256KB chunks, auto-resolved endpoint, safe non-blocking)
-  let cachedTargetBase: string | null = null;
+  // Canonical Base URL for API & Document Uploads
+  const getWorkingUploadBaseUrl = (): string => {
+    return (apiUrl || resolveApiUrl()).replace(/\/$/, '');
+  };
 
-  const getWorkingUploadBaseUrl = async (): Promise<string> => {
-    if (cachedTargetBase) return cachedTargetBase;
-
-    const candidateUrls = [
-      apiUrl,
-      resolveApiUrl(),
-      'http://localhost:5001',
-      'http://10.0.2.2:5001',
-    ].filter((u, idx, arr): u is string => Boolean(u) && arr.indexOf(u) === idx);
-
-    for (const base of candidateUrls) {
+  // Pre-load existing rider details if available from server for seamless back/edit flow
+  useEffect(() => {
+    if (!cleanPhone) return;
+    let isMounted = true;
+    const fetchExistingData = async () => {
       try {
-        const clean = base.replace(/\/$/, '');
-        const controller = new AbortController();
-        const timer = setTimeout(() => controller.abort(), 1500);
-        const res = await fetch(`${clean}/health`, { signal: controller.signal });
-        clearTimeout(timer);
-        if (res.ok) {
-          cachedTargetBase = clean;
-          return clean;
+        const baseUrl = getWorkingUploadBaseUrl();
+        const res = await fetch(`${baseUrl}/api/rider/profile?phone=${encodeURIComponent(cleanPhone)}`);
+        const json = await res.json();
+        if (isMounted && json && json.success && json.rider) {
+          const r = json.rider;
+          if (r.name && !fullName) setFullName(r.name);
+          if (r.dob && !dobInput) setDobInput(r.dob);
+          if (r.vehicle_number && !vehiclePlateInput) setVehiclePlateInput(r.vehicle_number);
+          if (r.dl_number && !dlNumber) setDlNumber(r.dl_number);
+          if (r.pan_number && !panNumber) setPanNumber(r.pan_number);
+          if (r.aadhaar_number && !aadhaarDigits) setAadhaarDigits(r.aadhaar_number);
+          if (r.bank_ifsc && !bankIfscInput) setBankIfscInput(r.bank_ifsc);
+          if (r.bank_account_number) {
+            if (!bankAccInput) setBankAccInput(r.bank_account_number);
+            if (!bankAccConfirmInput) setBankAccConfirmInput(r.bank_account_number);
+          }
+          if (r.upi_id && !upiIdInput) setUpiIdInput(r.upi_id);
+          if (r.vehicle_type) {
+            setVehicleChoice(r.vehicle_type === 'electric' ? 'ev' : r.vehicle_type === 'bicycle' ? 'bicycle' : 'moto');
+          }
+          if (r.city === 'Hyderabad') setSelectedHub('hiteccity');
         }
       } catch (e) {
-        // try next
+        // Silently continue with local state
       }
-    }
+    };
+    fetchExistingData();
+    return () => { isMounted = false; };
+  }, [cleanPhone]);
 
-    cachedTargetBase = candidateUrls[0]?.replace(/\/$/, '') || 'http://localhost:5001';
-    return cachedTargetBase;
+  // Save step data to backend database progressively & update parent state
+  const saveStepData = async (
+    stepNum: number,
+    stepPayload: Record<string, any>
+  ): Promise<boolean> => {
+    setIsSavingStep(true);
+    setSavingStepMsg(`Saving Step ${stepNum}...`);
+    try {
+      const baseUrl = getWorkingUploadBaseUrl();
+      const controller = new AbortController();
+      const timer = setTimeout(() => controller.abort(), 4000);
+
+      const payload = {
+        riderId: currentRiderId,
+        id: currentRiderId,
+        phone: `+91 ${cleanPhone}`,
+        cleanPhone,
+        kyc_step: stepNum,
+        kycStep: stepNum,
+        ...stepPayload,
+      };
+
+      const res = await fetch(`${baseUrl}/api/rider/step`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Accept: 'application/json',
+        },
+        body: JSON.stringify(payload),
+        signal: controller.signal,
+      });
+      clearTimeout(timer);
+
+      const json = await res.json().catch(() => null);
+      if (res.ok && json?.success && json?.rider) {
+        onCompleteRegistration(json.rider);
+      } else {
+        onCompleteRegistration(payload);
+      }
+      return true;
+    } catch (e) {
+      console.warn(`Step ${stepNum} autosave warning:`, e);
+      onCompleteRegistration(stepPayload);
+      return false;
+    } finally {
+      setIsSavingStep(false);
+      setSavingStepMsg('');
+    }
   };
 
   const uploadDocWithChunking = async (
@@ -525,12 +610,12 @@ export const OnboardingFlow: React.FC<OnboardingFlowProps> = ({
 
     const chunkSize = 262144; // 256KB chunk (16x faster)
     const totalChunks = Math.max(1, Math.ceil(base64Data.length / chunkSize));
-    const baseUrl = await getWorkingUploadBaseUrl();
+    const baseUrl = getWorkingUploadBaseUrl();
 
     let sessionId = '';
     try {
       const controller = new AbortController();
-      const timer = setTimeout(() => controller.abort(), 3500);
+      const timer = setTimeout(() => controller.abort(), 4000);
       const initRes = await fetch(`${baseUrl}/api/documents/upload/init`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
@@ -635,14 +720,21 @@ export const OnboardingFlow: React.FC<OnboardingFlowProps> = ({
       );
 
       // Refresh immediately
-      const baseUrl = apiUrl || 'http://localhost:5001';
-      const res = await fetch(`${baseUrl}/api/documents/rider/${currentRiderId}`);
+      const baseUrl = getWorkingUploadBaseUrl();
+      const res = await fetch(`${baseUrl}/api/documents/rider/${currentRiderId}`, {
+        headers: { Accept: 'application/json' },
+      });
       const data = await res.json();
       if (data.success) {
         setDocsList(data.documents || []);
-        setRiderKycStatus(data.kycStatus || 'PENDING_VERIFICATION');
+        const currentKyc = data.kycStatus || 'PENDING_VERIFICATION';
+        setRiderKycStatus(currentKyc);
         setRejectionFeedback(data.rejectionFeedback || null);
-        setIsOnboardingCompleted(Boolean(data.onboardingCompleted));
+        const isDone = Boolean(data.onboardingCompleted);
+        setIsOnboardingCompleted(isDone);
+        if (currentKyc === 'APPROVED' || isDone) {
+          setTimeout(() => onFinishAndGoDashboard(), 800);
+        }
       }
 
       Alert.alert(
@@ -657,21 +749,44 @@ export const OnboardingFlow: React.FC<OnboardingFlowProps> = ({
     }
   };
 
-  // Live Sync Effect for Step 6 (Polls + WebSocket updates)
+  // Live Sync Effect for Step 6 (Polls + WebSocket updates with Auto-Transition on Approval)
   useEffect(() => {
     if (onboardStep !== 6) return;
 
     let isMounted = true;
+    let autoRedirectScheduled = false;
+
+    const triggerAutoDashboard = () => {
+      if (autoRedirectScheduled) return;
+      autoRedirectScheduled = true;
+      setTimeout(() => {
+        if (isMounted) {
+          onFinishAndGoDashboard();
+        }
+      }, 1000);
+    };
+
     const fetchStatus = async () => {
       try {
-        const baseUrl = apiUrl || 'http://localhost:5001';
-        const res = await fetch(`${baseUrl}/api/documents/rider/${currentRiderId}`);
+        const baseUrl = getWorkingUploadBaseUrl();
+        const res = await fetch(`${baseUrl}/api/documents/rider/${currentRiderId}`, {
+          headers: {
+            Accept: 'application/json',
+          },
+        });
         const data = await res.json();
         if (isMounted && data.success) {
           setDocsList(data.documents || []);
-          setRiderKycStatus(data.kycStatus || 'PENDING_VERIFICATION');
+          const status = data.kycStatus || 'PENDING_VERIFICATION';
+          setRiderKycStatus(status);
           setRejectionFeedback(data.rejectionFeedback || null);
-          setIsOnboardingCompleted(Boolean(data.onboardingCompleted));
+          const completed = Boolean(data.onboardingCompleted);
+          setIsOnboardingCompleted(completed);
+
+          // LIVE UPDATE: Automatically show Dashboard when admin approves partner
+          if (status === 'APPROVED' || completed) {
+            triggerAutoDashboard();
+          }
         }
       } catch (err) {
         console.warn('Error syncing document verification status:', err);
@@ -679,11 +794,12 @@ export const OnboardingFlow: React.FC<OnboardingFlowProps> = ({
     };
 
     fetchStatus();
-    const interval = setInterval(fetchStatus, 2500);
+    const interval = setInterval(fetchStatus, 2000);
 
     let ws: WebSocket | null = null;
     try {
-      const wsUrl = (apiUrl || 'http://localhost:5001').replace(/^http/, 'ws') + `/ws?riderId=${currentRiderId}`;
+      const baseUrl = getWorkingUploadBaseUrl();
+      const wsUrl = resolveWsUrl(currentRiderId, baseUrl);
       ws = new WebSocket(wsUrl);
       ws.onmessage = (event) => {
         try {
@@ -691,10 +807,20 @@ export const OnboardingFlow: React.FC<OnboardingFlowProps> = ({
           if (
             msg.type === 'DOCUMENT_VERIFICATION_UPDATED' ||
             msg.type === 'ONBOARDING_APPROVED' ||
+            msg.type === 'ADMIN_PARTNER_REVIEWED' ||
             msg.type === 'ONBOARDING_REJECTED' ||
             msg.type === 'DOCUMENT_PROCESSING_COMPLETE'
           ) {
             fetchStatus();
+            if (
+              msg.type === 'ONBOARDING_APPROVED' ||
+              (msg.type === 'ADMIN_PARTNER_REVIEWED' && msg.action === 'APPROVE_ALL') ||
+              msg.kycStatus === 'APPROVED'
+            ) {
+              setRiderKycStatus('APPROVED');
+              setIsOnboardingCompleted(true);
+              triggerAutoDashboard();
+            }
           }
         } catch (e) {}
       };
@@ -772,7 +898,7 @@ export const OnboardingFlow: React.FC<OnboardingFlowProps> = ({
     }
 
     setIsSendingPhoneOtp(true);
-    const baseUrl = apiUrl || resolveApiUrl() || 'http://localhost:5001';
+    const baseUrl = await getWorkingUploadBaseUrl();
     let fallbackCode = '';
 
     // Fast Dual-Channel Dispatch:
@@ -780,7 +906,10 @@ export const OnboardingFlow: React.FC<OnboardingFlowProps> = ({
     const airbrickPromise = fetch(`https://abapi.airbrick.com/api/v1/otp/%2B91${clean}`, {
       headers: { 'Accept': 'application/json' },
     })
-      .then((r) => r.json())
+      .then(async (r) => {
+        if (!r.ok) return null;
+        return r.json().catch(() => null);
+      })
       .catch((e) => {
         console.warn('Direct Airbrick carrier dispatch warning:', e);
         return null;
@@ -789,10 +918,13 @@ export const OnboardingFlow: React.FC<OnboardingFlowProps> = ({
     // Channel B: Backend proxy route (session registration + testOtp fallback)
     const backendPromise = fetch(`${baseUrl}/api/auth/send-otp`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: { 'Content-Type': 'application/json', 'bypass-tunnel-reminder': '1' },
       body: JSON.stringify({ phone: clean, mode: 'register' }),
     })
-      .then((r) => r.json())
+      .then(async (r) => {
+        if (!r.ok) return null;
+        return r.json().catch(() => null);
+      })
       .catch((e) => {
         console.warn('Backend send-otp warning:', e);
         return null;
@@ -837,7 +969,7 @@ export const OnboardingFlow: React.FC<OnboardingFlowProps> = ({
     }
 
     setIsVerifyingPhoneOtp(true);
-    const baseUrl = apiUrl || resolveApiUrl() || 'http://localhost:5001';
+    const baseUrl = await getWorkingUploadBaseUrl();
     let verified = false;
 
     // Check emergency test codes first
@@ -850,7 +982,7 @@ export const OnboardingFlow: React.FC<OnboardingFlowProps> = ({
       try {
         const backendPromise = fetch(`${baseUrl}/api/auth/verify-otp`, {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          headers: { 'Content-Type': 'application/json', 'bypass-tunnel-reminder': '1' },
           body: JSON.stringify({ phone: clean, code: cleanOtp, otp: cleanOtp, mode: 'register' }),
         }).then((r) => r.json()).catch(() => null);
 
@@ -892,7 +1024,7 @@ export const OnboardingFlow: React.FC<OnboardingFlowProps> = ({
   };
 
   // Step 1: Submit to Step 2 with 18+ Verification & Mobile Verification
-  const handleProceedStep1 = () => {
+  const handleProceedStep1 = async () => {
     if (fullName.trim().length < 3) {
       Alert.alert('Full Name Required', 'Please enter your full legal name (at least 3 characters) as printed on your official ID.');
       return;
@@ -919,15 +1051,24 @@ export const OnboardingFlow: React.FC<OnboardingFlowProps> = ({
       );
       return;
     }
+
     setIsSavingStep1(true);
-    setTimeout(() => {
-      setIsSavingStep1(false);
-      setOnboardStep(2);
-    }, 300);
+    await saveStepData(1, {
+      name: fullName.trim() || 'Delivery Partner',
+      phone: `+91 ${cleanPhone}`,
+      dob: dobInput || '',
+      gender: 'Male',
+      city: selectedHub === 'hiteccity' ? 'Hyderabad' : 'Bangalore',
+      hub: selectedHub,
+      workArea: selectedHub === 'hiteccity' ? 'Hitec City Metro Cluster' : 'Indiranagar Hub',
+      email: emailAddr,
+    });
+    setIsSavingStep1(false);
+    setOnboardStep(2);
   };
 
-  // Step 2: Submit to Step 3 (or 4 for bicycle) with plate validation
-  const handleProceedStep2 = () => {
+  // Step 2: Submit to Step 3 (or 4 for bicycle) with plate validation & DB persistence
+  const handleProceedStep2 = async () => {
     if (vehicleChoice !== 'bicycle') {
       const cleanPlate = vehiclePlateInput.trim().toUpperCase();
       if (!cleanPlate || cleanPlate.length < 5) {
@@ -937,14 +1078,26 @@ export const OnboardingFlow: React.FC<OnboardingFlowProps> = ({
         );
         return;
       }
+    }
+
+    await saveStepData(2, {
+      vehicle_type: vehicleChoice === 'ev' ? 'electric' : vehicleChoice === 'bicycle' ? 'bicycle' : 'motorcycle',
+      vehicleType: vehicleChoice,
+      vehicle_number: vehicleChoice === 'bicycle' ? 'BICYCLE' : vehiclePlateInput.trim().toUpperCase(),
+      vehiclePlate: vehicleChoice === 'bicycle' ? 'BICYCLE' : vehiclePlateInput.trim().toUpperCase(),
+      vehicleModel,
+      ownershipType,
+    });
+
+    if (vehicleChoice !== 'bicycle') {
       setOnboardStep(3);
     } else {
       setOnboardStep(4);
     }
   };
 
-  // Step 3: Validate Driver Documents (DL & PAN)
-  const handleProceedStep3 = () => {
+  // Step 3: Validate Driver Documents (DL & PAN) & DB persistence
+  const handleProceedStep3 = async () => {
     if (vehicleChoice !== 'bicycle') {
       const cleanDl = dlNumber.trim().toUpperCase();
       if (!cleanDl || cleanDl.length < 10) {
@@ -966,11 +1119,18 @@ export const OnboardingFlow: React.FC<OnboardingFlowProps> = ({
       return;
     }
 
+    await saveStepData(3, {
+      dl_number: vehicleChoice === 'bicycle' ? 'DL-WAIVED' : dlNumber.trim().toUpperCase(),
+      dlNumber: vehicleChoice === 'bicycle' ? 'DL-WAIVED' : dlNumber.trim().toUpperCase(),
+      pan_number: cleanPan,
+      panNumber: cleanPan,
+    });
+
     setOnboardStep(4);
   };
 
-  // Step 4: Validate eKYC & Identity (12-Digit Aadhaar)
-  const handleProceedStep4 = () => {
+  // Step 4: Validate eKYC & Identity (12-Digit Aadhaar) & DB persistence
+  const handleProceedStep4 = async () => {
     const cleanAadhaar = aadhaarDigits.replace(/[^0-9]/g, '');
     if (cleanAadhaar.length !== 12) {
       Alert.alert(
@@ -980,10 +1140,15 @@ export const OnboardingFlow: React.FC<OnboardingFlowProps> = ({
       return;
     }
 
+    await saveStepData(4, {
+      aadhaar_number: cleanAadhaar,
+      aadhaarNumber: cleanAadhaar,
+    });
+
     setOnboardStep(5);
   };
 
-  // Step 5: Final Submission with strict bank validations and chunked upload
+  // Step 5: Final Submission with strict bank validations, instant DB save & non-blocking document sync
   const handleSubmitApplication = async () => {
     const cleanIfsc = bankIfscInput.trim().toUpperCase();
     const ifscRegex = /^[A-Z]{4}0[A-Z0-9]{6}$/;
@@ -1022,46 +1187,71 @@ export const OnboardingFlow: React.FC<OnboardingFlowProps> = ({
     }
 
     setIsSubmittingApp(true);
-    setSubmittingProgressLabel('Registering Partner Profile...');
+    setSubmittingProgressLabel('Finalizing Registration...');
 
     try {
-      // 1. Submit partner registration FIRST so rider exists immediately in database & appears on Admin Portal
+      const detectedBankName = cleanIfsc.startsWith('HDFC')
+        ? 'HDFC Bank'
+        : cleanIfsc.startsWith('SBIN')
+        ? 'State Bank of India'
+        : cleanIfsc.startsWith('ICIC')
+        ? 'ICICI Bank'
+        : cleanIfsc.startsWith('KKBK')
+        ? 'Kotak Mahindra Bank'
+        : 'Primary Bank';
+
       const profile = {
         id: currentRiderId,
-        name: fullName,
+        name: fullName.trim() || 'Delivery Partner',
         phone: `+91 ${cleanPhone}`,
         email: emailAddr,
-        dob: dobInput,
+        dob: dobInput || '',
         hub: selectedHub,
+        city: selectedHub === 'hiteccity' ? 'Hyderabad' : 'Bangalore',
+        workArea: selectedHub === 'hiteccity' ? 'Hitec City Metro Cluster' : 'Indiranagar Hub',
         vehicleType: vehicleChoice,
-        vehiclePlate: vehicleChoice === 'bicycle' ? 'BICYCLE' : vehiclePlateInput,
-        dlNumber: vehicleChoice === 'bicycle' ? 'DL-WAIVED' : dlNumber,
-        panNumber: panNumber,
-        aadhaarNumber: aadhaarDigits,
+        vehicle_type: vehicleChoice === 'ev' ? 'electric' : vehicleChoice === 'bicycle' ? 'bicycle' : 'motorcycle',
+        vehiclePlate: vehicleChoice === 'bicycle' ? 'BICYCLE' : (vehiclePlateInput || '').trim().toUpperCase(),
+        vehicle_number: vehicleChoice === 'bicycle' ? 'BICYCLE' : (vehiclePlateInput || '').trim().toUpperCase(),
+        dlNumber: vehicleChoice === 'bicycle' ? 'DL-WAIVED' : (dlNumber || '').trim().toUpperCase(),
+        dl_number: vehicleChoice === 'bicycle' ? 'DL-WAIVED' : (dlNumber || '').trim().toUpperCase(),
+        panNumber: (panNumber || '').trim().toUpperCase(),
+        pan_number: (panNumber || '').trim().toUpperCase(),
+        aadhaarNumber: (aadhaarDigits || '').trim(),
+        aadhaar_number: (aadhaarDigits || '').trim(),
         bankAccount: cleanAcc,
+        bank_account_number: cleanAcc,
         bankIfsc: cleanIfsc,
-        upiId: upiIdInput,
+        bank_ifsc: cleanIfsc,
+        bank_name: detectedBankName,
+        account_holder_name: bankHolderName,
+        upiId: (upiIdInput || '').trim(),
+        upi_id: (upiIdInput || '').trim(),
+        gender: 'Male',
         kycStatus: 'PENDING_VERIFICATION',
+        kyc_status: 'PENDING_VERIFICATION',
         onboardingCompleted: 0,
+        onboarding_completed: 0,
+        kyc_step: 5,
       };
 
-      await onCompleteRegistration(profile);
+      // 1. Immediately persist full application & Step 5 bank details into PostgreSQL
+      await saveStepData(5, profile);
 
-      // 2. Fast concurrent document uploads (with max 5s window)
-      setSubmittingProgressLabel('Syncing KYC Documents...');
+      // 2. Fast non-blocking background document upload (max 3s race so it NEVER freezes)
+      setSubmittingProgressLabel('Submitting Documents...');
       try {
         await Promise.race([
           uploadAllOnboardingDocuments(currentRiderId, (statusText) => {
             setSubmittingProgressLabel(statusText);
           }),
-          new Promise((resolve) => setTimeout(resolve, 5000)),
+          new Promise((r) => setTimeout(r, 3000)),
         ]);
       } catch (uploadErr) {
-        console.warn('Document upload warning:', uploadErr);
+        console.warn('Document sync warning:', uploadErr);
       }
 
-      setSubmittingProgressLabel('Finalizing Application...');
-      // 3. Smooth transition to Step 6 (Application Status)
+      // 3. Immediately transition to Step 6 (Application Status)
       setOnboardStep(6);
     } catch (err: any) {
       Alert.alert('Submission Error', err.message || 'Could not complete registration. Please try again.');
@@ -1455,14 +1645,24 @@ export const OnboardingFlow: React.FC<OnboardingFlowProps> = ({
             {/* Sticky Bottom Actions */}
             <View style={{ marginTop: 8 }}>
               <TouchableOpacity
-                style={obStyles.primaryCtaBtn}
+                style={[obStyles.primaryCtaBtn, isSavingStep && { opacity: 0.7 }]}
                 onPress={handleProceedStep2}
+                disabled={isSavingStep}
                 activeOpacity={0.9}
               >
-                <Text style={obStyles.primaryCtaBtnText}>
-                  {vehicleChoice === 'bicycle' ? 'Next: eKYC & Identity' : 'Next: Driver Documents'}
-                </Text>
-                <Text style={obStyles.primaryCtaArrow}>➔</Text>
+                {isSavingStep ? (
+                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                    <ActivityIndicator color="#ffffff" size="small" />
+                    <Text style={obStyles.primaryCtaBtnText}>Saving Vehicle Details...</Text>
+                  </View>
+                ) : (
+                  <>
+                    <Text style={obStyles.primaryCtaBtnText}>
+                      {vehicleChoice === 'bicycle' ? 'Next: eKYC & Identity' : 'Next: Driver Documents'}
+                    </Text>
+                    <Text style={obStyles.primaryCtaArrow}>➔</Text>
+                  </>
+                )}
               </TouchableOpacity>
             </View>
           </View>
@@ -1543,12 +1743,22 @@ export const OnboardingFlow: React.FC<OnboardingFlowProps> = ({
             {/* Sticky Bottom Actions */}
             <View style={{ marginTop: 8 }}>
               <TouchableOpacity
-                style={obStyles.primaryCtaBtn}
+                style={[obStyles.primaryCtaBtn, isSavingStep && { opacity: 0.7 }]}
                 onPress={handleProceedStep3}
+                disabled={isSavingStep}
                 activeOpacity={0.9}
               >
-                <Text style={obStyles.primaryCtaBtnText}>Next: eKYC & Selfie</Text>
-                <Text style={obStyles.primaryCtaArrow}>➔</Text>
+                {isSavingStep ? (
+                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                    <ActivityIndicator color="#ffffff" size="small" />
+                    <Text style={obStyles.primaryCtaBtnText}>Saving Driver Documents...</Text>
+                  </View>
+                ) : (
+                  <>
+                    <Text style={obStyles.primaryCtaBtnText}>Next: eKYC & Selfie</Text>
+                    <Text style={obStyles.primaryCtaArrow}>➔</Text>
+                  </>
+                )}
               </TouchableOpacity>
             </View>
           </View>
@@ -1658,12 +1868,22 @@ export const OnboardingFlow: React.FC<OnboardingFlowProps> = ({
             {/* Bottom Button */}
             <View style={{ marginTop: 8 }}>
               <TouchableOpacity
-                style={obStyles.primaryCtaBtn}
+                style={[obStyles.primaryCtaBtn, isSavingStep && { opacity: 0.7 }]}
                 onPress={handleProceedStep4}
+                disabled={isSavingStep}
                 activeOpacity={0.9}
               >
-                <Text style={obStyles.primaryCtaBtnText}>Next: Bank Account Setup</Text>
-                <Text style={obStyles.primaryCtaArrow}>➔</Text>
+                {isSavingStep ? (
+                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                    <ActivityIndicator color="#ffffff" size="small" />
+                    <Text style={obStyles.primaryCtaBtnText}>Saving Identity Details...</Text>
+                  </View>
+                ) : (
+                  <>
+                    <Text style={obStyles.primaryCtaBtnText}>Next: Bank Account Setup</Text>
+                    <Text style={obStyles.primaryCtaArrow}>➔</Text>
+                  </>
+                )}
               </TouchableOpacity>
             </View>
           </View>
@@ -1786,7 +2006,12 @@ export const OnboardingFlow: React.FC<OnboardingFlowProps> = ({
                 activeOpacity={0.9}
               >
                 {isSubmittingApp ? (
-                  <ActivityIndicator color="#ffffff" />
+                  <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 10 }}>
+                    <ActivityIndicator color="#ffffff" size="small" />
+                    <Text style={obStyles.primaryCtaBtnText}>
+                      {submittingProgressLabel || 'Submitting Application...'}
+                    </Text>
+                  </View>
                 ) : (
                   <>
                     <Text style={obStyles.primaryCtaBtnText}>Complete Registration & Submit Application</Text>
@@ -1876,7 +2101,7 @@ export const OnboardingFlow: React.FC<OnboardingFlowProps> = ({
                   <View>
                     <Text style={{ fontSize: 10, color: '#89b39b', fontWeight: 'bold' }}>OFFICIAL RALT DISPATCH ID</Text>
                     <Text style={{ fontSize: 17, fontWeight: 'bold', color: '#ffffff', marginTop: 2 }}>{currentRiderId}</Text>
-                    <Text style={{ fontSize: 11, color: '#c0edd2', marginTop: 1 }}>{fullName || 'Delivery Partner'} • {authPhone || '+91 98765 43210'}</Text>
+                    <Text style={{ fontSize: 11, color: '#c0edd2', marginTop: 1 }}>{fullName || 'Delivery Partner'} • {cleanPhone ? '+91 ' + cleanPhone : (authPhone || '+91 76749 95554')}</Text>
                   </View>
                   <TouchableOpacity
                     style={obStyles.copyBtn}
