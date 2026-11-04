@@ -399,6 +399,46 @@ class RiderManager {
       history
     };
   }
+
+  public async deleteRider(riderId: string): Promise<boolean> {
+    const existing = await this.getRider(riderId);
+    if (!existing) return false;
+
+    // Disconnect any active websocket connection
+    const ws = this.activeSockets.get(riderId);
+    if (ws) {
+      try {
+        ws.close(1000, 'Rider account deleted');
+      } catch (_) {}
+      this.activeSockets.delete(riderId);
+      this.allSockets.delete(ws);
+    }
+
+    try {
+      await run('DELETE FROM rider_documents WHERE rider_id = ?', [riderId]);
+    } catch (_) {}
+    try {
+      await run('DELETE FROM document_upload_sessions WHERE rider_id = ?', [riderId]);
+    } catch (_) {}
+    try {
+      await run('DELETE FROM earnings WHERE rider_id = ?', [riderId]);
+    } catch (_) {}
+    try {
+      await run('DELETE FROM notifications WHERE rider_id = ?', [riderId]);
+    } catch (_) {}
+    try {
+      await run('UPDATE orders SET rider_id = NULL WHERE rider_id = ?', [riderId]);
+    } catch (_) {}
+
+    await run('DELETE FROM riders WHERE id = ?', [riderId]);
+
+    this.broadcastToAll({
+      type: 'RIDER_DELETED',
+      riderId
+    });
+
+    return true;
+  }
 }
 
 export const riderManager = new RiderManager();

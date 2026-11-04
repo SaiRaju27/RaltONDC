@@ -271,6 +271,16 @@ export class DocumentController {
   }
 }
 
+function escapeXml(str: any): string {
+  if (str === null || str === undefined) return '';
+  return String(str)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&apos;');
+}
+
 function renderSvgDocumentCard(doc: {
   doc_type?: string;
   file_name?: string;
@@ -297,20 +307,20 @@ function renderSvgDocumentCard(doc: {
       color: '#d97706'
     },
     aadhaar_back: {
-      title: 'Aadhaar Identity Card (Address & QR)',
+      title: 'Aadhaar Identity Card (Address &amp; QR)',
       subtitle: 'Unique Identification Authority of India (UIDAI)',
       icon: '🪪',
       color: '#d97706'
     },
     driving_license: {
       title: 'Commercial Driving License',
-      subtitle: 'Ministry of Road Transport & Highways (MoRTH)',
+      subtitle: 'Ministry of Road Transport &amp; Highways (MoRTH)',
       icon: '🚗',
       color: '#059669'
     },
     driving_license_back: {
       title: 'Driving License (Endorsement & Back)',
-      subtitle: 'Ministry of Road Transport & Highways (MoRTH)',
+      subtitle: 'Ministry of Road Transport &amp; Highways (MoRTH)',
       icon: '🚗',
       color: '#059669'
     },
@@ -340,7 +350,7 @@ function renderSvgDocumentCard(doc: {
   const badgeColor = isApproved ? '#059669' : (isRejected ? '#dc2626' : '#d97706');
   const badgeBg = isApproved ? '#ecfdf5' : (isRejected ? '#fef2f2' : '#fffbeb');
   const badgeBorder = isApproved ? '#a7f3d0' : (isRejected ? '#fecaca' : '#fde68a');
-  const badgeText = isApproved ? 'APPROVED & VERIFIED ✓' : (isRejected ? 'ACTION REQUIRED ✕' : 'PENDING REVIEW ⏳');
+  const badgeText = isApproved ? 'APPROVED &amp; VERIFIED ✓' : (isRejected ? 'ACTION REQUIRED ✕' : 'PENDING REVIEW ⏳');
 
   return `<svg xmlns="http://www.w3.org/2000/svg" width="600" height="360" viewBox="0 0 600 360">
     <defs>
@@ -365,16 +375,16 @@ function renderSvgDocumentCard(doc: {
     <line x1="36" y1="102" x2="564" y2="102" stroke="#e2e8f0" stroke-width="1" stroke-dasharray="4,4"/>
     <rect x="36" y="116" width="528" height="150" rx="8" fill="#f8fafc" stroke="#cbd5e1" stroke-width="1"/>
     <text x="56" y="142" font-family="-apple-system, BlinkMacSystemFont, sans-serif" font-size="10" font-weight="700" fill="#64748b">PARTNER IDENTIFIER</text>
-    <text x="56" y="162" font-family="'JetBrains Mono', monospace" font-size="13" font-weight="600" fill="#0f172a">${riderId}</text>
+    <text x="56" y="162" font-family="'JetBrains Mono', monospace" font-size="13" font-weight="600" fill="#0f172a">${escapeXml(riderId)}</text>
     <text x="310" y="142" font-family="-apple-system, BlinkMacSystemFont, sans-serif" font-size="10" font-weight="700" fill="#64748b">ATTACHED FILE</text>
-    <text x="310" y="162" font-family="'JetBrains Mono', monospace" font-size="12" font-weight="600" fill="#0f172a">${fileName}</text>
+    <text x="310" y="162" font-family="'JetBrains Mono', monospace" font-size="12" font-weight="600" fill="#0f172a">${escapeXml(fileName)}</text>
     <text x="56" y="196" font-family="-apple-system, BlinkMacSystemFont, sans-serif" font-size="10" font-weight="700" fill="#64748b">DOCUMENT TYPE</text>
-    <text x="56" y="216" font-family="-apple-system, BlinkMacSystemFont, sans-serif" font-size="12" font-weight="600" fill="#0f172a">${docType.toUpperCase()}</text>
+    <text x="56" y="216" font-family="-apple-system, BlinkMacSystemFont, sans-serif" font-size="12" font-weight="600" fill="#0f172a">${escapeXml(docType.toUpperCase())}</text>
     <text x="310" y="196" font-family="-apple-system, BlinkMacSystemFont, sans-serif" font-size="10" font-weight="700" fill="#64748b">STATUS</text>
-    <text x="310" y="216" font-family="-apple-system, BlinkMacSystemFont, sans-serif" font-size="12" font-weight="700" fill="${badgeColor}">${status}</text>
+    <text x="310" y="216" font-family="-apple-system, BlinkMacSystemFont, sans-serif" font-size="12" font-weight="700" fill="${badgeColor}">${escapeXml(status)}</text>
     <rect x="56" y="234" width="488" height="24" rx="4" fill="#ffffff" stroke="#e2e8f0" stroke-width="1"/>
     <text x="300" y="250" font-family="-apple-system, BlinkMacSystemFont, sans-serif" font-size="10" font-weight="600" fill="#00855d" text-anchor="middle">🛡️ ONDC DIGITALLY VERIFIED KYC RECORD • RALT AUDITED</text>
-    <text x="36" y="300" font-family="'JetBrains Mono', monospace" font-size="10" fill="#94a3b8">DOC-ID: ${doc.doc_number || docType.toUpperCase()}</text>
+    <text x="36" y="300" font-family="'JetBrains Mono', monospace" font-size="10" fill="#94a3b8">DOC-ID: ${escapeXml(doc.doc_number || docType.toUpperCase())}</text>
     <text x="564" y="300" font-family="-apple-system, BlinkMacSystemFont, sans-serif" font-size="10" font-weight="600" fill="#94a3b8" text-anchor="end">Official Ops Verification Desk</text>
   </svg>`;
 }

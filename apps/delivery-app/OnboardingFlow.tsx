@@ -336,9 +336,12 @@ export const OnboardingFlow: React.FC<OnboardingFlowProps> = ({
   apiUrl = 'http://localhost:5001',
   existingRider,
 }) => {
-  // Step 1: Personal Profile State (Pre-populated from existing rider if available)
+  // Step 1: Personal Profile State (Clean state without pre-population)
   const initialCleanPhone = (authPhone || existingRider?.phone || '').replace(/[^0-9]/g, '').slice(-10);
-  const [fullName, setFullName] = useState<string>(existingRider?.name || '');
+  const [fullName, setFullName] = useState<string>('');
+  const [emergencyName, setEmergencyName] = useState<string>('');
+  const [emergencyPhone, setEmergencyPhone] = useState<string>('');
+  const [emergencyRelation, setEmergencyRelation] = useState<string>('');
   const [docImages, setDocImages] = useState<Record<string, string>>({
     aadhaar_front: '',
     aadhaar_back: '',
@@ -450,31 +453,29 @@ export const OnboardingFlow: React.FC<OnboardingFlowProps> = ({
   const [calMonth, setCalMonth] = useState<number>(0); // 0-indexed (0 = January)
 
   // Step 2: Vehicle Selection & RC State
-  const [vehicleChoice, setVehicleChoice] = useState<'moto' | 'ev' | 'bicycle'>(
-    existingRider?.vehicle_type === 'electric' ? 'ev' : existingRider?.vehicle_type === 'bicycle' ? 'bicycle' : 'moto'
-  );
-  const [vehiclePlateInput, setVehiclePlateInput] = useState<string>(existingRider?.vehicle_number || '');
+  const [vehicleChoice, setVehicleChoice] = useState<'moto' | 'ev' | 'bicycle'>('moto');
+  const [vehiclePlateInput, setVehiclePlateInput] = useState<string>('');
   const [vehicleModel, setVehicleModel] = useState<string>('hero-splendor');
   const [ownershipType, setOwnershipType] = useState<'own' | 'rented' | 'family'>('own');
 
   // Step 3: Document Upload State
-  const [dlNumber, setDlNumber] = useState<string>(existingRider?.dl_number || '');
-  const [panNumber, setPanNumber] = useState<string>(existingRider?.pan_number || '');
+  const [dlNumber, setDlNumber] = useState<string>('');
+  const [panNumber, setPanNumber] = useState<string>('');
   const [isRcUploading, setIsRcUploading] = useState<boolean>(false);
   const [rcProgress, setRcProgress] = useState<number>(100);
-  const [isRcVerified, setIsRcVerified] = useState<boolean>(true);
+  const [isRcVerified, setIsRcVerified] = useState<boolean>(false);
 
   // Step 4: eKYC & Selfie State
-  const [aadhaarDigits, setAadhaarDigits] = useState<string>(existingRider?.aadhaar_number || '');
+  const [aadhaarDigits, setAadhaarDigits] = useState<string>('');
   const [ekycOtp] = useState<string[]>(['6', '1', '9', '0', '4', '8']);
   const [isRetakingPhoto, setIsRetakingPhoto] = useState<boolean>(false);
 
   // Step 5: Bank Setup & Payout State
-  const bankHolderName = fullName.trim() || existingRider?.account_holder_name || existingRider?.name || 'Verified Fleet Partner';
-  const [bankIfscInput, setBankIfscInput] = useState<string>(existingRider?.bank_ifsc || '');
-  const [bankAccInput, setBankAccInput] = useState<string>(existingRider?.bank_account_number || '');
-  const [bankAccConfirmInput, setBankAccConfirmInput] = useState<string>(existingRider?.bank_account_number || '');
-  const [upiIdInput, setUpiIdInput] = useState<string>(existingRider?.upi_id || '');
+  const bankHolderName = fullName.trim() || 'Verified Fleet Partner';
+  const [bankIfscInput, setBankIfscInput] = useState<string>('');
+  const [bankAccInput, setBankAccInput] = useState<string>('');
+  const [bankAccConfirmInput, setBankAccConfirmInput] = useState<string>('');
+  const [upiIdInput, setUpiIdInput] = useState<string>('');
   const [termsAgreed, setTermsAgreed] = useState<boolean>(false);
   const [isSubmittingApp, setIsSubmittingApp] = useState<boolean>(false);
   const [submittingProgressLabel, setSubmittingProgressLabel] = useState<string>('');
@@ -509,7 +510,11 @@ export const OnboardingFlow: React.FC<OnboardingFlowProps> = ({
 
   // Canonical Base URL for API & Document Uploads
   const getWorkingUploadBaseUrl = (): string => {
-    return (apiUrl || resolveApiUrl()).replace(/\/$/, '');
+    const raw = (apiUrl || resolveApiUrl()).replace(/\/$/, '');
+    if (raw.includes('expo.app') || raw.includes('exp.direct')) {
+      return 'http://192.168.1.6:5001';
+    }
+    return raw;
   };
 
   // Pre-load existing rider details if available from server for seamless back/edit flow
@@ -523,22 +528,8 @@ export const OnboardingFlow: React.FC<OnboardingFlowProps> = ({
         const json = await res.json();
         if (isMounted && json && json.success && json.rider) {
           const r = json.rider;
-          if (r.name && !fullName) setFullName(r.name);
-          if (r.dob && !dobInput) setDobInput(r.dob);
-          if (r.vehicle_number && !vehiclePlateInput) setVehiclePlateInput(r.vehicle_number);
-          if (r.dl_number && !dlNumber) setDlNumber(r.dl_number);
-          if (r.pan_number && !panNumber) setPanNumber(r.pan_number);
-          if (r.aadhaar_number && !aadhaarDigits) setAadhaarDigits(r.aadhaar_number);
-          if (r.bank_ifsc && !bankIfscInput) setBankIfscInput(r.bank_ifsc);
-          if (r.bank_account_number) {
-            if (!bankAccInput) setBankAccInput(r.bank_account_number);
-            if (!bankAccConfirmInput) setBankAccConfirmInput(r.bank_account_number);
-          }
-          if (r.upi_id && !upiIdInput) setUpiIdInput(r.upi_id);
-          if (r.vehicle_type) {
-            setVehicleChoice(r.vehicle_type === 'electric' ? 'ev' : r.vehicle_type === 'bicycle' ? 'bicycle' : 'moto');
-          }
-          if (r.city === 'Hyderabad') setSelectedHub('hiteccity');
+          // User explicitly requested no auto pre-population of inputs
+          if (r.kyc_status) setRiderKycStatus(r.kyc_status);
         }
       } catch (e) {
         // Silently continue with local state
@@ -583,14 +574,14 @@ export const OnboardingFlow: React.FC<OnboardingFlowProps> = ({
 
       const json = await res.json().catch(() => null);
       if (res.ok && json?.success && json?.rider) {
-        onCompleteRegistration(json.rider);
+        if (stepNum === 5) onCompleteRegistration(json.rider);
       } else {
-        onCompleteRegistration(payload);
+        if (stepNum === 5) onCompleteRegistration(payload);
       }
       return true;
     } catch (e) {
       console.warn(`Step ${stepNum} autosave warning:`, e);
-      onCompleteRegistration(stepPayload);
+      if (stepNum === 5) onCompleteRegistration(stepPayload);
       return false;
     } finally {
       setIsSavingStep(false);
@@ -704,49 +695,110 @@ export const OnboardingFlow: React.FC<OnboardingFlowProps> = ({
     );
   };
 
-  // Re-upload single rejected document
-  const handleReuploadDocument = async (docType: string, docName: string) => {
-    setReuploadingDocType(docType);
-    setReuploadProgress(10);
+  // Re-upload single rejected document with Choice of Camera or Gallery
+  const handlePickAndReuploadDocument = async (
+    docType: string,
+    docName: string,
+    source: 'camera' | 'gallery'
+  ) => {
     try {
-      const sampleB64 = SAMPLE_DOCS[docType] || SAMPLE_DOCS.pan_card;
-      await uploadDocWithChunking(
-        currentRiderId,
-        docType,
-        `${docType}_reupload.jpg`,
-        'image/jpeg',
-        sampleB64,
-        (pct) => setReuploadProgress(pct)
-      );
-
-      // Refresh immediately
-      const baseUrl = getWorkingUploadBaseUrl();
-      const res = await fetch(`${baseUrl}/api/documents/rider/${currentRiderId}`, {
-        headers: { Accept: 'application/json' },
-      });
-      const data = await res.json();
-      if (data.success) {
-        setDocsList(data.documents || []);
-        const currentKyc = data.kycStatus || 'PENDING_VERIFICATION';
-        setRiderKycStatus(currentKyc);
-        setRejectionFeedback(data.rejectionFeedback || null);
-        const isDone = Boolean(data.onboardingCompleted);
-        setIsOnboardingCompleted(isDone);
-        if (currentKyc === 'APPROVED' || isDone) {
-          setTimeout(() => onFinishAndGoDashboard(), 800);
+      let result;
+      if (source === 'camera') {
+        const { status } = await ImagePicker.requestCameraPermissionsAsync();
+        if (status !== 'granted') {
+          Alert.alert('Camera Permission Required', 'Please allow camera access in device settings to photograph document.');
+          return;
         }
+        result = await ImagePicker.launchCameraAsync({
+          mediaTypes: ['images'],
+          quality: 0.65,
+          base64: true,
+          allowsEditing: true,
+          aspect: docType === 'profile_selfie' ? [1, 1] : [4, 3],
+        });
+      } else {
+        const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+        if (status !== 'granted') {
+          Alert.alert('Photo Library Permission Required', 'Please allow photo library access in device settings to select document photos.');
+          return;
+        }
+        result = await ImagePicker.launchImageLibraryAsync({
+          mediaTypes: ['images'],
+          quality: 0.65,
+          base64: true,
+          allowsEditing: true,
+          aspect: docType === 'profile_selfie' ? [1, 1] : [4, 3],
+        });
       }
 
-      Alert.alert(
-        'Document Re-uploaded ✓',
-        `Your new ${docName} has been processed by the worker node and is under review.`
-      );
+      if (!result.canceled && result.assets && result.assets.length > 0) {
+        const asset = result.assets[0];
+        const imgData = asset.base64 ? `data:image/jpeg;base64,${asset.base64}` : asset.uri;
+        setDocImages((prev) => ({ ...prev, [docType]: imgData }));
+
+        setReuploadingDocType(docType);
+        setReuploadProgress(15);
+
+        await uploadDocWithChunking(
+          currentRiderId,
+          docType,
+          `${docType}_reupload.jpg`,
+          'image/jpeg',
+          asset.base64 ? `data:image/jpeg;base64,${asset.base64}` : imgData,
+          (pct) => setReuploadProgress(pct)
+        );
+
+        // Refresh immediately
+        const baseUrl = getWorkingUploadBaseUrl();
+        const res = await fetch(`${baseUrl}/api/documents/rider/${currentRiderId}`, {
+          headers: { Accept: 'application/json' },
+        });
+        const data = await res.json().catch(() => null);
+        if (data && data.success) {
+          setDocsList(data.documents || []);
+          const currentKyc = data.kycStatus || 'PENDING_VERIFICATION';
+          setRiderKycStatus(currentKyc);
+          setRejectionFeedback(data.rejectionFeedback || null);
+          const isDone = Boolean(data.onboardingCompleted);
+          setIsOnboardingCompleted(isDone);
+          if (currentKyc === 'APPROVED' || isDone) {
+            setTimeout(() => onFinishAndGoDashboard(), 800);
+          }
+        }
+
+        Alert.alert(
+          'Document Re-uploaded ✓',
+          `Your new ${docName} has been processed and is under review.`
+        );
+      }
     } catch (err: any) {
       Alert.alert('Upload Error', err.message || 'Failed to re-upload document');
     } finally {
       setReuploadingDocType(null);
       setReuploadProgress(0);
     }
+  };
+
+  const handleReuploadDocument = (docType: string, docName: string) => {
+    Alert.alert(
+      `Re-upload ${docName}`,
+      'Choose how you want to upload your replacement document:',
+      [
+        {
+          text: '📷 Take Photo',
+          onPress: () => handlePickAndReuploadDocument(docType, docName, 'camera'),
+        },
+        {
+          text: '🖼️ Choose from Gallery',
+          onPress: () => handlePickAndReuploadDocument(docType, docName, 'gallery'),
+        },
+        {
+          text: 'Cancel',
+          style: 'cancel',
+        },
+      ],
+      { cancelable: true }
+    );
   };
 
   // Live Sync Effect for Step 6 (Polls + WebSocket updates with Auto-Transition on Approval)
@@ -1052,6 +1104,11 @@ export const OnboardingFlow: React.FC<OnboardingFlowProps> = ({
       return;
     }
 
+    if (emergencyPhone && emergencyPhone.replace(/[^0-9]/g, '').length !== 10) {
+      Alert.alert('Invalid Emergency Mobile', 'Emergency contact phone number must be a valid 10-digit mobile number.');
+      return;
+    }
+
     setIsSavingStep1(true);
     await saveStepData(1, {
       name: fullName.trim() || 'Delivery Partner',
@@ -1062,6 +1119,12 @@ export const OnboardingFlow: React.FC<OnboardingFlowProps> = ({
       hub: selectedHub,
       workArea: selectedHub === 'hiteccity' ? 'Hitec City Metro Cluster' : 'Indiranagar Hub',
       email: emailAddr,
+      emergency_name: emergencyName.trim(),
+      emergencyName: emergencyName.trim(),
+      emergency_phone: emergencyPhone.replace(/[^0-9]/g, '').slice(-10),
+      emergencyPhone: emergencyPhone.replace(/[^0-9]/g, '').slice(-10),
+      emergency_relation: emergencyRelation.trim() || 'Family',
+      emergencyRelation: emergencyRelation.trim() || 'Family',
     });
     setIsSavingStep1(false);
     setOnboardStep(2);
@@ -1209,6 +1272,12 @@ export const OnboardingFlow: React.FC<OnboardingFlowProps> = ({
         hub: selectedHub,
         city: selectedHub === 'hiteccity' ? 'Hyderabad' : 'Bangalore',
         workArea: selectedHub === 'hiteccity' ? 'Hitec City Metro Cluster' : 'Indiranagar Hub',
+        emergency_name: emergencyName.trim(),
+        emergencyName: emergencyName.trim(),
+        emergency_phone: emergencyPhone.replace(/[^0-9]/g, '').slice(-10),
+        emergencyPhone: emergencyPhone.replace(/[^0-9]/g, '').slice(-10),
+        emergency_relation: emergencyRelation.trim() || 'Family',
+        emergencyRelation: emergencyRelation.trim() || 'Family',
         vehicleType: vehicleChoice,
         vehicle_type: vehicleChoice === 'ev' ? 'electric' : vehicleChoice === 'bicycle' ? 'bicycle' : 'motorcycle',
         vehiclePlate: vehicleChoice === 'bicycle' ? 'BICYCLE' : (vehiclePlateInput || '').trim().toUpperCase(),
@@ -1458,6 +1527,44 @@ export const OnboardingFlow: React.FC<OnboardingFlowProps> = ({
                       ? `Age: ${riderAge} years old (Eligible for onboarding)`
                       : `⚠️ Under 18: Partner fleet guidelines mandate age 18+ (Current: ${riderAge} yrs)`
                 }
+              />
+            </View>
+
+            {/* Emergency Contact Card */}
+            <View style={[obStyles.card, { marginTop: 14 }]}>
+              <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 12 }}>
+                <Text style={{ fontSize: 22, marginRight: 8 }}>🚨</Text>
+                <View style={{ flex: 1 }}>
+                  <Text style={{ fontSize: 15, fontWeight: '700', color: '#0f172a' }}>Emergency Contact Details</Text>
+                  <Text style={{ fontSize: 12, color: '#64748b' }}>Required for on-duty transit insurance & roadside safety</Text>
+                </View>
+              </View>
+
+              <FloatingLabelInput
+                label="Emergency Contact Name"
+                value={emergencyName}
+                onChangeText={setEmergencyName}
+                placeholder="Full legal name of emergency contact"
+                autoCapitalize="words"
+                hint="Person to contact in case of an on-duty medical or road emergency"
+              />
+
+              <FloatingLabelInput
+                label="Emergency Contact Mobile"
+                value={emergencyPhone}
+                onChangeText={(t) => setEmergencyPhone(t.replace(/[^0-9]/g, '').slice(0, 10))}
+                placeholder="10-digit emergency contact phone"
+                keyboardType="phone-pad"
+                maxLength={10}
+                hint="Must be reachable 24x7 (different from your phone number)"
+              />
+
+              <FloatingLabelInput
+                label="Relationship to Partner"
+                value={emergencyRelation}
+                onChangeText={setEmergencyRelation}
+                placeholder="e.g. Father, Mother, Spouse, Brother, Sister"
+                hint="Relationship with the emergency contact"
               />
             </View>
 
@@ -2174,21 +2281,32 @@ export const OnboardingFlow: React.FC<OnboardingFlowProps> = ({
                             </View>
                           )}
 
-                          <TouchableOpacity
-                            style={obStyles.reuploadActionBtn}
-                            disabled={isUploadingThis}
-                            onPress={() => handleReuploadDocument(item.docType, item.name)}
-                            activeOpacity={0.8}
-                          >
-                            {isUploadingThis ? (
-                              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-                                <ActivityIndicator size="small" color="#ffffff" />
-                                <Text style={obStyles.reuploadActionBtnText}>Chunking & Uploading {reuploadProgress}%...</Text>
+                          {isUploadingThis ? (
+                            <View style={[obStyles.reuploadActionBtn, { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6 }]}>
+                              <ActivityIndicator size="small" color="#ffffff" />
+                              <Text style={obStyles.reuploadActionBtnText}>Chunking & Uploading {reuploadProgress}%...</Text>
+                            </View>
+                          ) : (
+                            <View style={{ gap: 8, marginTop: 4 }}>
+                              <Text style={{ fontSize: 11, fontWeight: '700', color: '#991b1b' }}>SELECT RE-UPLOAD METHOD:</Text>
+                              <View style={{ flexDirection: 'row', gap: 8 }}>
+                                <TouchableOpacity
+                                  style={[obStyles.reuploadActionBtn, { flex: 1, backgroundColor: '#0f172a', paddingVertical: 10 }]}
+                                  onPress={() => handlePickAndReuploadDocument(item.docType, item.name, 'camera')}
+                                  activeOpacity={0.8}
+                                >
+                                  <Text style={obStyles.reuploadActionBtnText}>📷 Camera</Text>
+                                </TouchableOpacity>
+                                <TouchableOpacity
+                                  style={[obStyles.reuploadActionBtn, { flex: 1, backgroundColor: '#0284c7', paddingVertical: 10 }]}
+                                  onPress={() => handlePickAndReuploadDocument(item.docType, item.name, 'gallery')}
+                                  activeOpacity={0.8}
+                                >
+                                  <Text style={obStyles.reuploadActionBtnText}>🖼️ Gallery</Text>
+                                </TouchableOpacity>
                               </View>
-                            ) : (
-                              <Text style={obStyles.reuploadActionBtnText}>🔄 Re-upload {item.name}</Text>
-                            )}
-                          </TouchableOpacity>
+                            </View>
+                          )}
 
                           {isUploadingThis && (
                             <View style={obStyles.progressBarTrack}>

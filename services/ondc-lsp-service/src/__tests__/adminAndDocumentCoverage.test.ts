@@ -2,6 +2,7 @@ import request from 'supertest';
 import { app } from '../server';
 import { AdminController } from '../controllers/adminController';
 import { DocumentController } from '../controllers/documentController';
+import { riderManager } from '../services/riderManager';
 import { documentWorker } from '../services/documentWorker';
 import { queueService } from '../services/queueService';
 import { redisService } from '../services/redisService';
@@ -138,6 +139,57 @@ describe('Admin, Document Controller & Document Worker Coverage Suite', () => {
       expect(res.status).toBe(401);
       expect(res.body.success).toBe(false);
       expect(res.body.error).toContain('Invalid admin username or password');
+    });
+
+    it('DELETE /api/admin/riders/:id permanently deletes an existing rider and associated records', async () => {
+      // 1. Seed a rider to be deleted
+      const deleteTestId = 'RIDER-TO-DELETE-001';
+      await riderManager.createOrUpdateRider({
+        id: deleteTestId,
+        name: 'Delete Me Partner',
+        phone: '+91 9991112222',
+        vehicle_type: 'motorcycle',
+        vehicle_number: 'TS 09 DL 9999',
+      });
+
+      // Attach dummy earning, notification
+      await run('INSERT INTO earnings (rider_id, order_id, amount, description, created_at) VALUES (?, ?, ?, ?, ?)',
+        [deleteTestId, 'ORD-DEL-1', 50, 'Delivery fee', new Date().toISOString()]);
+      await run('INSERT INTO notifications (id, rider_id, title, message, created_at) VALUES (?, ?, ?, ?, ?)',
+        ['NOTIF-DEL-1', deleteTestId, 'Test', 'Msg', new Date().toISOString()]);
+
+      // 2. Delete via DELETE endpoint
+      const res = await request(app).delete(`/api/admin/riders/${deleteTestId}`);
+      expect(res.status).toBe(200);
+      expect(res.body.success).toBe(true);
+
+      // Verify rider no longer exists
+      const found = await riderManager.getRider(deleteTestId);
+      expect(found).toBeUndefined();
+
+      // 3. Deleting non-existent rider returns 404
+      const res404 = await request(app).delete('/api/admin/riders/NON-EXISTENT-RIDER-ID');
+      expect(res404.status).toBe(404);
+      expect(res404.body.success).toBe(false);
+
+      // 4. Test POST /api/admin/riders/:id/delete route fallback
+      const deleteTestId2 = 'RIDER-TO-DELETE-002';
+      await riderManager.createOrUpdateRider({
+        id: deleteTestId2,
+        name: 'Delete Me Partner 2',
+        phone: '+91 9991113333',
+      });
+      const resPost = await request(app).post(`/api/admin/riders/${deleteTestId2}/delete`);
+      expect(resPost.status).toBe(200);
+      expect(resPost.body.success).toBe(true);
+
+      // 5. Test error branch in AdminController.deleteRider
+      const mockReq: any = { params: { id: 'ERR-RIDER' } };
+      const mockRes: any = { status: jest.fn().mockReturnThis(), json: jest.fn() };
+      jest.spyOn(riderManager, 'deleteRider').mockRejectedValueOnce(new Error('Simulated DB failure'));
+      await AdminController.deleteRider(mockReq, mockRes);
+      expect(mockRes.status).toHaveBeenCalledWith(500);
+      expect(mockRes.json).toHaveBeenCalledWith(expect.objectContaining({ success: false, error: 'Simulated DB failure' }));
     });
   });
 

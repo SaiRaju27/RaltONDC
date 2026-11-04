@@ -662,6 +662,29 @@
       box-shadow: 0 4px 10px rgba(0, 133, 93, 0.3);
     }
 
+    .btn-delete-rider {
+      background: #fee2e2;
+      color: #991b1b;
+      border: 1px solid #fca5a5;
+      padding: 8px 12px;
+      border-radius: 10px;
+      font-size: 12px;
+      font-weight: 700;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      margin-left: 6px;
+      transition: all 0.2s ease;
+    }
+
+    .btn-delete-rider:hover {
+      background: #fecaca;
+      color: #7f1d1d;
+      border-color: #f87171;
+      transform: translateY(-1px);
+    }
+
     /* MODAL */
     .modal-backdrop {
       position: fixed;
@@ -1194,6 +1217,10 @@
             <span id="modalBank" class="overview-val">HDFC Bank • A/C 987654321012</span>
           </div>
           <div class="overview-item">
+            <span class="overview-label">Emergency Contact</span>
+            <span id="modalEmergency" class="overview-val">N/A</span>
+          </div>
+          <div class="overview-item">
             <span class="overview-label">Overall KYC Status</span>
             <span id="modalKycChip" class="overview-val">
               <span class="status-chip pending_verification">Pending Review ⏳</span>
@@ -1226,7 +1253,10 @@
         <div style="font-size: 12px; color: var(--text-muted); max-width: 520px;">
           Approving sets partner status to <strong>APPROVED & ACTIVE</strong> and allows them to receive live delivery orders on their phone.
         </div>
-        <div style="display: flex; gap: 10px;">
+        <div style="display: flex; gap: 10px; align-items: center;">
+          <button id="btnDeletePartnerModal" class="btn btn-secondary" type="button" style="background: #fff1f2; color: #b91c1c; border-color: #fca5a5; font-weight: 700;">
+            🗑️ Delete Partner
+          </button>
           <button id="btnCancelModal" class="btn btn-secondary btn-close-modal" type="button">Cancel</button>
           <button id="btnRejectPartner" class="btn btn-danger" type="button">
             <span>⚠️</span> Request Re-upload
@@ -1356,15 +1386,61 @@
         });
       }
 
-      // 11. Event Delegation for Partner Table (Inspect Button)
+      // 11. Event Delegation for Partner Table (Inspect & Delete Buttons)
       const tableBody = document.getElementById('ridersTableBody');
       if (tableBody) {
         tableBody.addEventListener('click', (e) => {
           const btn = e.target.closest('.btn-inspect');
           if (btn && btn.dataset.riderId) {
             inspectRider(btn.dataset.riderId);
+            return;
+          }
+
+          const delBtn = e.target.closest('.btn-delete-rider');
+          if (delBtn && delBtn.dataset.riderId) {
+            deleteRider(delBtn.dataset.riderId, delBtn.dataset.riderName);
           }
         });
+      }
+
+      // 11a. Modal Delete Partner Button
+      const btnDeleteModal = document.getElementById('btnDeletePartnerModal');
+      if (btnDeleteModal) {
+        btnDeleteModal.addEventListener('click', () => {
+          if (!currentRider) return;
+          deleteRider(currentRider.id, currentRider.name);
+        });
+      }
+
+      // Function to permanently delete a partner
+      async function deleteRider(riderId, riderName) {
+        const confirmDelete = confirm(
+          'Are you sure you want to permanently delete delivery partner "' + (riderName || riderId) + '" (' + riderId + ')?\n\n' +
+          'This will remove their profile and all uploaded KYC documents from the system. This action cannot be undone.'
+        );
+        if (!confirmDelete) return;
+
+        try {
+          const res = await fetch('/api/admin/riders/' + encodeURIComponent(riderId), {
+            method: 'DELETE',
+            headers: { 'Accept': 'application/json' }
+          });
+          const data = await res.json().catch(() => null);
+          if (res.ok && data && data.success) {
+            const modal = document.getElementById('reviewModal');
+            if (modal && modal.classList.contains('open') && currentRider && currentRider.id === riderId) {
+              modal.classList.remove('open');
+              currentRider = null;
+            }
+            alert('Partner ' + (riderName || riderId) + ' has been permanently deleted.');
+            fetchStats();
+            fetchRiders();
+          } else {
+            alert('Failed to delete partner: ' + (data && data.error ? data.error : res.statusText || 'Unknown error'));
+          }
+        } catch (err) {
+          alert('Error deleting partner: ' + err.message);
+        }
       }
 
       // 11b. Inline Edit DOB Handler
@@ -1695,9 +1771,12 @@
             <td style="color: var(--text-muted); font-size: 12px;">
               ${dateStr}
             </td>
-            <td style="text-align: right;">
+            <td style="text-align: right; white-space: nowrap;">
               <button class="btn-inspect" data-rider-id="${escapeHtml(r.id)}" type="button">
                 Inspect & Verify 🔍
+              </button>
+              <button class="btn-delete-rider" data-rider-id="${escapeHtml(r.id)}" data-rider-name="${escapeHtml(r.name || 'Partner')}" type="button">
+                🗑️ Delete
               </button>
             </td>
           </tr>
@@ -1732,6 +1811,7 @@
         safeSetText('modalDl', currentRider.dl_number || 'N/A');
         safeSetText('modalAadhaarPan', `Aadhaar: ${currentRider.aadhaar_number || 'N/A'} • PAN: ${currentRider.pan_number || 'N/A'}`);
         safeSetText('modalBank', `${currentRider.bank_name || 'Bank'} • A/C: ${currentRider.bank_account_number || 'N/A'} (IFSC: ${currentRider.bank_ifsc || 'N/A'})`);
+        safeSetText('modalEmergency', currentRider.emergency_name ? `${currentRider.emergency_name} (${currentRider.emergency_relation || 'Contact'} • ${currentRider.emergency_phone || 'N/A'})` : 'Not specified');
 
         const kycStatus = (currentRider.kyc_status || 'PENDING_VERIFICATION').toUpperCase();
         const kycChip = document.getElementById('modalKycChip');

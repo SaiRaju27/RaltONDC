@@ -209,6 +209,8 @@ app.post('/api/admin/documents/:docId/verify', apiRateLimiter, AdminController.v
 app.post('/api/admin/riders/:id/review', apiRateLimiter, AdminController.reviewRider);
 app.post('/api/admin/riders/:id/update', apiRateLimiter, AdminController.updateRiderProfile);
 app.post('/api/admin/riders/:id/toggle-status', apiRateLimiter, AdminController.togglePartnerStatus);
+app.delete('/api/admin/riders/:id', apiRateLimiter, AdminController.deleteRider);
+app.post('/api/admin/riders/:id/delete', apiRateLimiter, AdminController.deleteRider);
 
 // =============================================================================
 // 5. ENTERPRISE NOTIFICATION SYSTEM REST APIS

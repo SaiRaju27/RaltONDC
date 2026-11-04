@@ -500,4 +500,17 @@ export class AdminController {
       res.status(500).json({ success: false, error: err.message });
     }
   }
+
+  public static async deleteRider(req: Request, res: Response) {
+    try {
+      const riderId = req.params.id;
+      const success = await riderManager.deleteRider(riderId);
+      if (!success) {
+        return res.status(404).json({ success: false, error: 'Partner not found' });
+      }
+      res.json({ success: true, message: `Partner ${riderId} deleted successfully` });
+    } catch (err: any) {
+      res.status(500).json({ success: false, error: err.message });
+    }
+  }
 }
